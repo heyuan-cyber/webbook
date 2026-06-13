@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath } from 'node:url';
 
 const base = process.env.VITE_BASE_PATH ?? '/';
+const navigateFallback = `${base.replace(/\/?$/, '/')}index.html`;
 
 export default defineConfig({
   // 从 monorepo 根目录加载 .env
@@ -22,7 +23,7 @@ export default defineConfig({
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait-primary',
-        start_url: `${base}app`,
+        start_url: base,
         scope: base,
         icons: [
           {
@@ -40,7 +41,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: 'index.html',
+        navigateFallback,
+        navigateFallbackDenylist: [/^\/api\//, /^https?:\/\/.*\.workers\.dev\//],
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,webmanifest}'],
         runtimeCaching: [
           {

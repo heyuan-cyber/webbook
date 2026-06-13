@@ -509,11 +509,15 @@ npm run dev:api    # API   http://localhost:8787
 $env:JAVA_HOME = "C:\Program Files\Java\jdk-17.0.2"
 $env:ANDROID_HOME = "$env:USERPROFILE\.bubblewrap\android_sdk"
 npm run android:apk
-npm run android:fingerprint   # 更新 assetlinks.json
-git push                      # 部署 assetlinks 后 TWA 全屏生效
+npm run android:fingerprint
+git push
 ```
 
-APK 输出：`apps/android-twa/app-release-signed.apk`。网站更新后一般**不用**重打 APK。
+**开屏卡在图标？** 常见原因是启动 URL 返回 HTTP 404。当前 TWA 已改为 `/webbook/`（200），修改后需重打 APK 并覆盖安装。
+
+**TWA 全屏验证：** Android 在 `https://heyuan-cyber.github.io/.well-known/assetlinks.json`（域名根）查找。除项目内的 `/webbook/.well-known/` 外，还需在 `heyuan-cyber.github.io` 用户主页仓放置相同内容的 `assetlinks.json`。
+
+APK 输出：`apps/android-twa/app-release-signed.apk`。网站内容更新后一般**不用**重打 APK。
 
 ---
 

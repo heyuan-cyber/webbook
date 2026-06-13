@@ -38,9 +38,11 @@ jobs:
           VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZXRpdHdmbW51dGl3ZXF5Zm5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzMjQzMzMsImV4cCI6MjA5NjkwMDMzM30.UYfQSLI6Y092yPOabxgo-uqak9rk_r-tlNGQAlbpLWU
           VITE_ADMIN_EMAIL: 1060707057@qq.com
         run: npm run build
-      - name: SPA fallback (404 -> index)
+      - name: SPA fallback (404 + /app path for TWA)
         run: |
           cp apps/web/dist/index.html apps/web/dist/404.html
+          mkdir -p apps/web/dist/app
+          cp apps/web/dist/index.html apps/web/dist/app/index.html
           touch apps/web/dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

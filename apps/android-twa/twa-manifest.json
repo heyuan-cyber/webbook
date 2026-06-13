@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#0F172A",
   "enableNotifications": true,
-  "startUrl": "/webbook/app",
+  "startUrl": "/webbook/",
   "iconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
   "maskableIconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
   "splashScreenFadeOutDuration": 300,
@@ -21,7 +21,7 @@
     "alias": "android"
   },
   "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://heyuan-cyber.github.io/webbook/manifest.webmanifest",
