@@ -1,0 +1,17 @@
+name = "webbook-api"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+
+# 通过 `wrangler secret put <NAME>` 设置以下机密（不要写入此文件）：
+#   GITHUB_TOKEN, AI_API_KEY, SUPABASE_SERVICE_ROLE_KEY
+[vars]
+GITHUB_REPO = "heyuan-cyber/webbook-data"
+GITHUB_BRANCH = "main"
+AI_PROVIDER = "deepseek"
+AI_BASE_URL = "https://api.deepseek.com"
+AI_MODEL = "deepseek-v4-flash"
+SUPABASE_URL = ""
+
+# 每晚定时整理（cron 策略）
+[triggers]
+crons = ["0 18 * * *"]

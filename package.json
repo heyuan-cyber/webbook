@@ -1,0 +1,26 @@
+{
+  "name": "webbook",
+  "private": true,
+  "version": "0.1.0",
+  "description": "个人知识 / 项目记录 / 私密笔记平台 — GitHub 托管，零 VPS",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "workers/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/web",
+    "build": "npm run build --workspace packages/shared && npm run build --workspace apps/web",
+    "lint": "eslint .",
+    "dev:api": "npm run dev --workspace workers/api",
+    "init:github": "node scripts/init-github-data.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "eslint": "^9.12.0",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.cache/
+.wrangler/
+*.local
+.env
+.env.*
+!.env.example
+.dev.vars
+.DS_Store
+*.log
+coverage/
+.vite/

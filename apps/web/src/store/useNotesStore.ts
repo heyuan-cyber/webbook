@@ -1,0 +1,219 @@
+import { create } from 'zustand';
+import type { Block, Note, NoteTree, TreeNode } from '@webbook/shared';
+import { createEmptyNote, createEmptyTree, findNode, normalizeNote } from '@webbook/shared';
+import { uid } from '@/lib/id';
+import { foldState } from '@/lib/storage';
+import { makeRepository, type Repository } from './repository';
+import type { Session } from '@/auth/types';
+
+interface NotesState {
+  repo: Repository;
+  tree: NoteTree;
+  activeNoteId: string | null;
+  activeNote: Note | null;
+  folds: Record<string, boolean>;
+  loading: boolean;
+  saving: boolean;
+
+  init: (session: Session | null) => Promise<void>;
+  selectNote: (id: string) => Promise<void>;
+  toggleFold: (nodeId: string) => void;
+
+  addFolder: (parentId: string | null, title: string) => Promise<void>;
+  addNote: (parentId: string | null, title: string) => Promise<string>;
+  renameNode: (id: string, title: string) => Promise<void>;
+  deleteNode: (id: string) => Promise<void>;
+  moveNode: (id: string, newParentId: string | null, index: number) => Promise<void>;
+
+  updateActiveBlocks: (blocks: Block[]) => void;
+  setActiveTitle: (title: string) => void;
+  setActiveVisibility: (visibility: 'public' | 'private') => void;
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function insertChild(
+  nodes: TreeNode[],
+  parentId: string | null,
+  node: TreeNode,
+): TreeNode[] {
+  if (parentId === null) return [...nodes, node];
+  return nodes.map((n) => {
+    if (n.id === parentId) {
+      return { ...n, children: [...(n.children ?? []), node] };
+    }
+    if (n.children) return { ...n, children: insertChild(n.children, parentId, node) };
+    return n;
+  });
+}
+
+function removeNode(nodes: TreeNode[], id: string): [TreeNode[], TreeNode | null] {
+  let removed: TreeNode | null = null;
+  const next: TreeNode[] = [];
+  for (const n of nodes) {
+    if (n.id === id) {
+      removed = n;
+      continue;
+    }
+    if (n.children) {
+      const [childNodes, childRemoved] = removeNode(n.children, id);
+      if (childRemoved) removed = childRemoved;
+      next.push({ ...n, children: childNodes });
+    } else {
+      next.push(n);
+    }
+  }
+  return [next, removed];
+}
+
+function patchNode(nodes: TreeNode[], id: string, patch: Partial<TreeNode>): TreeNode[] {
+  return nodes.map((n) => {
+    if (n.id === id) return { ...n, ...patch };
+    if (n.children) return { ...n, children: patchNode(n.children, id, patch) };
+    return n;
+  });
+}
+
+export const useNotesStore = create<NotesState>((setState, getState) => ({
+  repo: makeRepository(null),
+  tree: createEmptyTree(),
+  activeNoteId: null,
+  activeNote: null,
+  folds: foldState.load(),
+  loading: false,
+  saving: false,
+
+  async init(session) {
+    const repo = makeRepository(session);
+    setState({ repo, loading: true });
+    const tree = await repo.loadTree();
+    setState({ tree, loading: false });
+  },
+
+  async selectNote(id) {
+    const { repo, tree } = getState();
+    const node = findNode(tree.roots, id);
+    if (!node || node.kind !== 'note') return;
+    setState({ loading: true });
+    let note = await repo.loadNote(node.noteId ?? id);
+    if (!note) {
+      note = createEmptyNote(id, node.title);
+      await repo.saveNote(note);
+    } else {
+      note = normalizeNote(note);
+    }
+    setState({ activeNoteId: id, activeNote: note, loading: false });
+  },
+
+  toggleFold(nodeId) {
+    const folds = { ...getState().folds, [nodeId]: !getState().folds[nodeId] };
+    foldState.save(folds);
+    setState({ folds });
+  },
+
+  async addFolder(parentId, title) {
+    const { tree, repo } = getState();
+    const node: TreeNode = { id: uid('fld'), kind: 'folder', title, children: [] };
+    const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
+    setState({ tree: next });
+    await repo.saveTree(next);
+  },
+
+  async addNote(parentId, title) {
+    const { tree, repo } = getState();
+    const id = uid('note');
+    const node: TreeNode = { id, kind: 'note', title, noteId: id, visibility: 'private' };
+    const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
+    const note = createEmptyNote(id, title);
+    setState({ tree: next });
+    await repo.saveTree(next);
+    await repo.saveNote(note);
+    return id;
+  },
+
+  async renameNode(id, title) {
+    const { tree, repo } = getState();
+    const next = { ...tree, roots: patchNode(tree.roots, id, { title }) };
+    setState({ tree: next });
+    await repo.saveTree(next);
+  },
+
+  async deleteNode(id) {
+    const { tree, repo, activeNoteId } = getState();
+    const [roots] = removeNode(tree.roots, id);
+    const next = { ...tree, roots };
+    setState({ tree: next, ...(activeNoteId === id ? { activeNoteId: null, activeNote: null } : {}) });
+    await repo.saveTree(next);
+    await repo.deleteNote(id);
+  },
+
+  async moveNode(id, newParentId, index) {
+    const { tree, repo } = getState();
+    const [without, moved] = removeNode(tree.roots, id);
+    if (!moved) return;
+    let roots: TreeNode[];
+    if (newParentId === null) {
+      roots = [...without];
+      roots.splice(index, 0, moved);
+    } else {
+      roots = without.map(function place(n): TreeNode {
+        if (n.id === newParentId) {
+          const children = [...(n.children ?? [])];
+          children.splice(index, 0, moved);
+          return { ...n, children };
+        }
+        if (n.children) return { ...n, children: n.children.map(place) };
+        return n;
+      });
+    }
+    const next = { ...tree, roots };
+    setState({ tree: next });
+    await repo.saveTree(next);
+  },
+
+  updateActiveBlocks(blocks) {
+    const { activeNote } = getState();
+    if (!activeNote) return;
+    const updated: Note = { ...activeNote, blocks, updatedAt: new Date().toISOString() };
+    setState({ activeNote: updated });
+    scheduleSave(getState);
+  },
+
+  setActiveTitle(title) {
+    const { activeNote, tree } = getState();
+    if (!activeNote) return;
+    const updated: Note = { ...activeNote, title, updatedAt: new Date().toISOString() };
+    const next = { ...tree, roots: patchNode(tree.roots, activeNote.id, { title }) };
+    setState({ activeNote: updated, tree: next });
+    scheduleSave(getState);
+  },
+
+  setActiveVisibility(visibility) {
+    const { activeNote, tree } = getState();
+    if (!activeNote) return;
+    const updated: Note = {
+      ...activeNote,
+      visibility,
+      updatedAt: new Date().toISOString(),
+    };
+    const next = {
+      ...tree,
+      roots: patchNode(tree.roots, activeNote.id, { visibility }),
+    };
+    setState({ activeNote: updated, tree: next });
+    scheduleSave(getState);
+  },
+}));
+
+/** 防抖保存：编辑停止 800ms 后落盘（本地 + 远端） */
+function scheduleSave(getState: () => NotesState) {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const { repo, activeNote, tree } = getState();
+    if (!activeNote) return;
+    useNotesStore.setState({ saving: true });
+    await repo.saveNote(activeNote);
+    await repo.saveTree(tree);
+    useNotesStore.setState({ saving: false });
+  }, 800);
+}
