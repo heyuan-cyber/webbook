@@ -29,5 +29,5 @@ jobs:
           personal_token: ${{ secrets.USER_PAGES_DEPLOY_TOKEN }}
           external_repository: heyuan-cyber/heyuan-cyber.github.io
           publish_dir: ./user-pages
-          publish_branch: main
+          publish_branch: master
           enable_jekyll: false

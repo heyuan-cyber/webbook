@@ -46,6 +46,16 @@ git push                        # 部署 /webbook/.well-known/ 副本
 
 验证：`https://heyuan-cyber.github.io/.well-known/assetlinks.json` 返回 JSON。
 
+## 开屏卡在图标？
+
+**清「自带浏览器」缓存无效**——APK 用的是 **Chrome** 或 **Android System WebView**，与小米/华为自带浏览器无关。
+
+1. 清 **Google Chrome**（推荐先安装）→ 设置 → 网站设置 → `heyuan-cyber.github.io` → 清除并重置  
+   或清 **Android System WebView**（设置 → 应用 → 显示系统应用）
+2. 卸载 APK → 等 3 分钟 → 安装最新 `app-release-signed.apk`（versionCode ≥ 4）
+3. **先开 APK**，装好后不要先用浏览器打开网站
+4. 当前 APK：`webview` 回退（兼容无 Chrome 的国产手机）、TWA 内自动禁用 Service Worker
+
 ## 启动 URL 注意
 
 TWA `startUrl` 必须为 **HTTP 200** 的路径。`/webbook/app` 在 GitHub Pages 返回 404，会导致开屏动画后卡在图标界面。当前已改为 `/webbook/`（进入后由 React Router 跳转 `/app`）。

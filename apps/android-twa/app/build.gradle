@@ -33,11 +33,11 @@ def twaManifest = [
     navigationDividerColor: '#000000',
     navigationDividerColorDark: '#000000',
     backgroundColor: '#0F172A',
-    enableNotifications: true,
+    enableNotifications: false,
     shortcuts: [],
     splashScreenFadeOutDuration: 300,
     generatorApp: 'bubblewrap-cli',
-    fallbackType: 'customtabs',
+    fallbackType: 'webview',
     enableSiteSettingsShortcut: 'true',
     orientation: 'portrait-primary',
 ]
@@ -49,7 +49,7 @@ android {
         applicationId "io.github.heyuan_cyber.twa"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 3
+        versionCode 4
         versionName "1"
 
         resValue "string", "appName", twaManifest.name

@@ -11,7 +11,7 @@
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#0F172A",
-  "enableNotifications": true,
+  "enableNotifications": false,
   "startUrl": "/webbook/",
   "iconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
   "maskableIconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
@@ -21,11 +21,11 @@
     "alias": "android"
   },
   "appVersionName": "1",
-  "appVersionCode": 3,
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://heyuan-cyber.github.io/webbook/manifest.webmanifest",
-  "fallbackType": "customtabs",
+  "fallbackType": "webview",
   "features": {},
   "alphaDependencies": {
     "enabled": false
