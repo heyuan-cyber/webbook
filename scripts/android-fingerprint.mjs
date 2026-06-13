@@ -2,11 +2,10 @@
 /**
  * 从 android.keystore 提取 SHA256 指纹，更新 assetlinks.json。
  */
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createInterface } from 'node:readline';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const keystore = resolve(root, 'apps/android-twa/android.keystore');
@@ -17,17 +16,33 @@ if (!existsSync(keystore)) {
   process.exit(1);
 }
 
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-const password = await new Promise((res) => {
-  rl.question('输入 keystore 密码（Bubblewrap 首次 build 时设置的）: ', (ans) => {
-    rl.close();
-    res(ans);
-  });
-});
+const password = process.env.ANDROID_KEYSTORE_PASSWORD ?? 'webbook2026';
+if (!process.env.ANDROID_KEYSTORE_PASSWORD) {
+  console.log('使用默认 keystore 密码 webbook2026（首次 build 设置的密码）');
+}
 
+function resolveKeytool() {
+  if (process.env.JAVA_HOME) {
+    const p = resolve(process.env.JAVA_HOME, 'bin', process.platform === 'win32' ? 'keytool.exe' : 'keytool');
+    if (existsSync(p)) return p;
+  }
+  try {
+    const out = execSync('java -XshowSettings:properties -version 2>&1', { encoding: 'utf8' });
+    const m = out.match(/java\.home = (.+)/);
+    if (m) {
+      const p = resolve(m[1].trim(), 'bin', process.platform === 'win32' ? 'keytool.exe' : 'keytool');
+      if (existsSync(p)) return p;
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'keytool';
+}
+
+const keytool = resolveKeytool();
 const out = spawnSync(
-  'keytool',
-  ['-list', '-v', '-keystore', keystore, '-alias', 'webbook', `-storepass`, password],
+  keytool,
+  ['-list', '-v', '-keystore', keystore, '-alias', 'android', `-storepass`, password],
   { encoding: 'utf8' },
 );
 

@@ -67,9 +67,16 @@ VITE_SUPABASE_ANON_KEY=...
 
 环境变量模板见 `.env.example`。
 
-## 部署
+## 部署与学习
 
-详细小白向说明见 **[docs/DEPLOY-GUIDE.md](docs/DEPLOY-GUIDE.md)**（架构原理、管理员配置、逐步部署）。
+**推荐先读** **[docs/DEPLOY-GUIDE.md](docs/DEPLOY-GUIDE.md)** — 不只是部署步骤，还讲清：
+
+- 用户数据存哪（IndexedDB / GitHub 私有仓 / Supabase）
+- 后端逻辑谁跑（Cloudflare Workers 各路由做什么）
+- GitHub Pages、Supabase、DeepSeek 等每个模块的分工与计算机概念
+- 一次保存笔记的完整请求链路
+
+适合小白快速建立「现代 Web 应用」整体认知。
 
 - **前端 → GitHub Pages**：推送到 `main` 触发 `.github/workflows/deploy.yml`
   - 在仓库 Settings → Pages 选择 GitHub Actions
