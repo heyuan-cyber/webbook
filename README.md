@@ -69,10 +69,12 @@ VITE_SUPABASE_ANON_KEY=...
 
 ## 部署
 
+详细小白向说明见 **[docs/DEPLOY-GUIDE.md](docs/DEPLOY-GUIDE.md)**（架构原理、管理员配置、逐步部署）。
+
 - **前端 → GitHub Pages**：推送到 `main` 触发 `.github/workflows/deploy.yml`
   - 在仓库 Settings → Pages 选择 GitHub Actions
-  - 在 Settings → Variables 配置 `VITE_API_BASE_URL` 等
-- **API → Cloudflare Workers**：`cd workers/api && npm run deploy`
+  - 构建变量见 `deploy.yml`（含 `VITE_ADMIN_EMAIL`）
+- **API → Cloudflare Workers**：`cd workers/api && npx wrangler deploy`
 
 ## 私密性升级路径
 
