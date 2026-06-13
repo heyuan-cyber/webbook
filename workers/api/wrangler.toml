@@ -10,7 +10,7 @@ GITHUB_BRANCH = "main"
 AI_PROVIDER = "deepseek"
 AI_BASE_URL = "https://api.deepseek.com"
 AI_MODEL = "deepseek-v4-flash"
-SUPABASE_URL = ""
+SUPABASE_URL = "https://sfetitwfmnutiweqyfnq.supabase.co"
 
 # 每晚定时整理（cron 策略）
 [triggers]

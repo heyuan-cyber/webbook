@@ -32,9 +32,10 @@ jobs:
         env:
           # 项目站点部署在 /<repo>/ 子路径
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Supabase anon key 本就暴露在前端 bundle，可安全内联；API URL 部署 Workers 后更新
+          VITE_API_BASE_URL: ''
+          VITE_SUPABASE_URL: https://sfetitwfmnutiweqyfnq.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZXRpdHdmbW51dGl3ZXF5Zm5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzMjQzMzMsImV4cCI6MjA5NjkwMDMzM30.UYfQSLI6Y092yPOabxgo-uqak9rk_r-tlNGQAlbpLWU
         run: npm run build
       - name: SPA fallback (404 -> index)
         run: |
