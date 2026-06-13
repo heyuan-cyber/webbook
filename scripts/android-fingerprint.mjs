@@ -3,13 +3,14 @@
  * 从 android.keystore 提取 SHA256 指纹，更新 assetlinks.json。
  */
 import { spawnSync, execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const keystore = resolve(root, 'apps/android-twa/android.keystore');
 const assetlinks = resolve(root, 'apps/web/public/.well-known/assetlinks.json');
+const userPagesAssetlinks = resolve(root, 'user-pages/.well-known/assetlinks.json');
 
 if (!existsSync(keystore)) {
   console.error('未找到 android.keystore，请先运行 npm run android:apk');
@@ -61,6 +62,9 @@ const fp = m[1].toUpperCase();
 const json = JSON.parse(readFileSync(assetlinks, 'utf8'));
 json[0].target.sha256_cert_fingerprints = [fp];
 writeFileSync(assetlinks, JSON.stringify(json, null, 2) + '\n');
+mkdirSync(resolve(root, 'user-pages/.well-known'), { recursive: true });
+writeFileSync(userPagesAssetlinks, JSON.stringify(json, null, 2) + '\n');
 console.log(`✓ 已写入 ${assetlinks}`);
+console.log(`✓ 已同步 ${userPagesAssetlinks}`);
 console.log(`  指纹: ${fp}`);
-console.log('  请 git push 重新部署前端，TWA 全屏才会生效。');
+console.log('  请 git push 部署前端，并运行 npm run deploy:user-pages 部署域名根 assetlinks。');

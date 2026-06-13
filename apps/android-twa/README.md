@@ -36,19 +36,15 @@ APK 要**无浏览器地址栏**全屏打开，需配置 **Digital Asset Links**
 | 项目子路径（PWA） | `https://heyuan-cyber.github.io/webbook/.well-known/assetlinks.json` | 已随前端部署 |
 | **域名根（TWA 验证）** | `https://heyuan-cyber.github.io/.well-known/assetlinks.json` | Android 按域名根查找，需单独配置 |
 
-域名根文件内容与 `apps/web/public/.well-known/assetlinks.json` **相同**。GitHub Pages 项目站无法自动提供根路径，需在 **`heyuan-cyber.github.io` 用户主页仓库** 中创建：
-
-```
-.well-known/assetlinks.json
-```
-
-首次打包后运行：
+域名根文件由 `npm run deploy:user-pages` 自动部署到 **`heyuan-cyber/heyuan-cyber.github.io`** 用户主页仓（与 `webbook` 项目仓并存）。
 
 ```powershell
-npm run android:fingerprint
+npm run android:fingerprint   # 更新指纹（同步 web + user-pages）
+npm run deploy:user-pages       # 推送到用户主页仓并启用 Pages
+git push                        # 部署 /webbook/.well-known/ 副本
 ```
 
-按提示更新 `apps/web/public/.well-known/assetlinks.json`，同步复制到用户主页仓，然后 **git push** 重新部署。
+验证：`https://heyuan-cyber.github.io/.well-known/assetlinks.json` 返回 JSON。
 
 ## 启动 URL 注意
 

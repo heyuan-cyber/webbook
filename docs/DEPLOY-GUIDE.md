@@ -515,7 +515,13 @@ git push
 
 **开屏卡在图标？** 常见原因是启动 URL 返回 HTTP 404。当前 TWA 已改为 `/webbook/`（200），修改后需重打 APK 并覆盖安装。
 
-**TWA 全屏验证：** Android 在 `https://heyuan-cyber.github.io/.well-known/assetlinks.json`（域名根）查找。除项目内的 `/webbook/.well-known/` 外，还需在 `heyuan-cyber.github.io` 用户主页仓放置相同内容的 `assetlinks.json`。
+**TWA 全屏验证：** Android 在域名根查找 assetlinks。已自动部署到 `heyuan-cyber.github.io` 用户主页仓：
+
+```powershell
+npm run deploy:user-pages   # 同步并推送到 heyuan-cyber/heyuan-cyber.github.io
+```
+
+验证：`https://heyuan-cyber.github.io/.well-known/assetlinks.json` 应返回 JSON（非 404）。
 
 APK 输出：`apps/android-twa/app-release-signed.apk`。网站内容更新后一般**不用**重打 APK。
 

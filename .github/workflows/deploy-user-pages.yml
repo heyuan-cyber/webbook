@@ -1,0 +1,33 @@
+name: Deploy user pages (TWA assetlinks)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'user-pages/**'
+      - 'apps/web/public/.well-known/assetlinks.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync assetlinks into user-pages
+        run: |
+          mkdir -p user-pages/.well-known
+          cp apps/web/public/.well-known/assetlinks.json user-pages/.well-known/assetlinks.json
+
+      - name: Deploy to heyuan-cyber.github.io
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          # 在 webbook 仓库 Settings → Secrets 添加 USER_PAGES_DEPLOY_TOKEN（repo 权限 PAT）
+          personal_token: ${{ secrets.USER_PAGES_DEPLOY_TOKEN }}
+          external_repository: heyuan-cyber/heyuan-cyber.github.io
+          publish_dir: ./user-pages
+          publish_branch: main
+          enable_jekyll: false

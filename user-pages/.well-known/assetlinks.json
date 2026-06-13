@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.heyuan_cyber.twa",
+      "sha256_cert_fingerprints": [
+        "F5:11:8D:7D:4E:8A:51:15:24:1E:30:9A:9F:8C:D7:CE:AD:89:65:AB:80:96:08:68:36:EE:E8:CD:78:2B:EB:63"
+      ]
+    }
+  }
+]
