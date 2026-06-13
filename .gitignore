@@ -12,3 +12,8 @@ build/
 *.log
 coverage/
 .vite/
+apps/android-twa/android.keystore
+apps/android-twa/**/*.apk
+apps/android-twa/app/build/
+apps/android-twa/build/
+apps/android-twa/.gradle/

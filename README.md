@@ -75,6 +75,7 @@ VITE_SUPABASE_ANON_KEY=...
   - 在仓库 Settings → Pages 选择 GitHub Actions
   - 构建变量见 `deploy.yml`（含 `VITE_ADMIN_EMAIL`）
 - **API → Cloudflare Workers**：`cd workers/api && npx wrangler deploy`
+- **Android APK（侧载）**：`npm run android:init` → `npm run android:apk`（见 `apps/android-twa/README.md`）
 
 ## 私密性升级路径
 

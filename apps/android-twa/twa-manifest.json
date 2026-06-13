@@ -1,0 +1,33 @@
+{
+  "packageId": "com.heyuan.webbook",
+  "host": "heyuan-cyber.github.io",
+  "name": "WebBook 个人知识库",
+  "launcherName": "WebBook",
+  "display": "standalone",
+  "themeColor": "#0F172A",
+  "themeColorDark": "#0F172A",
+  "navigationColor": "#0F172A",
+  "navigationColorDark": "#0F172A",
+  "navigationDividerColor": "#0F172A",
+  "navigationDividerColorDark": "#0F172A",
+  "backgroundColor": "#0F172A",
+  "startUrl": "/webbook/app",
+  "iconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
+  "maskableIconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
+  "monochromeIconUrl": "https://heyuan-cyber.github.io/webbook/icon.svg",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "webbook"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "enableNotifications": false,
+  "webManifestUrl": "https://heyuan-cyber.github.io/webbook/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {},
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "orientation": "portrait-primary"
+}

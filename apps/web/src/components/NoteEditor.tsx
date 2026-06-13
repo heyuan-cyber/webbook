@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useNotesStore } from '@/store/useNotesStore';
 import { BlockEditor } from './editor/BlockEditor';
 
 export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const { id } = useParams();
   const { isGuest } = useAuth();
+  const isMobile = useIsMobile();
   const activeNote = useNotesStore((s) => s.activeNote);
   const selectNote = useNotesStore((s) => s.selectNote);
   const setActiveTitle = useNotesStore((s) => s.setActiveTitle);
@@ -23,7 +25,11 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
       <main className="editor empty">
         <div className="empty-state">
           <h2>欢迎使用 WebBook</h2>
-          <p className="muted">从左侧选择或新建一篇笔记开始记录。</p>
+          <p className="muted">
+            {isMobile
+              ? '点左上角 ☰ 打开目录，选择或新建一篇笔记。'
+              : '从左侧选择或新建一篇笔记开始记录。'}
+          </p>
         </div>
       </main>
     );

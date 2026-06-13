@@ -1,7 +1,9 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { TreeSidebar } from './TreeSidebar';
+import { InstallPrompt } from './InstallPrompt';
 
 export function AppShell({
   children,
@@ -11,13 +13,44 @@ export function AppShell({
   editable?: boolean;
 }) {
   const { session, isGuest, signOut } = useAuth();
+  const isMobile = useIsMobile();
+  const [navOpen, setNavOpen] = useState(false);
+
+  function closeNav() {
+    setNavOpen(false);
+  }
+
   return (
     <div className="shell">
-      <TreeSidebar editable={editable} />
+      {isMobile && navOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="关闭目录"
+          onClick={closeNav}
+        />
+      )}
+      <TreeSidebar
+        editable={editable}
+        className={isMobile && navOpen ? 'open' : undefined}
+        onNavigate={isMobile ? closeNav : undefined}
+      />
       <div className="shell-main">
         <header className="topbar">
-          <div className="topbar-left muted">
-            {isGuest ? '游客模式（数据仅存本机，不会同步）' : `已登录：${session?.email}`}
+          <div className="topbar-left">
+            {isMobile && (
+              <button
+                type="button"
+                className="btn btn-ghost nav-toggle"
+                aria-label="打开目录"
+                onClick={() => setNavOpen(true)}
+              >
+                ☰
+              </button>
+            )}
+            <span className="topbar-status muted">
+              {isGuest ? '游客模式' : session?.email}
+            </span>
           </div>
           <div className="topbar-right">
             <Link className="btn btn-ghost" to="/admin">
@@ -25,7 +58,7 @@ export function AppShell({
             </Link>
             {isGuest ? (
               <Link className="btn btn-primary" to="/login">
-                登录以保存
+                登录
               </Link>
             ) : (
               <button className="btn btn-ghost" onClick={() => signOut()}>
@@ -34,6 +67,7 @@ export function AppShell({
             )}
           </div>
         </header>
+        <InstallPrompt />
         <div className="content">{children}</div>
       </div>
     </div>

@@ -14,7 +14,10 @@
     "build": "npm run build --workspace packages/shared && npm run build --workspace apps/web",
     "lint": "eslint .",
     "dev:api": "npm run dev --workspace workers/api",
-    "init:github": "node scripts/init-github-data.mjs"
+    "init:github": "node scripts/init-github-data.mjs",
+    "android:init": "node scripts/android-init.mjs",
+    "android:apk": "node scripts/android-apk.mjs",
+    "android:fingerprint": "node scripts/android-fingerprint.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",

@@ -260,7 +260,29 @@ npm run dev:api    # API   http://localhost:8787
 
 **密钥放哪？** 绝不提交 Git。本地放 `.env`，云端用 `wrangler secret put`。
 
-## 十二、当前线上地址速查
+## 十二、手机端与 APK（免费侧载）
+
+### 手机浏览器 / PWA
+
+- 竖屏点左上角 **☰** 打开目录抽屉
+- 首次访问可点「安装」横幅，或浏览器菜单「添加到主屏幕」
+- 已打开过的笔记在离线时可只读缓存（Service Worker）
+
+### 打包 APK（不上商店，全免费）
+
+详细步骤见 **[apps/android-twa/README.md](../apps/android-twa/README.md)**。
+
+```powershell
+# 一次性：安装 JDK 17 + Android Studio (SDK)
+npm run android:init      # 首次生成 Android 工程
+npm run android:apk       # 输出 app-release-signed.apk
+npm run android:fingerprint   # 更新 assetlinks.json
+git push                  # 部署 assetlinks 后 TWA 全屏生效
+```
+
+APK 安装：传到手机 → 允许未知来源 → 安装。网站更新后一般**不用**重打 APK。
+
+## 十三、当前线上地址速查
 
 | 项目 | 地址 |
 |------|------|

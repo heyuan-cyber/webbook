@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.heyuan.webbook",
+      "sha256_cert_fingerprints": [
+        "REPLACE_AFTER_RUNNING_npm_run_android_fingerprint"
+      ]
+    }
+  }
+]

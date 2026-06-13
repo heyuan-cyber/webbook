@@ -586,20 +586,118 @@
   padding: 8px 10px;
 }
 
-/* ── Mobile: preview-first ────────────────────────────── */
+/* ── Mobile: drawer nav + stacked editor ─────────────── */
 @media (max-width: 720px) {
+  .shell {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .topbar {
+    padding: 8px 10px;
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+  }
+  .topbar-status {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .topbar-right {
+    flex-shrink: 0;
+  }
+  .topbar-right .btn {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  .nav-toggle {
+    font-size: 20px;
+    line-height: 1;
+    padding: 4px 8px !important;
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    border: none;
+    background: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+  }
   .sidebar {
     position: fixed;
     z-index: 30;
+    top: 0;
+    left: 0;
     height: 100%;
+    max-width: min(88vw, var(--sidebar-w));
     transform: translateX(-100%);
-    transition: transform 0.2s;
+    transition: transform 0.2s ease;
+    box-shadow: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.35);
   }
   .editor {
-    padding: 20px 16px 100px;
+    padding: 16px 14px 80px;
   }
-  .block-del,
+  .editor-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .note-title-input,
+  .note-title {
+    font-size: 22px;
+  }
+  .editor-head .save-state {
+    order: 3;
+  }
+  .visibility-toggle {
+    order: 2;
+  }
   .insert-trigger {
-    opacity: 0.5;
+    left: 0;
+    opacity: 0.85;
+  }
+  .insert-row {
+    height: 12px;
+  }
+  .install-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .admin {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .admin-body {
+    flex-direction: column;
+  }
+  .admin-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 8px;
+    gap: 4px;
+  }
+  .admin-nav button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .admin-content {
+    padding: 16px 14px;
   }
 }

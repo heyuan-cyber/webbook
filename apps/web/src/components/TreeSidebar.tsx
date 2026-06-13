@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import type { TreeNode } from '@webbook/shared';
 import { useNotesStore } from '@/store/useNotesStore';
 
-export function TreeSidebar({ editable = true }: { editable?: boolean }) {
+export function TreeSidebar({
+  editable = true,
+  className,
+  onNavigate,
+}: {
+  editable?: boolean;
+  className?: string;
+  onNavigate?: () => void;
+}) {
   const tree = useNotesStore((s) => s.tree);
   const addFolder = useNotesStore((s) => s.addFolder);
   const addNote = useNotesStore((s) => s.addNote);
@@ -12,10 +20,11 @@ export function TreeSidebar({ editable = true }: { editable?: boolean }) {
   async function newRootNote() {
     const id = await addNote(null, '新笔记');
     navigate(`/app/note/${id}`);
+    onNavigate?.();
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={className ? `sidebar ${className}` : 'sidebar'}>
       <div className="sidebar-head">
         <span className="logo">📓 WebBook</span>
       </div>
@@ -31,7 +40,13 @@ export function TreeSidebar({ editable = true }: { editable?: boolean }) {
       )}
       <div className="tree">
         {tree.roots.map((node) => (
-          <TreeItem key={node.id} node={node} depth={0} editable={editable} />
+          <TreeItem
+            key={node.id}
+            node={node}
+            depth={0}
+            editable={editable}
+            onNavigate={onNavigate}
+          />
         ))}
         {tree.roots.length === 0 && (
           <p className="muted tree-empty">还没有内容，点击「+ 笔记」开始。</p>
@@ -45,10 +60,12 @@ function TreeItem({
   node,
   depth,
   editable,
+  onNavigate,
 }: {
   node: TreeNode;
   depth: number;
   editable: boolean;
+  onNavigate?: () => void;
 }) {
   const folds = useNotesStore((s) => s.folds);
   const toggleFold = useNotesStore((s) => s.toggleFold);
@@ -71,6 +88,7 @@ function TreeItem({
       toggleFold(node.id);
     } else {
       navigate(`/app/note/${node.id}`);
+      onNavigate?.();
     }
   }
 
@@ -152,7 +170,13 @@ function TreeItem({
       {isFolder && !collapsed && node.children && (
         <div className="tree-children">
           {node.children.map((child) => (
-            <TreeItem key={child.id} node={child} depth={depth + 1} editable={editable} />
+            <TreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              editable={editable}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       )}
