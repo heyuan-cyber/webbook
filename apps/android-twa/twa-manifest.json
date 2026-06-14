@@ -21,7 +21,7 @@
     "alias": "android"
   },
   "appVersionName": "1",
-  "appVersionCode": 6,
+  "appVersionCode": 7,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://heyuan-cyber.github.io/webbook/manifest.webmanifest",

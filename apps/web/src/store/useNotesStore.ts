@@ -118,6 +118,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
       setState({ activeNoteId: null, activeNote: null, noteLoading: false });
       return;
     }
+    if (activeNoteId === id && getState().activeNote) return;
     setState({
       activeNoteId: id,
       activeNote: activeNoteId === id ? getState().activeNote : null,
@@ -127,7 +128,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
       let note = await repo.loadNote(node.noteId ?? id);
       if (!note) {
         note = createEmptyNote(id, node.title);
-        await repo.saveNote(note);
+        void repo.saveNote(note);
       } else {
         note = normalizeNote(note);
       }
@@ -199,9 +200,9 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     const node: TreeNode = { id, kind: 'note', title, noteId: id, visibility: 'private' };
     const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
     const note = createEmptyNote(id, title);
-    setState({ tree: next });
-    await repo.saveTree(next);
-    await repo.saveNote(note);
+    setState({ tree: next, activeNoteId: id, activeNote: note, noteLoading: false });
+    void repo.saveTree(next);
+    void repo.saveNote(note);
     return id;
   },
 

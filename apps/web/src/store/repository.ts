@@ -5,8 +5,8 @@ import type { Session } from '@/auth/types';
 
 /**
  * 仓库门面：
- * - 登录用户：远端完整读写（Workers→私有 GitHub）
- * - 游客：远端只读公开内容 + 本地 IndexedDB 草稿
+ * - 登录用户：远端完整读写（Workers→私有 GitHub），失败回退本地
+ * - 游客：仅 IndexedDB 本地读写，不请求网络（弱网可正常编辑）
  */
 export function makeRepository(session: Session | null) {
   const token = session?.token;
@@ -15,16 +15,11 @@ export function makeRepository(session: Session | null) {
   return {
     authed,
     async loadTree(): Promise<NoteTree> {
-      if (authed && token) {
-        try {
-          return await apiClient.loadTree(token);
-        } catch {
-          return localStore.loadTree();
-        }
+      if (!authed) {
+        return localStore.loadTree();
       }
-      // 游客：优先拉取公开树，失败回退本地
       try {
-        return await apiClient.loadPublicTree();
+        return await apiClient.loadTree(token);
       } catch {
         return localStore.loadTree();
       }
@@ -40,16 +35,11 @@ export function makeRepository(session: Session | null) {
       }
     },
     async loadNote(id: string): Promise<Note | undefined> {
-      if (authed && token) {
-        try {
-          return await apiClient.loadNote(id, token);
-        } catch {
-          return localStore.loadNote(id);
-        }
+      if (!authed) {
+        return localStore.loadNote(id);
       }
       try {
-        const { note } = await apiClient.loadPublicNoteLegacy(id);
-        return note;
+        return await apiClient.loadNote(id, token);
       } catch {
         return localStore.loadNote(id);
       }

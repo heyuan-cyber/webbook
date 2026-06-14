@@ -31,10 +31,25 @@ export function AuthProviderComponent({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    provider.getSession().then((s) => {
+    let done = false;
+    const finish = (s: Session | null) => {
+      if (done) return;
+      done = true;
       setSession(s);
       setLoading(false);
-    });
+    };
+    const timeout = window.setTimeout(() => finish(null), 4000);
+    provider
+      .getSession()
+      .then((s) => {
+        window.clearTimeout(timeout);
+        finish(s);
+      })
+      .catch(() => {
+        window.clearTimeout(timeout);
+        finish(null);
+      });
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const value: AuthState = {
