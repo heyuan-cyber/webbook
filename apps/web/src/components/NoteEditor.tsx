@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import type { Block } from '@webbook/shared';
+import type { Block, NoteVisibility } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useNotesStore } from '@/store/useNotesStore';
@@ -113,13 +113,19 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
             <select
               value={activeNote.visibility}
               onChange={(e) =>
-                setActiveVisibility(e.target.value as 'public' | 'private')
+                setActiveVisibility(e.target.value as NoteVisibility)
               }
             >
-              <option value="private">🔒 仅我</option>
-              <option value="public">🌐 公开</option>
+              <option value="private">🔒 仅自己</option>
+              <option value="circle">👥 圈子可见</option>
+              <option value="public">🌐 完全公开</option>
             </select>
           </label>
+        )}
+        {(activeNote.visibility === 'public' || activeNote.visibility === 'circle') && (
+          <span className="muted" style={{ fontSize: '0.85rem' }}>
+            {activeNote.visibility === 'public' ? '已公开' : '圈子成员可读'}
+          </span>
         )}
         {activeNote.visibility === 'public' && (
           <Link

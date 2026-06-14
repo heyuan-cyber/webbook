@@ -8,3 +8,4 @@ export * from './comment.js';
 export * from './circle.js';
 export * from './paths.js';
 export * from './settings.js';
+export * from './migrateLegacy.js';

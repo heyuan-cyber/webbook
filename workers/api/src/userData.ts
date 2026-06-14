@@ -9,13 +9,23 @@ import {
   USER_TREE_PATH,
 } from '@webbook/shared';
 import { registerUser } from './usersRegistry';
+import { isTreeEmpty } from '@webbook/shared';
+
+/** 旧版全局数据在 feed / 管理后台中的 ownerId */
+export const LEGACY_OWNER_ID = 'legacy';
+
+export function isLegacyOwner(ownerId: string): boolean {
+  return ownerId === LEGACY_OWNER_ID;
+}
 
 export async function loadUserTree(env: Env, userId: string): Promise<NoteTree> {
   const path = USER_TREE_PATH(userId);
   let raw = await getFile(env, path);
-  if (!raw) {
-    raw = await getFile(env, LEGACY_TREE_PATH);
+  if (raw) {
+    const tree = JSON.parse(raw) as NoteTree;
+    if (!isTreeEmpty(tree)) return tree;
   }
+  raw = await getFile(env, LEGACY_TREE_PATH);
   return raw
     ? (JSON.parse(raw) as NoteTree)
     : { schemaVersion: 1, roots: [] };
@@ -66,7 +76,38 @@ export async function saveUserNote(
 }
 
 export async function deleteUserNote(env: Env, userId: string, noteId: string): Promise<void> {
+  if (isLegacyOwner(userId)) {
+    await deleteLegacyNote(env, noteId);
+    return;
+  }
   await deleteFile(env, USER_NOTE_PATH(userId, noteId), `user ${userId}: delete note ${noteId}`);
+}
+
+export async function loadLegacyTree(env: Env): Promise<NoteTree> {
+  const raw = await getFile(env, LEGACY_TREE_PATH);
+  return raw ? (JSON.parse(raw) as NoteTree) : { schemaVersion: 1, roots: [] };
+}
+
+export async function saveLegacyTree(env: Env, tree: NoteTree): Promise<void> {
+  await putFile(
+    env,
+    LEGACY_TREE_PATH,
+    JSON.stringify(tree, null, 2),
+    'legacy: update tree',
+  );
+}
+
+export async function saveLegacyNote(env: Env, note: Note): Promise<void> {
+  await putFile(
+    env,
+    LEGACY_NOTE_PATH(note.id),
+    JSON.stringify(note, null, 2),
+    `legacy: update note ${note.id}`,
+  );
+}
+
+export async function deleteLegacyNote(env: Env, noteId: string): Promise<void> {
+  await deleteFile(env, LEGACY_NOTE_PATH(noteId), `legacy: delete note ${noteId}`);
 }
 
 export async function loadUserNoteAtSha(

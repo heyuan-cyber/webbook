@@ -1,4 +1,4 @@
-import type { NoteTree, TreeNode } from '@webbook/shared';
+import type { NoteTree, TreeNode, TreeNodeVisibility } from '@webbook/shared';
 
 /** 过滤树：仅保留 public 笔记及通向它们的文件夹 */
 export function filterPublicTree(tree: NoteTree): NoteTree {
@@ -24,7 +24,7 @@ function filterNodes(nodes: TreeNode[]): TreeNode[] {
 export function syncNoteVisibility(
   tree: NoteTree,
   noteId: string,
-  visibility: 'public' | 'private',
+  visibility: TreeNodeVisibility,
 ): NoteTree {
   return {
     ...tree,
@@ -35,7 +35,7 @@ export function syncNoteVisibility(
 function patchVisibility(
   nodes: TreeNode[],
   noteId: string,
-  visibility: 'public' | 'private',
+  visibility: TreeNodeVisibility,
 ): TreeNode[] {
   return nodes.map((n) => {
     if (n.kind === 'note' && (n.noteId ?? n.id) === noteId) {
@@ -46,4 +46,23 @@ function patchVisibility(
     }
     return n;
   });
+}
+
+/** 从树中移除指定笔记节点（含空文件夹清理） */
+export function removeNoteFromTree(tree: NoteTree, noteId: string): NoteTree {
+  return { ...tree, roots: removeNoteNodes(tree.roots, noteId) };
+}
+
+function removeNoteNodes(nodes: TreeNode[], noteId: string): TreeNode[] {
+  const out: TreeNode[] = [];
+  for (const n of nodes) {
+    if (n.kind === 'note' && (n.noteId ?? n.id) === noteId) continue;
+    if (n.kind === 'folder') {
+      const children = n.children ? removeNoteNodes(n.children, noteId) : [];
+      if (children.length > 0) out.push({ ...n, children });
+      continue;
+    }
+    out.push(n);
+  }
+  return out;
 }

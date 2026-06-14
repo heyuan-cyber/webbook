@@ -4,7 +4,7 @@ import type { PublicFeedItem } from '@webbook/shared';
 import { apiClient } from '@/lib/api';
 import { blogPostPath } from '@/lib/blog';
 
-export function UserBlogPage({ userId }: { userId: string }) {
+export function UserBlogPage({ userId, embedded = false }: { userId: string; embedded?: boolean }) {
   const [ownerEmail, setOwnerEmail] = useState('');
   const [posts, setPosts] = useState<PublicFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,19 +24,21 @@ export function UserBlogPage({ userId }: { userId: string }) {
   }, [userId]);
 
   return (
-    <div className="blog-shell">
-      <header className="blog-header">
-        <div className="blog-header-inner">
-          <h1>{ownerEmail || '个人博客'}</h1>
-          <p className="muted">公开笔记</p>
-          <nav className="blog-nav">
-            <Link to="/app">进入笔记本</Link>
-            <Link to="/app/circles">圈子</Link>
-            <Link to="/blog">博主目录</Link>
-          </nav>
-        </div>
-      </header>
-      <main className="blog-main">
+    <div className={embedded ? 'blog-embedded' : 'blog-shell'}>
+      {!embedded && (
+        <header className="blog-header">
+          <div className="blog-header-inner">
+            <h1>{ownerEmail || '个人博客'}</h1>
+            <p className="muted">完全公开的笔记</p>
+            <nav className="blog-nav">
+              <Link to="/app">进入笔记本</Link>
+              <Link to="/app/circles">圈子</Link>
+              <Link to="/blog">博客</Link>
+            </nav>
+          </div>
+        </header>
+      )}
+      <main className={embedded ? '' : 'blog-main'}>
         {loading && <p className="muted">加载中…</p>}
         {error && <p className="auth-error">{error}</p>}
         {!loading && !error && posts.length === 0 && (

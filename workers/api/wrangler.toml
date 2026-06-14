@@ -11,6 +11,8 @@ AI_PROVIDER = "deepseek"
 AI_BASE_URL = "https://api.deepseek.com"
 AI_MODEL = "deepseek-v4-flash"
 SUPABASE_URL = "https://sfetitwfmnutiweqyfnq.supabase.co"
+# 与前端 VITE_ADMIN_EMAIL 保持一致
+ADMIN_EMAIL = "1060707057@qq.com"
 # 联网简报：国内 RSS 为主，国际为辅（逗号分隔）
 RSS_FEEDS_DOMESTIC = "https://www.ithome.com/rss/,https://www.solidot.org/index.rss,https://feeds.feedburner.com/sspai"
 RSS_FEEDS_INTERNATIONAL = "https://hnrss.org/frontpage,http://feeds.bbci.co.uk/zhongwen/simp/rss.xml"

@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "dev:api": "npm run dev --workspace workers/api",
     "init:github": "node scripts/init-github-data.mjs",
+    "migrate:legacy": "npm run build --workspace packages/shared && node scripts/migrate-legacy-data.mjs",
     "android:init": "node scripts/android-init.mjs",
     "android:apk": "node scripts/android-apk.mjs",
     "android:fingerprint": "node scripts/android-fingerprint.mjs",

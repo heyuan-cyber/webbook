@@ -1,4 +1,4 @@
-import type { Circle, CircleShareStatus, CircleSummary, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings } from '@webbook/shared';
+import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings } from '@webbook/shared';
 import { normalizeNote } from '@webbook/shared';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -49,6 +49,7 @@ export const apiClient = {
     return normalizeNote(raw);
   },
   loadPublicFeed: () => http<{ posts: PublicFeedItem[] }>('/api/public/feed'),
+  loadSquareFeed: () => http<{ posts: PublicFeedItem[] }>('/api/public/square'),
   loadBloggers: () => http<{ bloggers: BloggerSummary[] }>('/api/public/bloggers'),
   loadUserPublicFeed: (userId: string) =>
     http<{ ownerId: string; ownerEmail: string; posts: PublicFeedItem[] }>(
@@ -131,11 +132,26 @@ export const apiClient = {
 
   listCircles: (token: string) =>
     http<{ circles: CircleSummary[] }>('/api/circles', { token }),
-  createCircle: (name: string, token: string) =>
+  discoverCircles: (token: string) =>
+    http<{ circles: DiscoverableCircle[] }>('/api/circles/discover', { token }),
+  listMyJoinRequests: (token: string) =>
+    http<{ requests: { circle: DiscoverableCircle; requestedAt: string }[] }>(
+      '/api/circles/join-requests',
+      { token },
+    ),
+  createCircle: (
+    payload: {
+      name: string;
+      description?: string;
+      visibility?: CircleVisibility;
+      joinPolicy?: CircleJoinPolicy;
+    },
+    token: string,
+  ) =>
     http<Circle>('/api/circles', {
       method: 'POST',
       token,
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(payload),
     }),
   listCircleInvites: (token: string) =>
     http<{ invites: { circle: CircleSummary; invitedAt: string }[] }>('/api/circles/invites', {
@@ -157,12 +173,78 @@ export const apiClient = {
     }),
   acceptCircleInvite: (id: string, token: string) =>
     http<Circle>(`/api/circles/${id}/accept`, { method: 'POST', token }),
-  updateCircleShare: (id: string, shareStatus: CircleShareStatus, token: string) =>
-    http<Circle>(`/api/circles/${id}/share`, {
+  joinCircle: (id: string, token: string) =>
+    http<Circle>(`/api/circles/${id}/join`, { method: 'POST', token }),
+  requestJoinCircle: (id: string, token: string) =>
+    http<Circle>(`/api/circles/${id}/request`, { method: 'POST', token }),
+  updateCircleSettings: (
+    id: string,
+    patch: {
+      name?: string;
+      description?: string;
+      visibility?: CircleVisibility;
+      joinPolicy?: CircleJoinPolicy;
+    },
+    token: string,
+  ) =>
+    http<Circle>(`/api/circles/${id}/settings`, {
       method: 'PATCH',
       token,
-      body: JSON.stringify({ shareStatus }),
+      body: JSON.stringify(patch),
     }),
+  approveJoinRequest: (circleId: string, userId: string, token: string) =>
+    http<Circle>(`/api/circles/${circleId}/requests/${userId}/approve`, {
+      method: 'POST',
+      token,
+    }),
+  rejectJoinRequest: (circleId: string, userId: string, token: string) =>
+    http<Circle>(`/api/circles/${circleId}/requests/${userId}/reject`, {
+      method: 'POST',
+      token,
+    }),
+  updateCircleCollab: (id: string, collabEdit: boolean, token: string) =>
+    http<Circle>(`/api/circles/${id}/collab`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({ collabEdit }),
+    }),
+  loadCircleTree: (id: string, token: string) =>
+    http<NoteTree>(`/api/circles/${id}/tree`, { token }),
+  saveCircleTree: (id: string, tree: NoteTree, token: string) =>
+    http<{ ok: true }>(`/api/circles/${id}/tree`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(tree),
+    }),
+  loadCircleNote: async (circleId: string, noteId: string, token: string) => {
+    const raw = await http<Note>(`/api/circles/${circleId}/notes/${noteId}`, { token });
+    return normalizeNote(raw);
+  },
+  saveCircleNote: (circleId: string, note: Note, token: string) =>
+    http<{ ok: true }>(`/api/circles/${circleId}/notes/${note.id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(note),
+    }),
+  deleteCircleNote: (circleId: string, noteId: string, token: string) =>
+    http<{ ok: true }>(`/api/circles/${circleId}/notes/${noteId}`, {
+      method: 'DELETE',
+      token,
+    }),
+  loadCircleMemberBlogNote: async (
+    circleId: string,
+    ownerId: string,
+    noteId: string,
+    token: string,
+  ) => {
+    const res = await http<{
+      note: Note;
+      ownerId: string;
+      ownerEmail: string;
+      circleId: string;
+    }>(`/api/circles/${circleId}/member-blog/${ownerId}/${noteId}`, { token });
+    return { ...res, note: normalizeNote(res.note) };
+  },
   leaveCircle: (circleId: string, userId: string, token: string) =>
     http<Circle>(`/api/circles/${circleId}/members/${userId}`, {
       method: 'DELETE',
@@ -210,5 +292,23 @@ export const apiClient = {
       method: 'PUT',
       token,
       body: JSON.stringify(config),
+    }),
+  adminPublicNotes: (token: string) =>
+    http<{ posts: PublicFeedItem[] }>('/api/admin/public-notes', { token }),
+  adminSetNoteVisibility: (
+    token: string,
+    ownerId: string,
+    noteId: string,
+    visibility: 'private' | 'public' | 'circle',
+  ) =>
+    http<{ ok: true }>(`/api/admin/notes/${ownerId}/${noteId}`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({ visibility }),
+    }),
+  adminDeleteNote: (token: string, ownerId: string, noteId: string) =>
+    http<{ ok: true }>(`/api/admin/notes/${ownerId}/${noteId}`, {
+      method: 'DELETE',
+      token,
     }),
 };

@@ -2,7 +2,7 @@ export const TREE_SCHEMA_VERSION = 1;
 
 export type TreeNodeKind = 'folder' | 'note';
 
-export type TreeNodeVisibility = 'public' | 'private';
+export type TreeNodeVisibility = 'private' | 'circle' | 'public';
 
 export interface TreeNode {
   id: string;

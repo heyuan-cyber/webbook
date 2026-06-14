@@ -2,11 +2,23 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { TreeSidebar } from '@/components/TreeSidebar';
-import type { AIStrategy, SystemSettings } from '@webbook/shared';
+import type { AIStrategy, PublicFeedItem, SystemSettings } from '@webbook/shared';
 import { apiClient } from '@/lib/api';
 import { toast } from '@/store/useToastStore';
 
-type Tab = 'tree' | 'ai' | 'users' | 'settings';
+type Tab = 'tree' | 'public' | 'ai' | 'users' | 'settings';
+
+function adminApiError(fallback: string) {
+  return (err: unknown) => {
+    const is401 = err instanceof Error && /\b401\b/.test(err.message);
+    toast(
+      'error',
+      is401
+        ? '管理员 API 权限不足：请确认 Worker 已配置 ADMIN_EMAIL（与 VITE_ADMIN_EMAIL 一致）'
+        : fallback,
+    );
+  };
+}
 
 export function AdminPanel() {
   const { isAdmin, isGuest, session } = useAuth();
@@ -45,6 +57,9 @@ export function AdminPanel() {
           <button className={tab === 'tree' ? 'active' : ''} onClick={() => setTab('tree')}>
             目录管理
           </button>
+          <button className={tab === 'public' ? 'active' : ''} onClick={() => setTab('public')}>
+            公开内容
+          </button>
           <button className={tab === 'ai' ? 'active' : ''} onClick={() => setTab('ai')}>
             AI 策略
           </button>
@@ -63,11 +78,137 @@ export function AdminPanel() {
               <TreeSidebar editable />
             </div>
           )}
+          {tab === 'public' && session?.token && <PublicContentPanel token={session.token} />}
           {tab === 'ai' && session?.token && <AIStrategyPanel token={session.token} />}
           {tab === 'users' && session?.token && <UsersPanel token={session.token} />}
           {tab === 'settings' && session?.token && <SettingsPanel token={session.token} />}
         </section>
       </div>
+    </div>
+  );
+}
+
+function PublicContentPanel({ token }: { token: string }) {
+  const [posts, setPosts] = useState<PublicFeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function reload() {
+    const res = await apiClient.adminPublicNotes(token);
+    setPosts(res.posts);
+  }
+
+  useEffect(() => {
+    void reload()
+      .catch(adminApiError('加载公开内容失败'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  async function makePrivate(post: PublicFeedItem) {
+    const key = `${post.ownerId}:${post.noteId}`;
+    if (!window.confirm(`将「${post.title}」设为私密？将从博客广场下架。`)) return;
+    setBusyId(key);
+    try {
+      await apiClient.adminSetNoteVisibility(token, post.ownerId, post.noteId, 'private');
+      toast('success', '已设为私密');
+      await reload();
+    } catch {
+      toast('error', '操作失败');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removePost(post: PublicFeedItem) {
+    const key = `${post.ownerId}:${post.noteId}`;
+    if (
+      !window.confirm(
+        `确定删除「${post.title}」？将永久移除笔记文件与作者目录中的条目（Git 历史可找回）。`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(key);
+    try {
+      await apiClient.adminDeleteNote(token, post.ownerId, post.noteId);
+      toast('success', '已删除');
+      await reload();
+    } catch {
+      toast('error', '删除失败');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (loading) return <p className="muted">加载中…</p>;
+
+  return (
+    <div>
+      <h2>公开内容审核</h2>
+      <p className="muted">
+        全站完全公开（public）的博客文章。可下架为私密或删除。圈子可见（circle）不在此列表。
+      </p>
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>标题</th>
+            <th>作者</th>
+            <th>更新</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {posts.length === 0 && (
+            <tr>
+              <td colSpan={4} className="muted">
+                暂无公开文章
+              </td>
+            </tr>
+          )}
+          {posts.map((post) => {
+            const key = `${post.ownerId}:${post.noteId}`;
+            const busy = busyId === key;
+            return (
+              <tr key={key}>
+                <td>
+                  <strong>{post.title}</strong>
+                  {post.summary && <div className="muted">{post.summary}</div>}
+                </td>
+                <td>{post.ownerEmail}</td>
+                <td className="muted">
+                  {post.updatedAt ? new Date(post.updatedAt).toLocaleString() : '—'}
+                </td>
+                <td className="admin-actions-cell">
+                  <Link
+                    to={`/blog/${post.ownerId}/${post.noteId}`}
+                    className="btn btn-ghost btn-sm"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    预览
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={() => void makePrivate(post)}
+                  >
+                    设为私密
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={() => void removePost(post)}
+                  >
+                    删除
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -81,7 +222,7 @@ function AIStrategyPanel({ token }: { token: string }) {
     void apiClient
       .adminLoadAiStrategies(token)
       .then((res) => setStrategies(res.strategies))
-      .catch(() => toast('error', '加载策略失败'))
+      .catch(adminApiError('加载策略失败'))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -146,7 +287,7 @@ function UsersPanel({ token }: { token: string }) {
     void apiClient
       .adminUsers(token)
       .then((res) => setUsers(res.users))
-      .catch(() => toast('error', '加载用户失败'))
+      .catch(adminApiError('加载用户失败'))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -214,7 +355,7 @@ function SettingsPanel({ token }: { token: string }) {
     void apiClient
       .adminLoadSettings(token)
       .then(setSettings)
-      .catch(() => toast('error', '加载设置失败'))
+      .catch(adminApiError('加载设置失败'))
       .finally(() => setLoading(false));
   }, [token]);
 

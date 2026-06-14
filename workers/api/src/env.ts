@@ -10,6 +10,8 @@ export interface Env {
   AI_BASE_URL: string;
   AI_MODEL: string;
   SUPABASE_URL: string;
+  /** 与前端 VITE_ADMIN_EMAIL 一致；匹配登录邮箱即视为 admin（无需 Supabase metadata） */
+  ADMIN_EMAIL?: string;
   /** 逗号分隔 RSS URL（兼容旧配置，等同国内源） */
   RSS_FEEDS?: string;
   /** 国内 RSS 源 */

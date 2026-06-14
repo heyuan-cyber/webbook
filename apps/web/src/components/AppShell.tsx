@@ -55,8 +55,8 @@ export function AppShell({
             </span>
           </div>
           <div className="topbar-right">
-            <Link className="btn btn-ghost" to={isGuest ? '/blog' : '/blog/me'}>
-              {isGuest ? '博客' : '我的博客'}
+            <Link className="btn btn-ghost" to="/blog">
+              博客
             </Link>
             {!isGuest && (
               <>

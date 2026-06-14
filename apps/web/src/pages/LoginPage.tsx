@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { localStore } from '@/lib/storage';
 import { apiClient } from '@/lib/api';
-import { createEmptyTree } from '@webbook/shared';
 import { supabase } from '@/auth/supabaseProvider';
 
 export function LoginPage() {
@@ -40,9 +39,8 @@ export function LoginPage() {
             const localTree = await localStore.loadTree();
             if (localTree.roots.length > 0) {
               await apiClient.saveTree(localTree, token);
-            } else {
-              await apiClient.saveTree(createEmptyTree(), token);
             }
+            // 本地 tree 为空时不覆盖云端（避免冲掉 legacy 目录）
           }
         }
       }

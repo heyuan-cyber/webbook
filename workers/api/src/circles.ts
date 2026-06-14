@@ -2,17 +2,69 @@ import type { Env } from './env';
 import { getFile, putFile } from './github';
 import type {
   Circle,
+  CircleJoinPolicy,
   CircleMember,
-  CircleShareStatus,
   CircleSummary,
+  CircleVisibility,
+  DiscoverableCircle,
 } from '@webbook/shared';
-import { CIRCLE_SCHEMA_VERSION, CIRCLE_PATH, USER_CIRCLES_INDEX_PATH } from '@webbook/shared';
+import {
+  CIRCLE_SCHEMA_VERSION,
+  CIRCLE_PATH,
+  PUBLIC_CIRCLES_INDEX_PATH,
+  USER_CIRCLES_INDEX_PATH,
+} from '@webbook/shared';
 import { buildCircleFeed } from './publicFeed';
+import { loadUserNote } from './userData';
+import { getUserEmail } from './usersRegistry';
 
 interface UserCirclesIndex {
   schemaVersion: number;
   owned: string[];
   memberOf: string[];
+}
+
+interface PublicCirclesIndex {
+  schemaVersion: number;
+  ids: string[];
+}
+
+type LegacyMember = CircleMember & { shareStatus?: 'none' | 'public_feed' };
+type LegacyCircle = Circle & {
+  members: LegacyMember[];
+  visibility?: CircleVisibility;
+  joinPolicy?: CircleJoinPolicy;
+  pendingJoinRequests?: Circle['pendingJoinRequests'];
+};
+
+function normalizeMember(raw: LegacyMember): CircleMember {
+  const collabEdit =
+    raw.collabEdit ??
+    (raw.role === 'owner' ? true : raw.shareStatus === 'public_feed');
+  return {
+    userId: raw.userId,
+    email: raw.email,
+    role: raw.role,
+    collabEdit,
+    joinedAt: raw.joinedAt,
+  };
+}
+
+function normalizeCircle(raw: LegacyCircle): Circle {
+  return {
+    schemaVersion: CIRCLE_SCHEMA_VERSION,
+    id: raw.id,
+    name: raw.name,
+    description: raw.description ?? '',
+    visibility: raw.visibility ?? 'private',
+    joinPolicy: raw.joinPolicy ?? 'approval',
+    ownerId: raw.ownerId,
+    members: raw.members.map(normalizeMember),
+    pendingInvites: raw.pendingInvites ?? [],
+    pendingJoinRequests: raw.pendingJoinRequests ?? [],
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+  };
 }
 
 async function loadUserCirclesIndex(env: Env, userId: string): Promise<UserCirclesIndex> {
@@ -35,10 +87,38 @@ async function saveUserCirclesIndex(env: Env, userId: string, index: UserCircles
   );
 }
 
+async function loadPublicCirclesIndex(env: Env): Promise<PublicCirclesIndex> {
+  const raw = await getFile(env, PUBLIC_CIRCLES_INDEX_PATH);
+  if (!raw) return { schemaVersion: 1, ids: [] };
+  const data = JSON.parse(raw) as PublicCirclesIndex;
+  return { schemaVersion: 1, ids: data.ids ?? [] };
+}
+
+async function savePublicCirclesIndex(env: Env, index: PublicCirclesIndex) {
+  await putFile(
+    env,
+    PUBLIC_CIRCLES_INDEX_PATH,
+    JSON.stringify(index, null, 2),
+    'public circles index',
+  );
+}
+
+async function syncPublicCirclesIndex(env: Env, circle: Circle) {
+  const index = await loadPublicCirclesIndex(env);
+  const set = new Set(index.ids);
+  if (circle.visibility === 'public') {
+    set.add(circle.id);
+  } else {
+    set.delete(circle.id);
+  }
+  index.ids = [...set];
+  await savePublicCirclesIndex(env, index);
+}
+
 export async function loadCircle(env: Env, circleId: string): Promise<Circle | null> {
   const raw = await getFile(env, CIRCLE_PATH(circleId));
   if (!raw) return null;
-  return JSON.parse(raw) as Circle;
+  return normalizeCircle(JSON.parse(raw) as LegacyCircle);
 }
 
 async function saveCircle(env: Env, circle: Circle): Promise<void> {
@@ -49,6 +129,7 @@ async function saveCircle(env: Env, circle: Circle): Promise<void> {
     JSON.stringify(circle, null, 2),
     `circle: ${circle.name}`,
   );
+  await syncPublicCirclesIndex(env, circle);
 }
 
 function summarize(circle: Circle, userId: string): CircleSummary {
@@ -58,9 +139,46 @@ function summarize(circle: Circle, userId: string): CircleSummary {
     name: circle.name,
     ownerId: circle.ownerId,
     memberCount: circle.members.length,
+    visibility: circle.visibility,
+    joinPolicy: circle.joinPolicy,
+    description: circle.description,
     myRole: me?.role,
-    myShareStatus: me?.shareStatus,
+    myCollabEdit: me?.collabEdit,
   };
+}
+
+export function isMember(circle: Circle, userId: string): boolean {
+  return circle.members.some((m) => m.userId === userId);
+}
+
+export function canEditCircleNotes(circle: Circle, userId: string): boolean {
+  const me = circle.members.find((m) => m.userId === userId);
+  if (!me) return false;
+  return me.role === 'owner' || me.collabEdit;
+}
+
+async function addMember(
+  env: Env,
+  circle: Circle,
+  userId: string,
+  email: string,
+): Promise<Circle> {
+  if (isMember(circle, userId)) return circle;
+  const normalized = email.trim().toLowerCase();
+  circle.members.push({
+    userId,
+    email: normalized,
+    role: 'member',
+    collabEdit: false,
+    joinedAt: new Date().toISOString(),
+  });
+  circle.pendingJoinRequests = circle.pendingJoinRequests.filter((r) => r.userId !== userId);
+  await saveCircle(env, circle);
+
+  const idx = await loadUserCirclesIndex(env, userId);
+  if (!idx.memberOf.includes(circle.id)) idx.memberOf.push(circle.id);
+  await saveUserCirclesIndex(env, userId, idx);
+  return circle;
 }
 
 export async function listMyCircles(env: Env, userId: string): Promise<CircleSummary[]> {
@@ -74,11 +192,71 @@ export async function listMyCircles(env: Env, userId: string): Promise<CircleSum
   return out;
 }
 
+export async function listDiscoverableCircles(
+  env: Env,
+  userId: string,
+): Promise<DiscoverableCircle[]> {
+  await rebuildPublicCirclesIndex(env);
+  const index = await loadPublicCirclesIndex(env);
+  const out: DiscoverableCircle[] = [];
+  for (const id of index.ids) {
+    const circle = await loadCircle(env, id);
+    if (!circle || circle.visibility !== 'public') continue;
+    const ownerEmail = await getUserEmail(env, circle.ownerId);
+    let myStatus: DiscoverableCircle['myStatus'] = 'none';
+    if (circle.ownerId === userId) myStatus = 'owner';
+    else if (isMember(circle, userId)) myStatus = 'member';
+    else if (circle.pendingJoinRequests.some((r) => r.userId === userId)) myStatus = 'pending';
+    out.push({
+      id: circle.id,
+      name: circle.name,
+      description: circle.description ?? '',
+      memberCount: circle.members.length,
+      joinPolicy: circle.joinPolicy,
+      ownerId: circle.ownerId,
+      ownerEmail,
+      myStatus,
+    });
+  }
+  return out.sort((a, b) => b.memberCount - a.memberCount);
+}
+
+export async function listMyJoinRequests(env: Env, userId: string) {
+  const index = await loadPublicCirclesIndex(env);
+  const out: { circle: DiscoverableCircle; requestedAt: string }[] = [];
+  for (const id of index.ids) {
+    const circle = await loadCircle(env, id);
+    if (!circle) continue;
+    const req = circle.pendingJoinRequests.find((r) => r.userId === userId);
+    if (!req) continue;
+    const ownerEmail = await getUserEmail(env, circle.ownerId);
+    out.push({
+      circle: {
+        id: circle.id,
+        name: circle.name,
+        description: circle.description ?? '',
+        memberCount: circle.members.length,
+        joinPolicy: circle.joinPolicy,
+        ownerId: circle.ownerId,
+        ownerEmail,
+        myStatus: 'pending',
+      },
+      requestedAt: req.requestedAt,
+    });
+  }
+  return out;
+}
+
 export async function createCircle(
   env: Env,
   ownerId: string,
   ownerEmail: string,
   name: string,
+  opts?: {
+    description?: string;
+    visibility?: CircleVisibility;
+    joinPolicy?: CircleJoinPolicy;
+  },
 ): Promise<Circle> {
   const trimmed = name.trim().slice(0, 40);
   if (!trimmed) throw new Error('name required');
@@ -89,16 +267,20 @@ export async function createCircle(
     userId: ownerId,
     email: ownerEmail,
     role: 'owner',
-    shareStatus: 'public_feed',
+    collabEdit: true,
     joinedAt: now,
   };
   const circle: Circle = {
     schemaVersion: CIRCLE_SCHEMA_VERSION,
     id,
     name: trimmed,
+    description: (opts?.description ?? '').trim().slice(0, 200),
+    visibility: opts?.visibility ?? 'private',
+    joinPolicy: opts?.joinPolicy ?? 'approval',
     ownerId,
     members: [ownerMember],
     pendingInvites: [],
+    pendingJoinRequests: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -109,8 +291,100 @@ export async function createCircle(
   return circle;
 }
 
-export function isMember(circle: Circle, userId: string): boolean {
-  return circle.members.some((m) => m.userId === userId);
+export async function updateCircleSettings(
+  env: Env,
+  circleId: string,
+  ownerId: string,
+  patch: {
+    name?: string;
+    description?: string;
+    visibility?: CircleVisibility;
+    joinPolicy?: CircleJoinPolicy;
+  },
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (circle.ownerId !== ownerId) throw new Error('forbidden');
+
+  if (patch.name !== undefined) {
+    const trimmed = patch.name.trim().slice(0, 40);
+    if (!trimmed) throw new Error('name required');
+    circle.name = trimmed;
+  }
+  if (patch.description !== undefined) {
+    circle.description = patch.description.trim().slice(0, 200);
+  }
+  if (patch.visibility !== undefined) circle.visibility = patch.visibility;
+  if (patch.joinPolicy !== undefined) circle.joinPolicy = patch.joinPolicy;
+
+  await saveCircle(env, circle);
+  return circle;
+}
+
+export async function joinPublicCircle(
+  env: Env,
+  circleId: string,
+  userId: string,
+  email: string,
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (circle.visibility !== 'public') throw new Error('not public');
+  if (circle.joinPolicy !== 'open') throw new Error('approval required');
+  if (isMember(circle, userId)) return circle;
+  return addMember(env, circle, userId, email);
+}
+
+export async function requestJoinCircle(
+  env: Env,
+  circleId: string,
+  userId: string,
+  email: string,
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (circle.visibility !== 'public') throw new Error('not public');
+  if (circle.joinPolicy !== 'approval') throw new Error('open join');
+  if (isMember(circle, userId)) return circle;
+  if (circle.pendingJoinRequests.some((r) => r.userId === userId)) return circle;
+
+  circle.pendingJoinRequests.push({
+    userId,
+    email: email.trim().toLowerCase(),
+    requestedAt: new Date().toISOString(),
+  });
+  await saveCircle(env, circle);
+  return circle;
+}
+
+export async function approveJoinRequest(
+  env: Env,
+  circleId: string,
+  ownerId: string,
+  targetUserId: string,
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (circle.ownerId !== ownerId) throw new Error('forbidden');
+  const req = circle.pendingJoinRequests.find((r) => r.userId === targetUserId);
+  if (!req) throw new Error('no request');
+  return addMember(env, circle, targetUserId, req.email);
+}
+
+export async function rejectJoinRequest(
+  env: Env,
+  circleId: string,
+  ownerId: string,
+  targetUserId: string,
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (circle.ownerId !== ownerId) throw new Error('forbidden');
+  circle.pendingJoinRequests = circle.pendingJoinRequests.filter(
+    (r) => r.userId !== targetUserId,
+  );
+  await saveCircle(env, circle);
+  return circle;
 }
 
 export async function inviteToCircle(
@@ -171,35 +445,23 @@ export async function acceptInvite(
   const normalized = email.trim().toLowerCase();
   const invIdx = circle.pendingInvites.findIndex((i) => i.email.toLowerCase() === normalized);
   if (invIdx < 0) throw new Error('no invite');
-  if (isMember(circle, userId)) return circle;
-
   circle.pendingInvites.splice(invIdx, 1);
-  circle.members.push({
-    userId,
-    email: normalized,
-    role: 'member',
-    shareStatus: 'public_feed',
-    joinedAt: new Date().toISOString(),
-  });
   await saveCircle(env, circle);
-
-  const idx = await loadUserCirclesIndex(env, userId);
-  if (!idx.memberOf.includes(circleId)) idx.memberOf.push(circleId);
-  await saveUserCirclesIndex(env, userId, idx);
-  return circle;
+  return addMember(env, circle, userId, email);
 }
 
-export async function updateMyShareStatus(
+export async function updateMyCollabEdit(
   env: Env,
   circleId: string,
   userId: string,
-  shareStatus: CircleShareStatus,
+  collabEdit: boolean,
 ): Promise<Circle> {
   const circle = await loadCircle(env, circleId);
   if (!circle) throw new Error('not found');
   const member = circle.members.find((m) => m.userId === userId);
   if (!member) throw new Error('not member');
-  member.shareStatus = shareStatus;
+  if (member.role === 'owner') throw new Error('owner always editable');
+  member.collabEdit = collabEdit;
   await saveCircle(env, circle);
   return circle;
 }
@@ -230,12 +492,8 @@ export async function getCircleFeed(env: Env, circleId: string, viewerId: string
   if (!circle) throw new Error('not found');
   if (!isMember(circle, viewerId)) throw new Error('forbidden');
 
-  const shareMap = new Map<string, boolean>();
-  for (const m of circle.members) {
-    shareMap.set(m.userId, m.shareStatus === 'public_feed');
-  }
   const memberIds = circle.members.map((m) => m.userId);
-  const feed = await buildCircleFeed(env, memberIds, shareMap);
+  const feed = await buildCircleFeed(env, memberIds);
   return { circle: summarize(circle, viewerId), feed, members: circle.members };
 }
 
@@ -244,4 +502,60 @@ export async function getCircleDetail(env: Env, circleId: string, viewerId: stri
   if (!circle) throw new Error('not found');
   if (!isMember(circle, viewerId)) throw new Error('forbidden');
   return circle;
+}
+
+export async function getCircleMemberBlogNote(
+  env: Env,
+  circleId: string,
+  viewerId: string,
+  ownerId: string,
+  noteId: string,
+) {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (!isMember(circle, viewerId)) throw new Error('forbidden');
+  if (!circle.members.some((m) => m.userId === ownerId)) throw new Error('not member note');
+
+  const note = await loadUserNote(env, ownerId, noteId);
+  if (!note) throw new Error('not found');
+  if (note.visibility !== 'public' && note.visibility !== 'circle') {
+    throw new Error('not found');
+  }
+  const email = circle.members.find((m) => m.userId === ownerId)?.email ?? ownerId;
+  return { note, ownerId, ownerEmail: email, circleId };
+}
+
+export async function assertCircleEditor(
+  env: Env,
+  circleId: string,
+  userId: string,
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (!canEditCircleNotes(circle, userId)) throw new Error('forbidden');
+  return circle;
+}
+
+export async function assertCircleMember(
+  env: Env,
+  circleId: string,
+  userId: string,
+): Promise<Circle> {
+  const circle = await loadCircle(env, circleId);
+  if (!circle) throw new Error('not found');
+  if (!isMember(circle, userId)) throw new Error('forbidden');
+  return circle;
+}
+
+/** 重建公开圈子索引（迁移用） */
+export async function rebuildPublicCirclesIndex(env: Env) {
+  const { listDirectory } = await import('./github');
+  const files = await listDirectory(env, 'data/meta/circles');
+  const ids: string[] = [];
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+    const circle = await loadCircle(env, file.replace(/\.json$/, ''));
+    if (circle?.visibility === 'public') ids.push(circle.id);
+  }
+  await savePublicCirclesIndex(env, { schemaVersion: 1, ids });
 }

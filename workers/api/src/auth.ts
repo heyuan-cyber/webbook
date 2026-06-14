@@ -25,8 +25,11 @@ export async function verifyUserToken(
     app_metadata?: { role?: string };
     user_metadata?: { role?: string };
   };
+  const adminEmail = env.ADMIN_EMAIL?.toLowerCase();
   const role =
-    user.app_metadata?.role === 'admin' || user.user_metadata?.role === 'admin'
+    user.app_metadata?.role === 'admin' ||
+    user.user_metadata?.role === 'admin' ||
+    (adminEmail && user.email?.toLowerCase() === adminEmail)
       ? 'admin'
       : 'user';
   return { id: user.id, email: user.email ?? '', role };

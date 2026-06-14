@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Block, Note, NoteTree, TreeNode } from '@webbook/shared';
+import type { Block, Note, NoteTree, TreeNode, NoteVisibility } from '@webbook/shared';
 import { createEmptyNote, createEmptyTree, findNode, normalizeNote } from '@webbook/shared';
 import { uid } from '@/lib/id';
 import { foldState } from '@/lib/storage';
@@ -33,7 +33,7 @@ interface NotesState {
 
   updateActiveBlocks: (blocks: Block[]) => void;
   setActiveTitle: (title: string) => void;
-  setActiveVisibility: (visibility: 'public' | 'private') => void;
+  setActiveVisibility: (visibility: NoteVisibility) => void;
 }
 
 export interface SearchHit {

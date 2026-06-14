@@ -4,12 +4,14 @@
 
 ## 线上地址
 
-| 页面 | URL | 说明 |
-|------|-----|------|
-| **入口站** | https://heyuan-cyber.github.io/ | 域名根导航（独立用户主页仓） |
-| 笔记本 | https://heyuan-cyber.github.io/webbook/app | 主应用 |
-| 公开博客 | https://heyuan-cyber.github.io/webbook/blog | `visibility: public` 的笔记 |
-| 管理后台 | https://heyuan-cyber.github.io/webbook/admin | 目录与策略 |
+
+| 页面      | URL                                                                                          | 说明                       |
+| ------- | -------------------------------------------------------------------------------------------- | ------------------------ |
+| **入口站** | [https://heyuan-cyber.github.io/](https://heyuan-cyber.github.io/)                           | 域名根导航（独立用户主页仓）           |
+| 笔记本     | [https://heyuan-cyber.github.io/webbook/app](https://heyuan-cyber.github.io/webbook/app)     | 主应用                      |
+| 公开博客    | [https://heyuan-cyber.github.io/webbook/blog](https://heyuan-cyber.github.io/webbook/blog)   | `visibility: public` 的笔记 |
+| 管理后台    | [https://heyuan-cyber.github.io/webbook/admin](https://heyuan-cyber.github.io/webbook/admin) | 目录与策略                    |
+
 
 入口站与 TWA 域名根配置见 **[user-pages/README.md](user-pages/README.md)**，部署：`npm run deploy:user-pages`。
 
@@ -61,6 +63,18 @@ npx wrangler secret put GITHUB_TOKEN     # 有 repo 写权限的 PAT
 # 在 wrangler.toml 的 [vars] 中设置 GITHUB_REPO / GITHUB_BRANCH
 ```
 
+**从旧版单用户数据恢复笔记**（`data/tree.json` → `data/users/{userId}/`）：
+
+```bash
+# 先 dry-run 看将合并多少篇
+npm run migrate:legacy -- --user-id=<Supabase用户UUID> --email=你的邮箱 --dry-run
+
+# 确认后执行（需 .env 中 GITHUB_TOKEN）
+npm run migrate:legacy -- --user-id=<UUID> --email=你的邮箱
+```
+
+登录用户打开笔记本时，若用户目录为空，API 也会**自动尝试**合并 legacy（`GET /api/tree`）。也可手动：`POST /api/migrate/legacy`（需登录）。
+
 ### 2. AI Provider（DeepSeek）
 
 ```bash
@@ -102,11 +116,13 @@ VITE_SUPABASE_ANON_KEY=...
 
 **产品需求**见 **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** — 可手写或与 AI 协作填写；后续据此对比现状并规划迭代。
 
-| 部署目标 | 命令 / 触发 | 产物 |
-|----------|-------------|------|
-| **应用** `/webbook/` | 推送到 `main` → `deploy.yml` | 笔记本、博客、PWA、APK 资源 |
-| **入口站** 域名根 | `npm run deploy:user-pages` 或改 `user-pages/**` | `index.html` + 根路径 assetlinks |
-| **API** | `cd workers/api && npx wrangler deploy` | 同步、鉴权、AI、图片上传 |
+
+| 部署目标               | 命令 / 触发                                        | 产物                            |
+| ------------------ | ---------------------------------------------- | ----------------------------- |
+| **应用** `/webbook/` | 推送到 `main` → `deploy.yml`                      | 笔记本、博客、PWA、APK 资源             |
+| **入口站** 域名根        | `npm run deploy:user-pages` 或改 `user-pages/`** | `index.html` + 根路径 assetlinks |
+| **API**            | `cd workers/api && npx wrangler deploy`        | 同步、鉴权、AI、图片上传                 |
+
 
 - **前端 → GitHub Pages**：推送到 `main` 触发 `.github/workflows/deploy.yml`
   - 在仓库 Settings → Pages 选择 GitHub Actions
@@ -130,3 +146,4 @@ VITE_SUPABASE_ANON_KEY=...
 - P1 基础体验 ✅ 键盘导航、图片上传、预览、搜索、toast
 - P2 博客 🚧 公开 `/blog` 列表与文章页（场景⑤ 基础）
 - Phase 3+ 🤖 提醒面板、历史版本、富文本进阶、账单、社交
+

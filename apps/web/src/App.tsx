@@ -10,7 +10,8 @@ import { useNotesStore } from './store/useNotesStore';
 import { UserApp } from './pages/UserApp';
 import { AdminPanel } from './pages/AdminPanel';
 import { LoginPage } from './pages/LoginPage';
-import { BlogPage } from './pages/BlogPage';
+import { BlogHubPage } from './pages/BlogHubPage';
+import { CircleBlogPostPage } from './pages/CircleBlogPostPage';
 import { BlogPostPage } from './pages/BlogPostPage';
 import { BlogMeRedirect } from './pages/BlogMeRedirect';
 import { UserBlogRoutePage } from './pages/UserBlogPage';
@@ -38,9 +39,10 @@ function Routed() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/blog/me" element={<BlogMeRedirect />} />
       <Route path="/blog/u/:userId" element={<UserBlogRoutePage />} />
+      <Route path="/blog/circle/:circleId/:ownerId/:noteId" element={<CircleBlogPostPage />} />
       <Route path="/blog/:ownerId/:noteId" element={<BlogPostPage />} />
       <Route path="/blog/:id" element={<BlogPostPage />} />
-      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/blog" element={<BlogHubPage />} />
       <Route path="/app" element={<UserApp />} />
       <Route path="/app/note/:id" element={<UserApp />} />
       <Route path="/app/circles" element={<CircleListPage />} />

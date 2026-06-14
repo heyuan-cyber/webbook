@@ -325,11 +325,10 @@ https://heyuan-cyber.github.io/webbook/admin
 1060707057@qq.com
 ```
 
-通过 `VITE_ADMIN_EMAIL` 配置。满足以下**任一**条件即为管理员：
+通过 `VITE_ADMIN_EMAIL`（前端）与 `ADMIN_EMAIL`（Worker，`wrangler.toml`）配置，**两处应相同**。满足以下**任一**条件即为管理员：
 
-1. 注册邮箱与 `VITE_ADMIN_EMAIL` 一致
-2. 登录邮箱与 `VITE_ADMIN_EMAIL` 一致
-3. Supabase 用户 `user_metadata.role` 或 `app_metadata.role` 为 `admin`
+1. 登录邮箱与 `VITE_ADMIN_EMAIL` / `ADMIN_EMAIL` 一致（**推荐**，无需改 Supabase metadata）
+2. Supabase 用户 `user_metadata.role` 或 `app_metadata.role` 为 `admin`
 
 ### 7.3 首次成为管理员
 
@@ -339,7 +338,9 @@ https://heyuan-cyber.github.io/webbook/admin
 2. 用 `1060707057@qq.com` 注册并验证邮箱
 3. 登录后访问 `/admin`
 
-**若已用其他邮箱注册过：** 在 Supabase → Authentication → Users → Raw User Meta Data 添加 `{ "role": "admin" }`，重新登录。
+**若已用管理员邮箱注册过：** 直接登录访问 `/admin` 即可；Worker 通过 `ADMIN_EMAIL` 授予 `/api/admin/*` 权限，**不必**在 Supabase 控制台改 metadata。
+
+**若已用其他邮箱注册过：** 可换用管理员邮箱重新注册，或在 Supabase SQL Editor 执行 `update auth.users set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb where email = '你的邮箱';` 后重新登录。
 
 ### 7.4 管理后台功能现状
 
@@ -481,7 +482,9 @@ npm run dev:api    # API   http://localhost:8787
 
 **登录后不同步？** 检查 `VITE_API_BASE_URL` 是否指向 Worker；浏览器 Network 看 API 是否 401。
 
-**/admin 无权限？** 确认管理员邮箱或 Supabase `role: admin`。
+**/admin 能进但「加载用户失败」？** 前端已认管理员，但 Worker 未配置 `ADMIN_EMAIL` 或值与 `VITE_ADMIN_EMAIL` 不一致；改 `workers/api/wrangler.toml` 后 `wrangler deploy`。
+
+**/admin 完全无权限？** 确认登录邮箱与 `VITE_ADMIN_EMAIL` 一致。
 
 **游客能看到私密笔记吗？** 不能。私密内容必须登录且走 `/api/notes/*`。
 

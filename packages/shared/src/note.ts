@@ -3,7 +3,7 @@ import type { ParagraphBlock } from './blocks.js';
 
 export const NOTE_SCHEMA_VERSION = 2;
 
-export type NoteVisibility = 'public' | 'private';
+export type NoteVisibility = 'private' | 'circle' | 'public';
 
 export interface Note {
   schemaVersion: number;

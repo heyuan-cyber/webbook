@@ -1,18 +1,34 @@
 :root {
-  --bg: #0f172a;
-  --bg-elev: #1e293b;
-  --bg-elev-2: #273449;
-  --border: #334155;
-  --text: #e2e8f0;
-  --text-dim: #94a3b8;
-  --accent: #38bdf8;
-  --accent-strong: #0ea5e9;
-  --danger: #f87171;
-  --ok: #4ade80;
-  --radius: 10px;
-  --sidebar-w: 290px;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* 安静阅读：暖色深色底 + 低饱和金棕点缀 */
+  --bg: #14161a;
+  --bg-elev: #1c1f26;
+  --bg-elev-2: #252a34;
+  --surface: #1c1f26;
+  --border: #323845;
+  --border-subtle: #2a2e38;
+  --text: #e8e6e1;
+  --text-dim: #9c9890;
+  --accent: #c4a574;
+  --accent-strong: #b8945f;
+  --accent-soft: rgba(196, 165, 116, 0.12);
+  --accent-glow: rgba(196, 165, 116, 0.25);
+  --danger: #e07a7a;
+  --ok: #7eb88a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --sidebar-w: 300px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Source Serif 4', Georgia, 'Songti SC', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+  --leading-tight: 1.35;
+  --leading-body: 1.65;
+  --leading-article: 1.85;
+  font-family: var(--font-sans);
 }
 
 * {
@@ -30,6 +46,8 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: var(--leading-body);
 }
 
 button {
@@ -39,6 +57,12 @@ button {
 
 a {
   color: var(--accent);
+  text-decoration-color: var(--accent-glow);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: #d4b88a;
 }
 
 input,
@@ -48,40 +72,64 @@ select {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .btn {
   background: var(--bg-elev-2);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 12px;
-  transition: background 0.15s, border-color 0.15s;
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
 }
 .btn:hover {
-  background: var(--border);
+  background: #2e3440;
+  border-color: #3d4454;
+}
+.btn:active {
+  transform: translateY(1px);
 }
 .btn-primary {
-  background: var(--accent-strong);
+  background: linear-gradient(180deg, #c9ad7f 0%, var(--accent-strong) 100%);
   border-color: var(--accent-strong);
-  color: #04222f;
+  color: #1a1510;
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover {
-  background: var(--accent);
+  background: linear-gradient(180deg, #d4b88a 0%, #c4a574 100%);
+  border-color: #c4a574;
 }
 .btn-ghost {
   background: transparent;
   border-color: transparent;
+  color: var(--text-dim);
 }
 .btn-ghost:hover {
-  background: var(--bg-elev-2);
+  background: var(--accent-soft);
+  color: var(--text);
+  border-color: transparent;
+}
+.btn-ghost.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-glow);
 }
 
 .muted {
@@ -95,7 +143,7 @@ select {
   gap: 12px;
   padding: 10px 16px;
   background: var(--bg-elev);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 14px;
 }
 .install-banner-actions {
@@ -120,18 +168,18 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
-  border-radius: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg-elev-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-lg);
   font-size: 14px;
 }
 .toast-success {
-  border-color: var(--ok);
+  border-color: rgba(126, 184, 138, 0.5);
 }
 .toast-error {
-  border-color: var(--danger);
+  border-color: rgba(224, 122, 122, 0.5);
 }
 .toast-close {
   background: transparent;
@@ -149,6 +197,7 @@ select {
   height: 100vh;
   padding: 24px;
   text-align: center;
+  font-family: var(--font-serif);
 }
 
 .spinner {

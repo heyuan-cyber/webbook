@@ -4,9 +4,9 @@ import { summarizeNote, extractTodos, assistNoteChat } from './ai';
 import { extractBearer, verifyUserToken } from './auth';
 import { syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
-import type { Note, NoteTree } from '@webbook/shared';
+import type { Note, NoteTree, NoteVisibility } from '@webbook/shared';
 import { normalizeNote } from '@webbook/shared';
-import type { AIStrategiesConfig, CircleShareStatus, SystemSettings } from '@webbook/shared';
+import type { AIStrategiesConfig, SystemSettings } from '@webbook/shared';
 import {
   loadUserTree,
   saveUserTree,
@@ -17,7 +17,19 @@ import {
   userNoteHistory,
   findNoteOwner,
 } from './userData';
-import { buildGlobalPublicFeed, buildUserPublicFeed, buildBloggersDirectory } from './publicFeed';
+import {
+  loadCircleTree,
+  saveCircleTree,
+  loadCircleNote,
+  saveCircleNote,
+  deleteCircleNote,
+} from './circleData';
+import {
+  buildGlobalPublicFeed,
+  buildUserPublicFeed,
+  buildBloggersDirectory,
+  buildSquareFeed,
+} from './publicFeed';
 import { listKnownUserIds, isUserDisabled } from './usersRegistry';
 import {
   listMyCircles,
@@ -25,10 +37,20 @@ import {
   inviteToCircle,
   listPendingInvites,
   acceptInvite,
-  updateMyShareStatus,
-  removeMember,
   getCircleFeed,
   getCircleDetail,
+  removeMember,
+  updateMyCollabEdit,
+  getCircleMemberBlogNote,
+  assertCircleEditor,
+  assertCircleMember,
+  listDiscoverableCircles,
+  listMyJoinRequests,
+  joinPublicCircle,
+  requestJoinCircle,
+  approveJoinRequest,
+  rejectJoinRequest,
+  updateCircleSettings,
 } from './circles';
 import {
   loadUserReminders,
@@ -37,6 +59,7 @@ import {
   mergeTodosFromNote,
   migrateLegacyReminders,
 } from './reminders';
+import { migrateLegacyToUser } from './migrateLegacy';
 import { runCronStrategies } from './aiStrategies';
 import {
   requireAdmin,
@@ -47,6 +70,11 @@ import {
   getAdminAiStrategies,
   putAdminAiStrategies,
 } from './admin';
+import {
+  adminListPublicNotes,
+  adminSetNoteVisibility,
+  adminDeleteNote,
+} from './adminContent';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -96,6 +124,10 @@ export default {
       // ── Public feed (/blog 全网，保留兼容) ──
       if (pathname === '/api/public/feed' && req.method === 'GET') {
         return json({ posts: await buildGlobalPublicFeed(env) });
+      }
+
+      if (pathname === '/api/public/square' && req.method === 'GET') {
+        return json({ posts: await buildSquareFeed(env) });
       }
 
       if (pathname === '/api/public/tree' && req.method === 'GET') {
@@ -231,21 +263,136 @@ export default {
         await putAdminAiStrategies(env, body);
         return json({ ok: true });
       }
+      if (pathname === '/api/admin/public-notes' && req.method === 'GET') {
+        if (!requireAdmin(user)) return unauthorized();
+        return json({ posts: await adminListPublicNotes(env) });
+      }
+      const adminNoteMatch = pathname.match(/^\/api\/admin\/notes\/([^/]+)\/([^/]+)$/);
+      if (adminNoteMatch && req.method === 'PATCH') {
+        if (!requireAdmin(user)) return unauthorized();
+        const body = (await req.json()) as { visibility?: NoteVisibility };
+        if (body.visibility !== 'private' && body.visibility !== 'public' && body.visibility !== 'circle') {
+          return json({ error: 'invalid visibility' }, 400);
+        }
+        try {
+          await adminSetNoteVisibility(env, adminNoteMatch[1]!, adminNoteMatch[2]!, body.visibility);
+          return json({ ok: true });
+        } catch (e) {
+          return json({ error: (e as Error).message }, 404);
+        }
+      }
+      if (adminNoteMatch && req.method === 'DELETE') {
+        if (!requireAdmin(user)) return unauthorized();
+        try {
+          await adminDeleteNote(env, adminNoteMatch[1]!, adminNoteMatch[2]!);
+          return json({ ok: true });
+        } catch (e) {
+          return json({ error: (e as Error).message }, 404);
+        }
+      }
 
       // ── Circles (auth required) ──
+      if (pathname === '/api/circles/discover' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json({ circles: await listDiscoverableCircles(env, user.id) });
+      }
+      if (pathname === '/api/circles/join-requests' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json({ requests: await listMyJoinRequests(env, user.id) });
+      }
       if (pathname === '/api/circles' && req.method === 'GET') {
         if (!user) return unauthorized();
         return json({ circles: await listMyCircles(env, user.id) });
       }
       if (pathname === '/api/circles' && req.method === 'POST') {
         if (!user) return unauthorized();
-        const body = (await req.json()) as { name?: string };
-        const circle = await createCircle(env, user.id, user.email, body.name ?? '我的圈子');
+        const body = (await req.json()) as {
+          name?: string;
+          description?: string;
+          visibility?: 'private' | 'public';
+          joinPolicy?: 'open' | 'approval';
+        };
+        const circle = await createCircle(env, user.id, user.email, body.name ?? '我的圈子', {
+          description: body.description,
+          visibility: body.visibility,
+          joinPolicy: body.joinPolicy,
+        });
         return json(circle, 201);
       }
       if (pathname === '/api/circles/invites' && req.method === 'GET') {
         if (!user) return unauthorized();
         return json({ invites: await listPendingInvites(env, user.email) });
+      }
+
+      const circleJoin = pathname.match(/^\/api\/circles\/([^/]+)\/join$/);
+      if (circleJoin && req.method === 'POST') {
+        if (!user) return unauthorized();
+        try {
+          const circle = await joinPublicCircle(env, circleJoin[1]!, user.id, user.email);
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
+      }
+
+      const circleRequest = pathname.match(/^\/api\/circles\/([^/]+)\/request$/);
+      if (circleRequest && req.method === 'POST') {
+        if (!user) return unauthorized();
+        try {
+          const circle = await requestJoinCircle(env, circleRequest[1]!, user.id, user.email);
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
+      }
+
+      const circleSettings = pathname.match(/^\/api\/circles\/([^/]+)\/settings$/);
+      if (circleSettings && req.method === 'PATCH') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as {
+          name?: string;
+          description?: string;
+          visibility?: 'private' | 'public';
+          joinPolicy?: 'open' | 'approval';
+        };
+        try {
+          const circle = await updateCircleSettings(env, circleSettings[1]!, user.id, body);
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 403);
+        }
+      }
+
+      const circleApprove = pathname.match(/^\/api\/circles\/([^/]+)\/requests\/([^/]+)\/approve$/);
+      if (circleApprove && req.method === 'POST') {
+        if (!user) return unauthorized();
+        try {
+          const circle = await approveJoinRequest(
+            env,
+            circleApprove[1]!,
+            user.id,
+            circleApprove[2]!,
+          );
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
+      }
+
+      const circleReject = pathname.match(/^\/api\/circles\/([^/]+)\/requests\/([^/]+)\/reject$/);
+      if (circleReject && req.method === 'POST') {
+        if (!user) return unauthorized();
+        try {
+          const circle = await rejectJoinRequest(
+            env,
+            circleReject[1]!,
+            user.id,
+            circleReject[2]!,
+          );
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
       }
 
       const circleFeed = pathname.match(/^\/api\/circles\/([^/]+)\/feed$/);
@@ -281,23 +428,105 @@ export default {
         }
       }
 
-      const circleShare = pathname.match(/^\/api\/circles\/([^/]+)\/share$/);
+      const circleShare = pathname.match(/^\/api\/circles\/([^/]+)\/collab$/);
       if (circleShare && req.method === 'PATCH') {
         if (!user) return unauthorized();
-        const body = (await req.json()) as { shareStatus?: CircleShareStatus };
-        if (body.shareStatus !== 'none' && body.shareStatus !== 'public_feed') {
-          return json({ error: 'invalid shareStatus' }, 400);
+        const body = (await req.json()) as { collabEdit?: boolean };
+        if (typeof body.collabEdit !== 'boolean') {
+          return json({ error: 'invalid collabEdit' }, 400);
         }
         try {
-          const circle = await updateMyShareStatus(
+          const circle = await updateMyCollabEdit(
             env,
             circleShare[1]!,
             user.id,
-            body.shareStatus!,
+            body.collabEdit,
           );
           return json(circle);
         } catch (e) {
           return json({ error: (e as Error).message }, 403);
+        }
+      }
+
+      const circleMemberBlog = pathname.match(
+        /^\/api\/circles\/([^/]+)\/member-blog\/([^/]+)\/([^/]+)$/,
+      );
+      if (circleMemberBlog && req.method === 'GET') {
+        if (!user) return unauthorized();
+        try {
+          return json(
+            await getCircleMemberBlogNote(
+              env,
+              circleMemberBlog[1]!,
+              user.id,
+              circleMemberBlog[2]!,
+              circleMemberBlog[3]!,
+            ),
+          );
+        } catch (e) {
+          const msg = (e as Error).message;
+          return json({ error: msg }, msg === 'not found' ? 404 : 403);
+        }
+      }
+
+      const circleTreePath = pathname.match(/^\/api\/circles\/([^/]+)\/tree$/);
+      if (circleTreePath) {
+        if (!user) return unauthorized();
+        const circleId = circleTreePath[1]!;
+        if (req.method === 'GET') {
+          try {
+            await assertCircleMember(env, circleId, user.id);
+            return json(await loadCircleTree(env, circleId));
+          } catch (e) {
+            return json({ error: (e as Error).message }, 403);
+          }
+        }
+        if (req.method === 'PUT') {
+          try {
+            await assertCircleEditor(env, circleId, user.id);
+            const tree = (await req.json()) as NoteTree;
+            await saveCircleTree(env, circleId, tree);
+            return json({ ok: true });
+          } catch (e) {
+            return json({ error: (e as Error).message }, 403);
+          }
+        }
+      }
+
+      const circleNotePath = pathname.match(/^\/api\/circles\/([^/]+)\/notes\/([^/]+)$/);
+      if (circleNotePath) {
+        if (!user) return unauthorized();
+        const circleId = circleNotePath[1]!;
+        const noteId = circleNotePath[2]!;
+        if (req.method === 'GET') {
+          try {
+            await assertCircleMember(env, circleId, user.id);
+            const note = await loadCircleNote(env, circleId, noteId);
+            if (!note) return json({ error: 'not found' }, 404);
+            return json(note);
+          } catch (e) {
+            return json({ error: (e as Error).message }, 403);
+          }
+        }
+        if (req.method === 'PUT') {
+          try {
+            await assertCircleEditor(env, circleId, user.id);
+            const note = normalizeNote((await req.json()) as Note);
+            if (note.id !== noteId) return json({ error: 'id mismatch' }, 400);
+            await saveCircleNote(env, circleId, note);
+            return json({ ok: true });
+          } catch (e) {
+            return json({ error: (e as Error).message }, 403);
+          }
+        }
+        if (req.method === 'DELETE') {
+          try {
+            await assertCircleEditor(env, circleId, user.id);
+            await deleteCircleNote(env, circleId, noteId);
+            return json({ ok: true });
+          } catch (e) {
+            return json({ error: (e as Error).message }, 403);
+          }
         }
       }
 
@@ -322,6 +551,13 @@ export default {
         }
       }
 
+      // ── Legacy data migration ──
+      if (pathname === '/api/migrate/legacy' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const result = await migrateLegacyToUser(env, user.id, user.email);
+        return json(result);
+      }
+
       // ── User tree ──
       if (pathname === '/api/tree') {
         if (req.method === 'GET') {
@@ -336,7 +572,12 @@ export default {
             }));
             return json({ schemaVersion: 1, roots });
           }
-          return json(await loadUserTree(env, user.id));
+          let tree = await loadUserTree(env, user.id);
+          const migration = await migrateLegacyToUser(env, user.id, user.email);
+          if (migration.merged) {
+            tree = await loadUserTree(env, user.id);
+          }
+          return json(tree);
         }
         if (req.method === 'PUT') {
           if (!user) return unauthorized();
