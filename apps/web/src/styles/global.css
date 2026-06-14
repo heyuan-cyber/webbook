@@ -103,3 +103,71 @@ select {
   gap: 8px;
   flex-shrink: 0;
 }
+
+/* ── Toast ───────────────────────────────────────────── */
+.toast-host {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+}
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+}
+.toast-success {
+  border-color: var(--ok);
+}
+.toast-error {
+  border-color: var(--danger);
+}
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 2px 6px;
+}
+
+.error-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100vh;
+  padding: 24px;
+  text-align: center;
+}
+
+.spinner {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 0;
+}

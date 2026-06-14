@@ -29,15 +29,26 @@ export function createBlock(type: BlockType): Block {
   }
 }
 
-export const BLOCK_MENU: { type: BlockType; label: string; icon: string }[] = [
-  { type: 'paragraph', label: '文本', icon: '¶' },
-  { type: 'heading', label: '标题', icon: 'H' },
-  { type: 'list', label: '列表', icon: '•' },
-  { type: 'checkbox', label: '待办', icon: '☑' },
-  { type: 'image', label: '图片', icon: '🖼' },
-  { type: 'video', label: '视频', icon: '▶' },
-  { type: 'link-preview', label: '链接预览', icon: '🔗' },
-  { type: 'callout', label: '标注', icon: '💡' },
-  { type: 'canvas', label: '自由画布', icon: '🎨' },
-  { type: 'divider', label: '分割线', icon: '―' },
+export const BLOCK_MENU: { type: BlockType; label: string; icon: string; slash?: string[] }[] = [
+  { type: 'paragraph', label: '文本', icon: '¶', slash: ['文本', '段落', 'text', 'p'] },
+  { type: 'heading', label: '标题', icon: 'H', slash: ['标题', 'heading', 'h1', 'h2', 'h3'] },
+  { type: 'list', label: '列表', icon: '•', slash: ['列表', 'list', 'ul'] },
+  { type: 'checkbox', label: '待办', icon: '☑', slash: ['待办', 'todo', 'checkbox', '任务'] },
+  { type: 'image', label: '图片', icon: '🖼', slash: ['图片', 'image', 'img', '图'] },
+  { type: 'video', label: '视频', icon: '▶', slash: ['视频', 'video'] },
+  { type: 'link-preview', label: '链接预览', icon: '🔗', slash: ['链接', 'link', 'url'] },
+  { type: 'callout', label: '标注', icon: '💡', slash: ['标注', 'callout', '提示'] },
+  { type: 'canvas', label: '自由画布', icon: '🎨', slash: ['画布', 'canvas', '画板'] },
+  { type: 'divider', label: '分割线', icon: '―', slash: ['分割', 'divider', 'hr'] },
 ];
+
+export function filterBlockMenu(query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return BLOCK_MENU;
+  return BLOCK_MENU.filter(
+    (m) =>
+      m.label.toLowerCase().includes(q) ||
+      m.type.includes(q) ||
+      m.slash?.some((s) => s.toLowerCase().includes(q)),
+  );
+}

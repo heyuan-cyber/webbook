@@ -48,20 +48,23 @@ export function makeRepository(session: Session | null) {
         }
       }
       try {
-        return await apiClient.loadPublicNote(id);
+        const { note } = await apiClient.loadPublicNoteLegacy(id);
+        return note;
       } catch {
         return localStore.loadNote(id);
       }
     },
-    async saveNote(note: Note): Promise<void> {
+    async saveNote(note: Note): Promise<{ noteOk: boolean }> {
       await localStore.saveNote(note);
       if (authed && token) {
         try {
           await apiClient.saveNote(note, token);
+          return { noteOk: true };
         } catch {
-          /* fallthrough */
+          return { noteOk: false };
         }
       }
+      return { noteOk: true };
     },
     async deleteNote(id: string): Promise<void> {
       await localStore.deleteNote(id);

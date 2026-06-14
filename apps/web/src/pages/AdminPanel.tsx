@@ -1,30 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { TreeSidebar } from '@/components/TreeSidebar';
-import type { AIStrategy } from '@webbook/shared';
+import type { AIStrategy, SystemSettings } from '@webbook/shared';
+import { apiClient } from '@/lib/api';
+import { toast } from '@/store/useToastStore';
 
 type Tab = 'tree' | 'ai' | 'users' | 'settings';
-
-const DEFAULT_STRATEGIES: AIStrategy[] = [
-  {
-    id: 'on-save-summary',
-    name: '写完即总结',
-    enabled: false,
-    trigger: 'on_save',
-    scope: { kind: 'note' },
-    actions: ['summarize'],
-  },
-  {
-    id: 'nightly-tidy',
-    name: '每晚整理 + TODO 提取',
-    enabled: true,
-    trigger: 'cron',
-    cron: '0 2 * * *',
-    scope: { kind: 'all' },
-    actions: ['classify', 'extract_todos'],
-  },
-];
 
 export function AdminPanel() {
   const { isAdmin, isGuest, session } = useAuth();
@@ -81,17 +63,27 @@ export function AdminPanel() {
               <TreeSidebar editable />
             </div>
           )}
-          {tab === 'ai' && <AIStrategyPanel />}
-          {tab === 'users' && <UsersPanel />}
-          {tab === 'settings' && <SettingsPanel />}
+          {tab === 'ai' && session?.token && <AIStrategyPanel token={session.token} />}
+          {tab === 'users' && session?.token && <UsersPanel token={session.token} />}
+          {tab === 'settings' && session?.token && <SettingsPanel token={session.token} />}
         </section>
       </div>
     </div>
   );
 }
 
-function AIStrategyPanel() {
-  const [strategies, setStrategies] = useState<AIStrategy[]>(DEFAULT_STRATEGIES);
+function AIStrategyPanel({ token }: { token: string }) {
+  const [strategies, setStrategies] = useState<AIStrategy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    void apiClient
+      .adminLoadAiStrategies(token)
+      .then((res) => setStrategies(res.strategies))
+      .catch(() => toast('error', '加载策略失败'))
+      .finally(() => setLoading(false));
+  }, [token]);
 
   function toggle(id: string) {
     setStrategies((list) =>
@@ -99,11 +91,25 @@ function AIStrategyPanel() {
     );
   }
 
+  async function save() {
+    setSaving(true);
+    try {
+      await apiClient.adminSaveAiStrategies(token, { schemaVersion: 1, strategies });
+      toast('success', '策略已保存');
+    } catch {
+      toast('error', '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <p className="muted">加载中…</p>;
+
   return (
     <div>
       <h2>AI 策略</h2>
       <p className="muted">
-        触发器 × 动作的可配置流水线。Provider / API Key 在「系统设置」中配置，仅存服务端。
+        触发器 × 动作的可配置流水线。Cron 策略由 Workers 定时任务执行。
       </p>
       <div className="strategy-list">
         {strategies.map((s) => (
@@ -123,73 +129,160 @@ function AIStrategyPanel() {
           </div>
         ))}
       </div>
-      <button className="btn" disabled title="后续接入：新增策略">
-        + 新增策略（待接入后端）
+      <button className="btn btn-primary" disabled={saving} onClick={() => void save()}>
+        {saving ? '保存中…' : '保存策略'}
       </button>
     </div>
   );
 }
 
-function UsersPanel() {
+function UsersPanel({ token }: { token: string }) {
+  const [users, setUsers] = useState<
+    { id: string; email: string; updatedAt: string; disabled?: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void apiClient
+      .adminUsers(token)
+      .then((res) => setUsers(res.users))
+      .catch(() => toast('error', '加载用户失败'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  async function setDisabled(userId: string, disabled: boolean) {
+    try {
+      const updated = await apiClient.adminSetUserDisabled(token, userId, disabled);
+      setUsers((list) =>
+        list.map((u) => (u.id === userId ? { ...u, disabled: updated.disabled } : u)),
+      );
+      toast('success', disabled ? '已停用' : '已启用');
+    } catch {
+      toast('error', '操作失败');
+    }
+  }
+
+  if (loading) return <p className="muted">加载中…</p>;
+
   return (
     <div>
       <h2>用户管理</h2>
-      <p className="muted">列出注册用户、查看角色、启用 / 停用账号。</p>
+      <p className="muted">列出已注册用户，可启用 / 停用账号（停用后无法调用 API）。</p>
       <table className="data-table">
         <thead>
           <tr>
             <th>邮箱</th>
-            <th>角色</th>
             <th>状态</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td colSpan={4} className="muted">
-              （接入 Supabase 后展示真实用户列表）
-            </td>
-          </tr>
+          {users.length === 0 && (
+            <tr>
+              <td colSpan={3} className="muted">
+                暂无注册用户
+              </td>
+            </tr>
+          )}
+          {users.map((u) => (
+            <tr key={u.id}>
+              <td>{u.email}</td>
+              <td>{u.disabled ? '已停用' : '正常'}</td>
+              <td>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void setDisabled(u.id, !u.disabled)}
+                >
+                  {u.disabled ? '启用' : '停用'}
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   );
 }
 
-function SettingsPanel() {
+function SettingsPanel({ token }: { token: string }) {
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    void apiClient
+      .adminLoadSettings(token)
+      .then(setSettings)
+      .catch(() => toast('error', '加载设置失败'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  async function save() {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      await apiClient.adminSaveSettings(token, settings);
+      toast('success', '设置已保存到数据仓');
+    } catch {
+      toast('error', '保存失败');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading || !settings) return <p className="muted">加载中…</p>;
+
   return (
     <div>
       <h2>系统设置</h2>
+      <p className="muted">
+        配置写入 GitHub 数据仓。Workers 运行时仍以 Cloudflare 环境变量为准；此处用于记录与对账。
+      </p>
       <div className="settings-group">
         <h3>GitHub 仓库</h3>
         <label>
           仓库 (owner/repo)
-          <input placeholder="your-name/webbook-data" />
+          <input
+            value={settings.githubRepo}
+            onChange={(e) => setSettings({ ...settings, githubRepo: e.target.value })}
+            placeholder="your-name/webbook-data"
+          />
         </label>
         <label>
           分支
-          <input placeholder="main" defaultValue="main" />
+          <input
+            value={settings.githubBranch}
+            onChange={(e) => setSettings({ ...settings, githubBranch: e.target.value })}
+          />
         </label>
-        <p className="muted">Token 存于 Workers Secrets，不在前端保存。</p>
       </div>
       <div className="settings-group">
         <h3>AI Provider</h3>
         <label>
           Provider
-          <input placeholder="deepseek" defaultValue="deepseek" />
+          <input
+            value={settings.aiProvider}
+            onChange={(e) => setSettings({ ...settings, aiProvider: e.target.value })}
+          />
         </label>
         <label>
           Base URL
-          <input placeholder="https://api.deepseek.com" />
+          <input
+            value={settings.aiBaseUrl}
+            onChange={(e) => setSettings({ ...settings, aiBaseUrl: e.target.value })}
+          />
         </label>
         <label>
           Model
-          <input placeholder="deepseek-chat" />
+          <input
+            value={settings.aiModel}
+            onChange={(e) => setSettings({ ...settings, aiModel: e.target.value })}
+          />
         </label>
-        <p className="muted">API Key 仅在服务端配置。</p>
       </div>
-      <button className="btn btn-primary" disabled title="后续接入后端保存">
-        保存（待接入后端）
+      <button className="btn btn-primary" disabled={saving} onClick={() => void save()}>
+        {saving ? '保存中…' : '保存设置'}
       </button>
     </div>
   );

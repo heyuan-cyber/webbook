@@ -18,7 +18,8 @@
     "android:init": "node scripts/android-init.mjs",
     "android:apk": "node scripts/android-apk.mjs",
     "android:fingerprint": "node scripts/android-fingerprint.mjs",
-    "deploy:user-pages": "node scripts/deploy-user-pages.mjs"
+    "deploy:user-pages": "node scripts/deploy-user-pages.mjs",
+    "smoke": "node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",

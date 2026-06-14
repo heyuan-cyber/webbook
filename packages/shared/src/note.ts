@@ -1,4 +1,5 @@
 import type { Block } from './blocks.js';
+import type { ParagraphBlock } from './blocks.js';
 
 export const NOTE_SCHEMA_VERSION = 2;
 
@@ -18,27 +19,38 @@ export interface Note {
   updatedAt: string;
 }
 
+function newParagraphId(): string {
+  return `blk-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/** 新建笔记默认带一个空段落，打开即可输入 */
+export function createDefaultParagraph(): ParagraphBlock {
+  return { id: newParagraphId(), type: 'paragraph', text: '' };
+}
+
 export function createEmptyNote(id: string, title = '未命名笔记'): Note {
   const now = new Date().toISOString();
   return {
     schemaVersion: NOTE_SCHEMA_VERSION,
     id,
     title,
-    blocks: [],
+    blocks: [createDefaultParagraph()],
     visibility: 'private',
     createdAt: now,
     updatedAt: now,
   };
 }
 
-/** 旧数据迁移：补 visibility 默认值 */
+/** 旧数据迁移：补 visibility；空 blocks 补默认段落 */
 export function normalizeNote(raw: Partial<Note> & { id: string }): Note {
   const now = new Date().toISOString();
+  const blocks =
+    raw.blocks && raw.blocks.length > 0 ? raw.blocks : [createDefaultParagraph()];
   return {
     schemaVersion: raw.schemaVersion ?? NOTE_SCHEMA_VERSION,
     id: raw.id,
     title: raw.title ?? '未命名笔记',
-    blocks: raw.blocks ?? [],
+    blocks,
     visibility: raw.visibility ?? 'private',
     summary: raw.summary,
     tags: raw.tags,

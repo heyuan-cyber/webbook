@@ -1,8 +1,17 @@
+import { useRef, useCallback, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { Block, BlockType, CanvasBlock } from '@webbook/shared';
+import { useAuth } from '@/auth/AuthContext';
+import { apiClient, assetUrl } from '@/lib/api';
 import { createBlock } from './blockFactory';
 import { InsertMenu } from './InsertMenu';
+import { SlashMenu } from './SlashMenu';
 import { CanvasBlockView } from './CanvasBlockView';
 import { LinkPreviewBlockView } from './LinkPreviewBlockView';
+import { handleBlockKeyDown, isEditableBlock } from './blockKeyboard';
+import { convertBlock, isInPlaceSlashType, isSlashInput, slashFilter } from './slashCommand';
+import { EditableMarkdownField } from './EditableMarkdownField';
+import { renderInlineMarkdown, renderMultilineMarkdown } from '@/lib/markdown';
+import { toast } from '@/store/useToastStore';
 
 interface Props {
   blocks: Block[];
@@ -11,10 +20,48 @@ interface Props {
 }
 
 export function BlockEditor({ blocks, onChange, readOnly }: Props) {
-  function insertAt(index: number, type: BlockType) {
+  const focusRefs = useRef(new Map<string, HTMLElement>());
+
+  const registerRef = useCallback((id: string, el: HTMLElement | null) => {
+    if (el) focusRefs.current.set(id, el);
+    else focusRefs.current.delete(id);
+  }, []);
+
+  function focusBlock(id: string) {
+    requestAnimationFrame(() => focusRefs.current.get(id)?.focus());
+  }
+
+  function focusBlockAt(index: number) {
+    let i = index;
+    while (i >= 0 && i < blocks.length) {
+      const b = blocks[i]!;
+      if (isEditableBlock(b)) {
+        const el = focusRefs.current.get(b.id);
+        if (el) {
+          el.focus();
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+            const len = el.value.length;
+            el.setSelectionRange(len, len);
+          }
+        }
+        return;
+      }
+      i += index < i ? -1 : 1;
+    }
+  }
+
+  function insertAt(index: number, type: BlockType = 'paragraph') {
+    const newBlock = createBlock(type);
     const next = [...blocks];
-    next.splice(index, 0, createBlock(type));
+    next.splice(index, 0, newBlock);
     onChange(next);
+    focusBlock(newBlock.id);
+  }
+
+  function removeAt(index: number) {
+    const next = blocks.filter((_, i) => i !== index);
+    onChange(next.length ? next : [createBlock('paragraph')]);
+    requestAnimationFrame(() => focusBlockAt(Math.max(0, index - 1)));
   }
 
   function patch(id: string, patchBlock: Partial<Block>) {
@@ -24,23 +71,64 @@ export function BlockEditor({ blocks, onChange, readOnly }: Props) {
   }
 
   function remove(id: string) {
-    onChange(blocks.filter((b) => b.id !== id));
+    const next = blocks.filter((b) => b.id !== id);
+    onChange(next.length ? next : [createBlock('paragraph')]);
+  }
+
+  function applySlash(index: number, blockId: string, type: BlockType) {
+    const block = blocks[index];
+    if (!block) return;
+    if (isInPlaceSlashType(type)) {
+      onChange(blocks.map((b) => (b.id === blockId ? convertBlock(block, type) : b)));
+      focusBlock(blockId);
+      return;
+    }
+    const cleared = blocks.map((b) =>
+      b.id === blockId && b.type === 'paragraph' ? { ...b, text: '' } : b,
+    );
+    const newBlock = createBlock(type);
+    const next = [...cleared];
+    next.splice(index + 1, 0, newBlock);
+    onChange(next);
+    focusBlock(newBlock.id);
+  }
+
+  function ensureWritingSurface() {
+    const para = createBlock('paragraph');
+    onChange([para]);
+    focusBlock(para.id);
+  }
+
+  if (blocks.length === 0 && !readOnly) {
+    return (
+      <button type="button" className="editor-placeholder" onClick={ensureWritingSurface}>
+        <span className="editor-placeholder-title">开始书写</span>
+        <span className="muted">直接输入文字，<kbd>Enter</kbd> 换行、<kbd>Shift+Enter</kbd> 新块，或键入 <kbd>/</kbd> 插入块</span>
+      </button>
+    );
   }
 
   return (
     <div className="block-editor">
-      {!readOnly && (
-        <InsertRow onInsert={(t) => insertAt(0, t)} />
-      )}
       {blocks.map((block, i) => (
         <div key={block.id} className="block-row">
-          <BlockView block={block} patch={patch} remove={remove} readOnly={readOnly} />
+          <BlockView
+            block={block}
+            index={i}
+            patch={patch}
+            remove={remove}
+            readOnly={readOnly}
+            registerRef={registerRef}
+            onInsertAfter={(type) => insertAt(i + 1, type ?? 'paragraph')}
+            onRemoveAt={() => removeAt(i)}
+            onFocusAt={focusBlockAt}
+            onSlashPick={(type) => applySlash(i, block.id, type)}
+            blocks={blocks}
+          />
           {!readOnly && <InsertRow onInsert={(t) => insertAt(i + 1, t)} />}
         </div>
       ))}
-      {blocks.length === 0 && readOnly && (
-        <p className="muted">（空笔记）</p>
-      )}
+      {blocks.length === 0 && readOnly && <p className="muted">（空笔记）</p>}
     </div>
   );
 }
@@ -55,18 +143,56 @@ function InsertRow({ onInsert }: { onInsert: (t: BlockType) => void }) {
 
 interface BlockViewProps {
   block: Block;
+  index: number;
+  blocks: Block[];
   patch: (id: string, patch: Partial<Block>) => void;
   remove: (id: string) => void;
   readOnly?: boolean;
+  registerRef: (id: string, el: HTMLElement | null) => void;
+  onInsertAfter: (type?: BlockType) => void;
+  onRemoveAt: () => void;
+  onFocusAt: (index: number) => void;
+  onSlashPick: (type: BlockType) => void;
 }
 
-function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
+function BlockView({
+  block,
+  index,
+  blocks,
+  patch,
+  remove,
+  readOnly,
+  registerRef,
+  onInsertAfter,
+  onRemoveAt,
+  onFocusAt,
+  onSlashPick,
+}: BlockViewProps) {
   const ro = Boolean(readOnly);
   const delBtn = !ro && (
     <button className="block-del btn btn-ghost" title="删除块" onClick={() => remove(block.id)}>
       ✕
     </button>
   );
+
+  const makeKeyNav =
+    (el: HTMLInputElement | HTMLTextAreaElement) =>
+    (e: ReactKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (e.key === 'Escape' && block.type === 'paragraph' && isSlashInput(block.text)) {
+        e.preventDefault();
+        patch(block.id, { text: '' });
+        return;
+      }
+      handleBlockKeyDown(e, {
+        index,
+        block,
+        blocks,
+        el,
+        onInsertAfter: (_idx, type) => onInsertAfter(type),
+        onRemoveAt,
+        onFocusAt,
+      });
+    };
 
   switch (block.type) {
     case 'heading':
@@ -84,13 +210,18 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
             </select>
           )}
           {ro ? (
-            <div className={`h h${block.level}`}>{block.text}</div>
+            <div className={`h h${block.level} preview-md`}>{renderInlineMarkdown(block.text)}</div>
           ) : (
-            <input
-              className={`h-input h${block.level}`}
+            <EditableMarkdownField
+              blockId={block.id}
               value={block.text}
-              placeholder="标题"
-              onChange={(e) => patch(block.id, { text: e.target.value })}
+              onChange={(text) => patch(block.id, { text })}
+              onKeyDown={(e) => makeKeyNav(e.currentTarget)(e)}
+              placeholder="标题（支持 **粗体**、[链接](url)）"
+              registerRef={registerRef}
+              multiline={false}
+              inputClassName={`h-input h${block.level}`}
+              previewClassName={`h h${block.level}`}
             />
           )}
           {delBtn}
@@ -101,15 +232,27 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
       return (
         <div className="block block-para">
           {ro ? (
-            <p className="para-text">{block.text}</p>
+            <div className="para-text preview-md">{renderMultilineMarkdown(block.text, 'para-line')}</div>
           ) : (
-            <textarea
-              className="para-input"
-              value={block.text}
-              placeholder="输入文本，支持 Markdown…"
-              rows={Math.max(1, block.text.split('\n').length)}
-              onChange={(e) => patch(block.id, { text: e.target.value })}
-            />
+            <div className="para-edit-wrap">
+              <EditableMarkdownField
+                blockId={block.id}
+                value={block.text}
+                onChange={(text) => patch(block.id, { text })}
+                onKeyDown={(e) => makeKeyNav(e.currentTarget)(e)}
+                placeholder="输入文字（支持 **粗体**、`代码`、[链接](url)）；Enter 换行，Shift+Enter 新块；/ 插入块"
+                registerRef={registerRef}
+                inputClassName="para-input"
+                rows={2}
+              />
+              {isSlashInput(block.text) && (
+                <SlashMenu
+                  filter={slashFilter(block.text)}
+                  onPick={onSlashPick}
+                  onClose={() => patch(block.id, { text: '' })}
+                />
+              )}
+            </div>
           )}
           {delBtn}
         </div>
@@ -125,13 +268,19 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
             onChange={(e) => patch(block.id, { checked: e.target.checked })}
           />
           {ro ? (
-            <span className={block.checked ? 'done' : ''}>{block.text}</span>
+            <span className={block.checked ? 'done' : ''}>
+              {renderMultilineMarkdown(block.text, 'preview-line')}
+            </span>
           ) : (
-            <input
-              className="cb-input"
+            <EditableMarkdownField
+              blockId={block.id}
               value={block.text}
-              placeholder="待办事项 (TODO)"
-              onChange={(e) => patch(block.id, { text: e.target.value })}
+              onChange={(text) => patch(block.id, { text })}
+              onKeyDown={(e) => makeKeyNav(e.currentTarget)(e)}
+              placeholder="待办事项"
+              registerRef={registerRef}
+              multiline={false}
+              inputClassName="cb-input"
             />
           )}
           {delBtn}
@@ -144,16 +293,21 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
           {ro ? (
             <ul>
               {block.items.map((it, i) => (
-                <li key={i}>{it}</li>
+                <li key={i} className="preview-md">
+                  {renderMultilineMarkdown(it, 'preview-line')}
+                </li>
               ))}
             </ul>
           ) : (
-            <textarea
-              className="list-input"
+            <EditableMarkdownField
+              blockId={block.id}
               value={block.items.join('\n')}
-              placeholder="每行一项"
+              onChange={(text) => patch(block.id, { items: text.split('\n') })}
+              onKeyDown={(e) => makeKeyNav(e.currentTarget)(e)}
+              placeholder="每行一项（Enter 新行，Shift+Enter 新块）"
+              registerRef={registerRef}
+              inputClassName="list-input"
               rows={Math.max(1, block.items.length)}
-              onChange={(e) => patch(block.id, { items: e.target.value.split('\n') })}
             />
           )}
           {delBtn}
@@ -164,15 +318,12 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
       return (
         <div className="block block-image">
           {block.src ? (
-            <img src={block.src} alt={block.alt ?? ''} />
+            <figure>
+              <img src={assetUrl(block.src)} alt={block.alt ?? ''} />
+              {block.caption && <figcaption className="muted">{block.caption}</figcaption>}
+            </figure>
           ) : (
-            !ro && (
-              <input
-                className="url-input"
-                placeholder="图片 URL"
-                onChange={(e) => patch(block.id, { src: e.target.value })}
-              />
-            )
+            !ro && <ImageUploadRow onUploaded={(src) => patch(block.id, { src })} />
           )}
           {delBtn}
         </div>
@@ -199,11 +350,7 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
     case 'link-preview':
       return (
         <div className="block block-link">
-          <LinkPreviewBlockView
-            block={block}
-            patch={(p) => patch(block.id, p)}
-            readOnly={ro}
-          />
+          <LinkPreviewBlockView block={block} patch={(p) => patch(block.id, p)} readOnly={ro} />
           {delBtn}
         </div>
       );
@@ -212,13 +359,16 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
       return (
         <div className={`block block-callout tone-${block.tone}`}>
           {ro ? (
-            <p>{block.text}</p>
+            <div className="preview-md">{renderMultilineMarkdown(block.text, 'preview-line')}</div>
           ) : (
-            <textarea
-              className="callout-input"
+            <EditableMarkdownField
+              blockId={block.id}
               value={block.text}
+              onChange={(text) => patch(block.id, { text })}
               placeholder="标注内容"
-              onChange={(e) => patch(block.id, { text: e.target.value })}
+              registerRef={registerRef}
+              inputClassName="callout-input"
+              rows={2}
             />
           )}
           {delBtn}
@@ -248,4 +398,61 @@ function BlockView({ block, patch, remove, readOnly }: BlockViewProps) {
     default:
       return null;
   }
+}
+
+function ImageUploadRow({ onUploaded }: { onUploaded: (src: string) => void }) {
+  const { session, isGuest } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  async function onFile(file: File | undefined) {
+    if (!file || !file.type.startsWith('image/')) return;
+    setBusy(true);
+    try {
+      if (isGuest || !session?.token) {
+        const dataUrl = await readAsDataUrl(file);
+        onUploaded(dataUrl);
+        toast('info', '游客模式：图片仅存本地');
+      } else {
+        const { url } = await apiClient.uploadAsset(file, session.token);
+        onUploaded(url);
+        toast('success', '图片已上传');
+      }
+    } catch {
+      toast('error', '图片上传失败');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="image-upload-row">
+      <label className="btn btn-ghost">
+        {busy ? '上传中…' : '选择图片'}
+        <input
+          type="file"
+          accept="image/*"
+          hidden
+          disabled={busy}
+          onChange={(e) => void onFile(e.target.files?.[0])}
+        />
+      </label>
+      <span className="muted">或粘贴 URL：</span>
+      <input
+        className="url-input"
+        placeholder="https://..."
+        onBlur={(e) => {
+          if (e.target.value) onUploaded(e.target.value);
+        }}
+      />
+    </div>
+  );
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
 }

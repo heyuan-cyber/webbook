@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { TreeNode } from '@webbook/shared';
 import { useNotesStore } from '@/store/useNotesStore';
+import type { SearchHit } from '@/store/useNotesStore';
 
 export function TreeSidebar({
   editable = true,
@@ -13,13 +14,29 @@ export function TreeSidebar({
   onNavigate?: () => void;
 }) {
   const tree = useNotesStore((s) => s.tree);
+  const searchNotes = useNotesStore((s) => s.searchNotes);
   const addFolder = useNotesStore((s) => s.addFolder);
   const addNote = useNotesStore((s) => s.addNote);
+  const selectNote = useNotesStore((s) => s.selectNote);
   const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState<SearchHit[]>([]);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setHits([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      void searchNotes(query).then(setHits);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query, searchNotes, tree]);
 
   async function newRootNote() {
     const id = await addNote(null, '新笔记');
     navigate(`/app/note/${id}`);
+    void selectNote(id);
     onNavigate?.();
   }
 
@@ -28,6 +45,34 @@ export function TreeSidebar({
       <div className="sidebar-head">
         <span className="logo">📓 WebBook</span>
       </div>
+      <div className="sidebar-search">
+        <input
+          className="search-input"
+          placeholder="搜索笔记…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      {hits.length > 0 && (
+        <div className="search-hits">
+          {hits.map((h) => (
+            <button
+              key={h.id}
+              type="button"
+              className="search-hit"
+              onClick={() => {
+                navigate(`/app/note/${h.id}`);
+                void selectNote(h.id);
+                onNavigate?.();
+                setQuery('');
+              }}
+            >
+              <span className="search-hit-title">{h.title}</span>
+              <span className="search-hit-snippet muted">{h.snippet}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {editable && (
         <div className="sidebar-actions">
           <button className="btn btn-ghost" onClick={() => addFolder(null, '新栏目')}>
@@ -75,6 +120,7 @@ function TreeItem({
   const renameNode = useNotesStore((s) => s.renameNode);
   const deleteNode = useNotesStore((s) => s.deleteNode);
   const moveNode = useNotesStore((s) => s.moveNode);
+  const selectNote = useNotesStore((s) => s.selectNote);
   const navigate = useNavigate();
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(node.title);
@@ -88,6 +134,7 @@ function TreeItem({
       toggleFold(node.id);
     } else {
       navigate(`/app/note/${node.id}`);
+      void selectNote(node.id);
       onNavigate?.();
     }
   }

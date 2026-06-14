@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { TreeSidebar } from './TreeSidebar';
 import { InstallPrompt } from './InstallPrompt';
+import { RemindersPanel } from './RemindersPanel';
 
 export function AppShell({
   children,
@@ -15,6 +16,7 @@ export function AppShell({
   const { session, isGuest, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [navOpen, setNavOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
 
   function closeNav() {
     setNavOpen(false);
@@ -53,6 +55,23 @@ export function AppShell({
             </span>
           </div>
           <div className="topbar-right">
+            <Link className="btn btn-ghost" to={isGuest ? '/blog' : '/blog/me'}>
+              {isGuest ? '博客' : '我的博客'}
+            </Link>
+            {!isGuest && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setRemindersOpen(true)}
+                >
+                  提醒
+                </button>
+                <Link className="btn btn-ghost" to="/app/circles">
+                  圈子
+                </Link>
+              </>
+            )}
             <Link className="btn btn-ghost" to="/admin">
               后台
             </Link>
@@ -68,6 +87,7 @@ export function AppShell({
           </div>
         </header>
         <InstallPrompt />
+        <RemindersPanel open={remindersOpen} onClose={() => setRemindersOpen(false)} />
         <div className="content">{children}</div>
       </div>
     </div>

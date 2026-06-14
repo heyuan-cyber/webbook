@@ -5,6 +5,8 @@ import { uid } from '@/lib/id';
 import { foldState } from '@/lib/storage';
 import { makeRepository, type Repository } from './repository';
 import type { Session } from '@/auth/types';
+import { localStore } from '@/lib/storage';
+import { toast } from '@/store/useToastStore';
 
 interface NotesState {
   repo: Repository;
@@ -12,12 +14,16 @@ interface NotesState {
   activeNoteId: string | null;
   activeNote: Note | null;
   folds: Record<string, boolean>;
-  loading: boolean;
+  treeReady: boolean;
+  treeLoading: boolean;
+  noteLoading: boolean;
   saving: boolean;
+  saveError: boolean;
 
   init: (session: Session | null) => Promise<void>;
   selectNote: (id: string) => Promise<void>;
   toggleFold: (nodeId: string) => void;
+  searchNotes: (query: string) => Promise<SearchHit[]>;
 
   addFolder: (parentId: string | null, title: string) => Promise<void>;
   addNote: (parentId: string | null, title: string) => Promise<string>;
@@ -28,6 +34,12 @@ interface NotesState {
   updateActiveBlocks: (blocks: Block[]) => void;
   setActiveTitle: (title: string) => void;
   setActiveVisibility: (visibility: 'public' | 'private') => void;
+}
+
+export interface SearchHit {
+  id: string;
+  title: string;
+  snippet: string;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -80,35 +92,97 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
   activeNoteId: null,
   activeNote: null,
   folds: foldState.load(),
-  loading: false,
+  treeReady: false,
+  treeLoading: false,
+  noteLoading: false,
   saving: false,
+  saveError: false,
 
   async init(session) {
     const repo = makeRepository(session);
-    setState({ repo, loading: true });
-    const tree = await repo.loadTree();
-    setState({ tree, loading: false });
+    setState({ repo, treeReady: false, treeLoading: true, saveError: false });
+    try {
+      const tree = await repo.loadTree();
+      setState({ tree, treeReady: true, treeLoading: false });
+    } catch {
+      setState({ treeReady: true, treeLoading: false });
+      toast('error', '加载目录失败，使用本地数据');
+    }
   },
 
   async selectNote(id) {
-    const { repo, tree } = getState();
+    const { repo, tree, treeReady, activeNoteId } = getState();
+    if (!treeReady) return;
     const node = findNode(tree.roots, id);
-    if (!node || node.kind !== 'note') return;
-    setState({ loading: true });
-    let note = await repo.loadNote(node.noteId ?? id);
-    if (!note) {
-      note = createEmptyNote(id, node.title);
-      await repo.saveNote(note);
-    } else {
-      note = normalizeNote(note);
+    if (!node || node.kind !== 'note') {
+      setState({ activeNoteId: null, activeNote: null, noteLoading: false });
+      return;
     }
-    setState({ activeNoteId: id, activeNote: note, loading: false });
+    setState({
+      activeNoteId: id,
+      activeNote: activeNoteId === id ? getState().activeNote : null,
+      noteLoading: true,
+    });
+    try {
+      let note = await repo.loadNote(node.noteId ?? id);
+      if (!note) {
+        note = createEmptyNote(id, node.title);
+        await repo.saveNote(note);
+      } else {
+        note = normalizeNote(note);
+      }
+      setState({ activeNoteId: id, activeNote: note, noteLoading: false });
+    } catch {
+      setState({ noteLoading: false });
+      toast('error', '加载笔记失败');
+    }
   },
 
   toggleFold(nodeId) {
     const folds = { ...getState().folds, [nodeId]: !getState().folds[nodeId] };
     foldState.save(folds);
     setState({ folds });
+  },
+
+  async searchNotes(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const { tree } = getState();
+    const hits: SearchHit[] = [];
+    const seen = new Set<string>();
+
+    function walk(nodes: TreeNode[]) {
+      for (const n of nodes) {
+        if (n.kind === 'note') {
+          if (n.title.toLowerCase().includes(q)) {
+            hits.push({ id: n.id, title: n.title, snippet: '标题匹配' });
+            seen.add(n.id);
+          }
+        }
+        if (n.children) walk(n.children);
+      }
+    }
+    walk(tree.roots);
+
+    const ids = await localStore.allNoteIds();
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      const note = await localStore.loadNote(id);
+      if (!note) continue;
+      const body = blocksToText(note.blocks).toLowerCase();
+      if (note.title.toLowerCase().includes(q) || body.includes(q)) {
+        const idx = body.indexOf(q);
+        const snippet =
+          idx >= 0
+            ? note.blocks
+                .map((b) => ('text' in b ? b.text : ''))
+                .join(' ')
+                .slice(Math.max(0, idx - 20), idx + 40)
+            : note.title;
+        hits.push({ id: note.id, title: note.title, snippet });
+      }
+    }
+    return hits.slice(0, 20);
   },
 
   async addFolder(parentId, title) {
@@ -211,9 +285,22 @@ function scheduleSave(getState: () => NotesState) {
   saveTimer = setTimeout(async () => {
     const { repo, activeNote, tree } = getState();
     if (!activeNote) return;
-    useNotesStore.setState({ saving: true });
-    await repo.saveNote(activeNote);
+    useNotesStore.setState({ saving: true, saveError: false });
+    const result = await repo.saveNote(activeNote);
     await repo.saveTree(tree);
-    useNotesStore.setState({ saving: false });
+    useNotesStore.setState({ saving: false, saveError: !result.noteOk });
+    if (!result.noteOk && repo.authed) {
+      toast('error', '云端保存失败，内容已存本地');
+    }
   }, 800);
+}
+
+function blocksToText(blocks: Block[]): string {
+  return blocks
+    .map((b) => {
+      if ('text' in b && typeof b.text === 'string') return b.text;
+      if (b.type === 'list') return b.items.join(' ');
+      return '';
+    })
+    .join('\n');
 }

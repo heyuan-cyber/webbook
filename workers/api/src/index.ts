@@ -1,14 +1,56 @@
 import type { Env } from './env';
-import { getFile, putFile, deleteFile, fileHistory } from './github';
-import { summarizeNote, extractTodos } from './ai';
+import { getBinaryFile, putBinaryFile } from './github';
+import { summarizeNote, extractTodos, assistNoteChat } from './ai';
 import { extractBearer, verifyUserToken } from './auth';
-import { filterPublicTree, syncNoteVisibility } from './tree-filter';
-import type { Note, NoteTree, RemindersIndex } from '@webbook/shared';
+import { syncNoteVisibility } from './tree-filter';
+import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
+import type { Note, NoteTree } from '@webbook/shared';
 import { normalizeNote } from '@webbook/shared';
+import type { AIStrategiesConfig, CircleShareStatus, SystemSettings } from '@webbook/shared';
+import {
+  loadUserTree,
+  saveUserTree,
+  loadUserNote,
+  saveUserNote,
+  deleteUserNote,
+  loadUserNoteAtSha,
+  userNoteHistory,
+  findNoteOwner,
+} from './userData';
+import { buildGlobalPublicFeed, buildUserPublicFeed, buildBloggersDirectory } from './publicFeed';
+import { listKnownUserIds, isUserDisabled } from './usersRegistry';
+import {
+  listMyCircles,
+  createCircle,
+  inviteToCircle,
+  listPendingInvites,
+  acceptInvite,
+  updateMyShareStatus,
+  removeMember,
+  getCircleFeed,
+  getCircleDetail,
+} from './circles';
+import {
+  loadUserReminders,
+  addQuickReminder,
+  patchReminder,
+  mergeTodosFromNote,
+  migrateLegacyReminders,
+} from './reminders';
+import { runCronStrategies } from './aiStrategies';
+import {
+  requireAdmin,
+  listAdminUsers,
+  updateAdminUser,
+  loadSystemSettings,
+  saveSystemSettings,
+  getAdminAiStrategies,
+  putAdminAiStrategies,
+} from './admin';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,PUT,DELETE,POST,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,PUT,DELETE,POST,PATCH,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -23,9 +65,9 @@ function unauthorized(): Response {
   return json({ error: 'unauthorized' }, 401);
 }
 
-const notePath = (id: string) => `data/notes/${id}.json`;
-const TREE_PATH = 'data/tree.json';
-const REMINDERS_PATH = 'data/meta/reminders.json';
+function forbidden(): Response {
+  return json({ error: 'forbidden' }, 403);
+}
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -35,99 +77,391 @@ export default {
     const { pathname } = url;
     const token = extractBearer(req);
     const user = await verifyUserToken(env, token);
+    if (user && (await isUserDisabled(env, user.id))) return forbidden();
 
     try {
-      // ── Public read (no auth) ──
-      if (pathname === '/api/public/tree' && req.method === 'GET') {
-        const raw = await getFile(env, TREE_PATH);
-        const tree = raw
-          ? (JSON.parse(raw) as NoteTree)
-          : { schemaVersion: 1, roots: [] };
-        return json(filterPublicTree(tree));
+      // ── Public bloggers directory ──
+      if (pathname === '/api/public/bloggers' && req.method === 'GET') {
+        return json({ bloggers: await buildBloggersDirectory(env) });
       }
 
-      const pubNote = pathname.match(/^\/api\/public\/notes\/([^/]+)$/);
-      if (pubNote && req.method === 'GET') {
-        const id = pubNote[1];
-        const raw = await getFile(env, notePath(id));
-        if (!raw) return json({ error: 'not found' }, 404);
-        const note = normalizeNote(JSON.parse(raw) as Note);
-        if (note.visibility !== 'public') return json({ error: 'not found' }, 404);
+      const userFeedMatch = pathname.match(/^\/api\/public\/users\/([^/]+)\/feed$/);
+      if (userFeedMatch && req.method === 'GET') {
+        const ownerId = userFeedMatch[1]!;
+        const posts = await buildUserPublicFeed(env, ownerId);
+        const email = posts[0]?.ownerEmail ?? ownerId;
+        return json({ ownerId, ownerEmail: email, posts });
+      }
+
+      // ── Public feed (/blog 全网，保留兼容) ──
+      if (pathname === '/api/public/feed' && req.method === 'GET') {
+        return json({ posts: await buildGlobalPublicFeed(env) });
+      }
+
+      if (pathname === '/api/public/tree' && req.method === 'GET') {
+        const posts = await buildGlobalPublicFeed(env);
+        const roots = posts.map((p) => ({
+          id: p.noteId,
+          kind: 'note' as const,
+          title: p.title,
+          noteId: p.noteId,
+          visibility: 'public' as const,
+          ownerId: p.ownerId,
+        }));
+        return json({ schemaVersion: 1, roots });
+      }
+
+      const pubNoteScoped = pathname.match(/^\/api\/public\/notes\/([^/]+)\/([^/]+)$/);
+      if (pubNoteScoped && req.method === 'GET') {
+        const ownerId = pubNoteScoped[1]!;
+        const noteId = pubNoteScoped[2]!;
+        const note = await loadUserNote(env, ownerId, noteId);
+        if (!note || note.visibility !== 'public') return json({ error: 'not found' }, 404);
         return json(note);
       }
 
-      // ── Tree (auth optional for GET; write requires auth) ──
+      const pubNoteLegacy = pathname.match(/^\/api\/public\/notes\/([^/]+)$/);
+      if (pubNoteLegacy && req.method === 'GET') {
+        const noteId = pubNoteLegacy[1]!;
+        const userIds = await listKnownUserIds(env);
+        const ownerId = await findNoteOwner(env, noteId, [...userIds, 'legacy']);
+        if (!ownerId) return json({ error: 'not found' }, 404);
+        const note = await loadUserNote(env, ownerId, noteId);
+        if (!note || note.visibility !== 'public') return json({ error: 'not found' }, 404);
+        return json({ ...note, ownerId });
+      }
+
+      const pubCommentsScoped = pathname.match(
+        /^\/api\/public\/notes\/([^/]+)\/([^/]+)\/comments$/,
+      );
+      if (pubCommentsScoped) {
+        const ownerId = pubCommentsScoped[1]!;
+        const noteId = pubCommentsScoped[2]!;
+        if (req.method === 'GET') {
+          const note = await loadUserNote(env, ownerId, noteId);
+          if (!note || note.visibility !== 'public') return json({ error: 'not found' }, 404);
+          const data = await loadComments(env, ownerId, noteId);
+          const sorted = [...data.comments].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+          return json({ comments: sorted });
+        }
+        if (req.method === 'POST') {
+          const payload = (await req.json()) as {
+            body?: string;
+            author?: {
+              guestId?: string;
+              displayName?: string;
+              avatarHue?: number;
+            };
+          };
+          if (!payload.body?.trim()) return json({ error: 'empty body' }, 400);
+          let author;
+          if (user) {
+            author = buildUserAuthor(user.id, user.email);
+          } else {
+            const guest = buildGuestAuthor({
+              guestId: payload.author?.guestId ?? '',
+              displayName: payload.author?.displayName ?? '',
+              avatarHue: payload.author?.avatarHue,
+            });
+            if (!guest) return json({ error: 'invalid guest author' }, 400);
+            author = guest;
+          }
+          const comment = await addComment(env, ownerId, noteId, payload.body, author);
+          if (!comment) return json({ error: 'cannot comment' }, 400);
+          return json(comment, 201);
+        }
+      }
+
+      // ── Reminders (auth) ──
+      if (pathname === '/api/reminders' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        await migrateLegacyReminders(env, user.id);
+        const index = await loadUserReminders(env, user.id);
+        return json(index);
+      }
+      if (pathname === '/api/reminders' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as { text?: string };
+        if (!body.text?.trim()) return json({ error: 'empty text' }, 400);
+        const reminder = await addQuickReminder(env, user.id, body.text);
+        return json(reminder, 201);
+      }
+      const reminderPatch = pathname.match(/^\/api\/reminders\/([^/]+)$/);
+      if (reminderPatch && req.method === 'PATCH') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as { done?: boolean };
+        const updated = await patchReminder(env, user.id, reminderPatch[1]!, body);
+        if (!updated) return json({ error: 'not found' }, 404);
+        return json(updated);
+      }
+
+      // ── Admin ──
+      if (pathname === '/api/admin/users' && req.method === 'GET') {
+        if (!requireAdmin(user)) return unauthorized();
+        return json({ users: await listAdminUsers(env) });
+      }
+      const adminUserMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+      if (adminUserMatch && req.method === 'PATCH') {
+        if (!requireAdmin(user)) return unauthorized();
+        const body = (await req.json()) as { disabled?: boolean };
+        if (typeof body.disabled !== 'boolean') return json({ error: 'disabled required' }, 400);
+        const updated = await updateAdminUser(env, adminUserMatch[1]!, body.disabled);
+        if (!updated) return json({ error: 'not found' }, 404);
+        return json(updated);
+      }
+      if (pathname === '/api/admin/settings' && req.method === 'GET') {
+        if (!requireAdmin(user)) return unauthorized();
+        return json(await loadSystemSettings(env));
+      }
+      if (pathname === '/api/admin/settings' && req.method === 'PUT') {
+        if (!requireAdmin(user)) return unauthorized();
+        const body = (await req.json()) as SystemSettings;
+        await saveSystemSettings(env, body);
+        return json({ ok: true });
+      }
+      if (pathname === '/api/admin/ai-strategies' && req.method === 'GET') {
+        if (!requireAdmin(user)) return unauthorized();
+        return json(await getAdminAiStrategies(env));
+      }
+      if (pathname === '/api/admin/ai-strategies' && req.method === 'PUT') {
+        if (!requireAdmin(user)) return unauthorized();
+        const body = (await req.json()) as AIStrategiesConfig;
+        await putAdminAiStrategies(env, body);
+        return json({ ok: true });
+      }
+
+      // ── Circles (auth required) ──
+      if (pathname === '/api/circles' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json({ circles: await listMyCircles(env, user.id) });
+      }
+      if (pathname === '/api/circles' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as { name?: string };
+        const circle = await createCircle(env, user.id, user.email, body.name ?? '我的圈子');
+        return json(circle, 201);
+      }
+      if (pathname === '/api/circles/invites' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json({ invites: await listPendingInvites(env, user.email) });
+      }
+
+      const circleFeed = pathname.match(/^\/api\/circles\/([^/]+)\/feed$/);
+      if (circleFeed && req.method === 'GET') {
+        if (!user) return unauthorized();
+        try {
+          return json(await getCircleFeed(env, circleFeed[1]!, user.id));
+        } catch (e) {
+          return json({ error: (e as Error).message }, 403);
+        }
+      }
+
+      const circleInvite = pathname.match(/^\/api\/circles\/([^/]+)\/invites$/);
+      if (circleInvite && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as { email?: string };
+        try {
+          const circle = await inviteToCircle(env, circleInvite[1]!, user.id, body.email ?? '');
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
+      }
+
+      const circleAccept = pathname.match(/^\/api\/circles\/([^/]+)\/accept$/);
+      if (circleAccept && req.method === 'POST') {
+        if (!user) return unauthorized();
+        try {
+          const circle = await acceptInvite(env, circleAccept[1]!, user.id, user.email);
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
+      }
+
+      const circleShare = pathname.match(/^\/api\/circles\/([^/]+)\/share$/);
+      if (circleShare && req.method === 'PATCH') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as { shareStatus?: CircleShareStatus };
+        if (body.shareStatus !== 'none' && body.shareStatus !== 'public_feed') {
+          return json({ error: 'invalid shareStatus' }, 400);
+        }
+        try {
+          const circle = await updateMyShareStatus(
+            env,
+            circleShare[1]!,
+            user.id,
+            body.shareStatus!,
+          );
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 403);
+        }
+      }
+
+      const circleMember = pathname.match(/^\/api\/circles\/([^/]+)\/members\/([^/]+)$/);
+      if (circleMember && req.method === 'DELETE') {
+        if (!user) return unauthorized();
+        try {
+          const circle = await removeMember(env, circleMember[1]!, user.id, circleMember[2]!);
+          return json(circle);
+        } catch (e) {
+          return json({ error: (e as Error).message }, 403);
+        }
+      }
+
+      const circleOne = pathname.match(/^\/api\/circles\/([^/]+)$/);
+      if (circleOne && req.method === 'GET') {
+        if (!user) return unauthorized();
+        try {
+          return json(await getCircleDetail(env, circleOne[1]!, user.id));
+        } catch (e) {
+          return json({ error: (e as Error).message }, 403);
+        }
+      }
+
+      // ── User tree ──
       if (pathname === '/api/tree') {
         if (req.method === 'GET') {
-          const raw = await getFile(env, TREE_PATH);
-          const tree = raw
-            ? (JSON.parse(raw) as NoteTree)
-            : { schemaVersion: 1, roots: [] };
-          if (!user) return json(filterPublicTree(tree));
-          return json(tree);
+          if (!user) {
+            const posts = await buildGlobalPublicFeed(env);
+            const roots = posts.map((p) => ({
+              id: p.noteId,
+              kind: 'note' as const,
+              title: p.title,
+              noteId: p.noteId,
+              visibility: 'public' as const,
+            }));
+            return json({ schemaVersion: 1, roots });
+          }
+          return json(await loadUserTree(env, user.id));
         }
         if (req.method === 'PUT') {
           if (!user) return unauthorized();
           const body = await req.text();
-          await putFile(env, TREE_PATH, body, 'chore: update tree');
+          const tree = JSON.parse(body) as NoteTree;
+          await saveUserTree(env, user.id, user.email, tree);
           return json({ ok: true });
         }
       }
 
       // ── Notes ──
+      const versionMatch = pathname.match(/^\/api\/notes\/([^/]+)\/versions\/([^/]+)$/);
+      if (versionMatch && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const note = await loadUserNoteAtSha(env, user.id, versionMatch[1]!, versionMatch[2]!);
+        if (!note) return json({ error: 'not found' }, 404);
+        return json(note);
+      }
+
       const noteMatch = pathname.match(/^\/api\/notes\/([^/]+)(\/history)?$/);
-      if (noteMatch) {
-        const id = noteMatch[1];
+      if (noteMatch && user) {
+        const id = noteMatch[1]!;
         const isHistory = Boolean(noteMatch[2]);
 
         if (isHistory && req.method === 'GET') {
-          if (!user) return unauthorized();
-          return json({ commits: await fileHistory(env, notePath(id)) });
+          return json({ commits: await userNoteHistory(env, user.id, id) });
         }
 
         if (req.method === 'GET') {
-          const raw = await getFile(env, notePath(id));
-          if (!raw) return json({ error: 'not found' }, 404);
-          const note = normalizeNote(JSON.parse(raw) as Note);
-          if (!user && note.visibility !== 'public') {
-            return json({ error: 'not found' }, 404);
-          }
+          const note = await loadUserNote(env, user.id, id);
+          if (!note) return json({ error: 'not found' }, 404);
           return json(note);
         }
 
         if (req.method === 'PUT') {
-          if (!user) return unauthorized();
           const body = await req.text();
           const note = normalizeNote(JSON.parse(body) as Note);
-          await putFile(env, notePath(id), JSON.stringify(note, null, 2), `note: update ${id}`);
+          await saveUserNote(env, user.id, user.email, note);
 
-          // 同步 visibility 到 tree.json
-          const treeRaw = await getFile(env, TREE_PATH);
-          if (treeRaw) {
-            const tree = JSON.parse(treeRaw) as NoteTree;
-            const synced = syncNoteVisibility(tree, id, note.visibility);
-            await putFile(env, TREE_PATH, JSON.stringify(synced, null, 2), 'chore: sync visibility');
+          const tree = await loadUserTree(env, user.id);
+          const synced = syncNoteVisibility(tree, id, note.visibility);
+          await saveUserTree(env, user.id, user.email, synced);
+
+          try {
+            await mergeTodosFromNote(env, user.id, note);
+          } catch {
+            /* non-blocking */
           }
-
-          await runOnSave(env, note);
           return json({ ok: true });
         }
 
         if (req.method === 'DELETE') {
-          if (!user) return unauthorized();
-          await deleteFile(env, notePath(id), `note: delete ${id}`);
+          await deleteUserNote(env, user.id, id);
           return json({ ok: true });
         }
       }
 
-      // ── Link preview (public) ──
+      // Public note read without auth (by id in own... no, use public routes)
+
+      // ── Assets ──
+      const assetGet = pathname.match(/^\/api\/assets\/([^/]+)$/);
+      if (assetGet && req.method === 'GET') {
+        const name = assetGet[1]!;
+        if (!/^[\w.-]+\.(png|jpe?g|gif|webp)$/i.test(name)) {
+          return json({ error: 'invalid asset' }, 400);
+        }
+        let bytes = user ? await getBinaryFile(env, `data/users/${user.id}/assets/${name}`) : null;
+        if (!bytes) bytes = await getBinaryFile(env, `data/assets/${name}`);
+        if (!bytes) return json({ error: 'not found' }, 404);
+        const ext = name.split('.').pop()?.toLowerCase() ?? 'png';
+        const mime =
+          ext === 'jpg' || ext === 'jpeg'
+            ? 'image/jpeg'
+            : ext === 'gif'
+              ? 'image/gif'
+              : ext === 'webp'
+                ? 'image/webp'
+                : 'image/png';
+        return new Response(bytes.buffer as ArrayBuffer, {
+          headers: { 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400', ...CORS },
+        });
+      }
+
+      if (pathname === '/api/assets/upload' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const form = await req.formData();
+        const file = form.get('file');
+        if (!(file instanceof File)) return json({ error: 'missing file' }, 400);
+        if (!file.type.startsWith('image/')) return json({ error: 'images only' }, 400);
+        if (file.size > 5 * 1024 * 1024) return json({ error: 'max 5MB' }, 400);
+        const ext = mimeToExt(file.type);
+        const filename = `${crypto.randomUUID()}.${ext}`;
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        await putBinaryFile(
+          env,
+          `data/users/${user.id}/assets/${filename}`,
+          bytes,
+          `asset: ${filename}`,
+        );
+        return json({ url: `/api/assets/${filename}` });
+      }
+
       if (pathname === '/api/link-preview' && req.method === 'GET') {
         const target = url.searchParams.get('url');
         if (!target) return json({ error: 'missing url' }, 400);
         return json(await fetchLinkMeta(target));
       }
 
-      // ── AI run (auth required) ──
+      if (pathname === '/api/ai/chat' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as {
+          note: Note;
+          messages: { role: 'user' | 'assistant'; content: string }[];
+        };
+        if (!body.note || !Array.isArray(body.messages) || body.messages.length === 0) {
+          return json({ error: 'note and messages required' }, 400);
+        }
+        const last = body.messages[body.messages.length - 1];
+        if (!last || last.role !== 'user' || !last.content.trim()) {
+          return json({ error: 'last message must be non-empty user message' }, 400);
+        }
+        const result = await assistNoteChat(env, normalizeNote(body.note), body.messages);
+        return json({ reply: result.reply, noteMarkdown: result.noteMarkdown });
+      }
+
       if (pathname === '/api/ai/run' && req.method === 'POST') {
         if (!user) return unauthorized();
         const { action, note } = (await req.json()) as { action: string; note: Note };
@@ -143,35 +477,15 @@ export default {
   },
 
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
-    const raw = await getFile(env, TREE_PATH);
-    if (!raw) return;
-    const reminders: RemindersIndex = { schemaVersion: 1, reminders: [] };
-    await putFile(env, REMINDERS_PATH, JSON.stringify(reminders, null, 2), 'ai: nightly tidy');
+    await runCronStrategies(env);
   },
 };
 
-async function runOnSave(env: Env, note: Note): Promise<void> {
-  try {
-    const todos = await extractTodos(env, note);
-    if (todos.length === 0) return;
-    const raw = await getFile(env, REMINDERS_PATH);
-    const index: RemindersIndex = raw
-      ? (JSON.parse(raw) as RemindersIndex)
-      : { schemaVersion: 1, reminders: [] };
-    const filtered = index.reminders.filter((r) => r.noteId !== note.id);
-    const now = new Date().toISOString();
-    for (const text of todos) {
-      filtered.push({ id: `${note.id}:${text}`, noteId: note.id, text, createdAt: now, done: false });
-    }
-    await putFile(
-      env,
-      REMINDERS_PATH,
-      JSON.stringify({ ...index, reminders: filtered }, null, 2),
-      'ai: update reminders',
-    );
-  } catch {
-    /* 不阻塞保存 */
-  }
+function mimeToExt(mime: string): string {
+  if (mime.includes('jpeg')) return 'jpg';
+  if (mime.includes('gif')) return 'gif';
+  if (mime.includes('webp')) return 'webp';
+  return 'png';
 }
 
 async function fetchLinkMeta(target: string) {

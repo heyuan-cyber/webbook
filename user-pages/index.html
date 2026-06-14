@@ -2,10 +2,68 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="refresh" content="0;url=/webbook/" />
-    <title>WebBook</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>heyuan-cyber · WebBook</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f172a;
+        --text: #e2e8f0;
+        --dim: #94a3b8;
+        --accent: #38bdf8;
+        --card: #1e293b;
+        --border: #334155;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        padding: 24px;
+      }
+      main {
+        max-width: 420px;
+        width: 100%;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 28px 24px;
+        text-align: center;
+      }
+      h1 { margin: 0 0 8px; font-size: 24px; }
+      p { margin: 0 0 20px; color: var(--dim); line-height: 1.5; }
+      .links { display: flex; flex-direction: column; gap: 10px; }
+      a {
+        display: block;
+        padding: 12px 16px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .primary {
+        background: #0ea5e9;
+        color: #04222f;
+      }
+      .ghost {
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .ghost:hover { border-color: var(--accent); }
+    </style>
   </head>
   <body>
-    <p>正在跳转到 <a href="/webbook/">WebBook</a>…</p>
+    <main>
+      <h1>WebBook</h1>
+      <p>个人知识库与公开博客。笔记本在子路径 <code>/webbook/</code> 运行。</p>
+      <div class="links">
+        <a class="primary" href="/webbook/app">打开笔记本</a>
+        <a class="ghost" href="/webbook/blog">阅读公开博客</a>
+      </div>
+    </main>
   </body>
 </html>
