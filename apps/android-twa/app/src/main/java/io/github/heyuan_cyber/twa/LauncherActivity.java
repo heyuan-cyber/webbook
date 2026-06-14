@@ -44,11 +44,10 @@ public class LauncherActivity
 
     @Override
     protected Uri getLaunchingUrl() {
-        // Get the original launch Url.
         Uri uri = super.getLaunchingUrl();
-
-        
-
-        return uri;
+        // shell=twa：前端识别 APK 壳并跳过 Service Worker，避免旧缓存
+        return uri.buildUpon()
+                .appendQueryParameter("shell", "twa")
+                .build();
     }
 }

@@ -53,8 +53,9 @@ git push                        # 部署 /webbook/.well-known/ 副本
 1. 清 **Google Chrome**（推荐先安装）→ 设置 → 网站设置 → `heyuan-cyber.github.io` → 清除并重置  
    或清 **Android System WebView**（设置 → 应用 → 显示系统应用）
 2. 卸载 APK → 等 3 分钟 → 安装最新 `app-release-signed.apk`（versionCode ≥ 4）
-3. **先开 APK**，装好后不要先用浏览器打开网站
-4. 当前 APK：`webview` 回退（兼容无 Chrome 的国产手机）、TWA 内自动禁用 Service Worker
+3. **先开 APK** 安装后测试；若仍见旧版，卸载后重装最新 APK（versionCode ≥ 6）
+4. APK 启动 URL 带 `?shell=twa`，前端会**禁用 Service Worker** 并清缓存，避免旧版壳
+5. 浏览器里「删除缓存」不够，需「清除网站数据」或卸载重装 APK
 
 ## 启动 URL 注意
 

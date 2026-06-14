@@ -10,6 +10,28 @@
     <title>WebBook · 个人知识库</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var shell =
+          document.referrer.indexOf('android-app://') === 0 ||
+          (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+          /[?&]shell=/.test(location.search) ||
+          (/Android/i.test(navigator.userAgent) && /; wv\)/.test(navigator.userAgent));
+        if (!shell || !('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) {
+            r.unregister();
+          });
+        });
+        if ('caches' in window) {
+          caches.keys().then(function (keys) {
+            keys.forEach(function (k) {
+              caches.delete(k);
+            });
+          });
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
