@@ -31,6 +31,33 @@ export const localStore = {
   },
 };
 
+/** 大纲折叠：按笔记 id 存 localStorage */
+const OUTLINE_COLLAPSE_KEY = 'webbook:outline-collapse';
+
+export const outlineCollapseState = {
+  load(noteId: string): Record<string, boolean> {
+    try {
+      const all = JSON.parse(localStorage.getItem(OUTLINE_COLLAPSE_KEY) ?? '{}') as Record<
+        string,
+        Record<string, boolean>
+      >;
+      return all[noteId] ?? {};
+    } catch {
+      return {};
+    }
+  },
+  save(noteId: string, state: Record<string, boolean>): void {
+    try {
+      const raw = localStorage.getItem(OUTLINE_COLLAPSE_KEY);
+      const all = raw ? (JSON.parse(raw) as Record<string, Record<string, boolean>>) : {};
+      all[noteId] = state;
+      localStorage.setItem(OUTLINE_COLLAPSE_KEY, JSON.stringify(all));
+    } catch {
+      /* ignore */
+    }
+  },
+};
+
 /** 折叠状态：纯本地偏好，localStorage 足够 */
 export const foldState = {
   load(): Record<string, boolean> {

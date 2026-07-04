@@ -6,6 +6,7 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onActivate?: () => void;
   placeholder?: string;
   registerRef: (id: string, el: HTMLElement | null) => void;
   multiline?: boolean;
@@ -21,6 +22,7 @@ export function EditableMarkdownField({
   value,
   onChange,
   onKeyDown,
+  onActivate,
   placeholder = '',
   registerRef,
   multiline = true,
@@ -42,6 +44,7 @@ export function EditableMarkdownField({
   }, [blockId, editing, registerRef]);
 
   function startEditing() {
+    onActivate?.();
     setEditing(true);
     requestAnimationFrame(() => {
       const el = inputRef.current;

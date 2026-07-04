@@ -10,11 +10,23 @@ export type BlockType =
   | 'link-preview'
   | 'divider'
   | 'callout'
-  | 'canvas';
+  | 'canvas'
+  | 'sticky';
+
+/** flow=文档流脊；absolute=舞台覆层（仍占 blocks[] 顺序以定节归属） */
+export interface BlockPlacement {
+  mode: 'flow' | 'absolute';
+  x?: number;
+  y?: number;
+  z?: number;
+  width?: number;
+  height?: number;
+}
 
 export interface BaseBlock {
   id: string;
   type: BlockType;
+  placement?: BlockPlacement;
 }
 
 export interface HeadingBlock extends BaseBlock {
@@ -41,11 +53,27 @@ export interface CheckboxBlock extends BaseBlock {
   text: string;
 }
 
+/** 相对原图 0–1 的裁剪区域 */
+export interface ImageCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ImageBlock extends BaseBlock {
   type: 'image';
   src: string;
   alt?: string;
   caption?: string;
+  /** 显示宽度（px），未设则 100% */
+  width?: number;
+  align?: 'left' | 'center' | 'right';
+  crop?: ImageCrop;
+  /** inline=文档流；free=块内自由定位 */
+  layout?: 'inline' | 'free';
+  freeX?: number;
+  freeY?: number;
 }
 
 export interface VideoBlock extends BaseBlock {
@@ -73,8 +101,14 @@ export interface CalloutBlock extends BaseBlock {
   text: string;
 }
 
+export interface StickyBlock extends BaseBlock {
+  type: 'sticky';
+  text: string;
+  color?: string;
+}
+
 /** 画布内自由定位的元素 */
-export type CanvasElementKind = 'sticky' | 'image' | 'text' | 'shape';
+export type CanvasElementKind = 'sticky' | 'image' | 'text' | 'shape' | 'link';
 
 export interface CanvasElement {
   id: string;
@@ -88,6 +122,14 @@ export interface CanvasElement {
   /** sticky/text 的文本，image 的 src */
   content?: string;
   color?: string;
+  /** image 元素裁剪（从 image block 迁入时可带） */
+  imageCrop?: ImageCrop;
+  /** link 预览卡 */
+  linkUrl?: string;
+  linkTitle?: string;
+  linkDescription?: string;
+  linkImage?: string;
+  linkFavicon?: string;
 }
 
 export interface CanvasBlock extends BaseBlock {
@@ -109,4 +151,28 @@ export type Block =
   | LinkPreviewBlock
   | DividerBlock
   | CalloutBlock
+  | StickyBlock
   | CanvasBlock;
+
+/** 笔记舞台相机（固定视口，平移 viewCenter 浏览无限平面） */
+export interface NoteStage {
+  viewCenterX: number;
+  viewCenterY: number;
+}
+
+export const DEFAULT_NOTE_STAGE: NoteStage = { viewCenterX: 0, viewCenterY: 0 };
+
+export function isAbsoluteBlock(block: Block): boolean {
+  return block.placement?.mode === 'absolute';
+}
+
+export function defaultStickyPlacement(offset = 0): BlockPlacement {
+  return {
+    mode: 'absolute',
+    x: 32 + offset * 20,
+    y: 32 + offset * 20,
+    z: 1,
+    width: 200,
+    height: 140,
+  };
+}

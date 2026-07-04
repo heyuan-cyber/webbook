@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import type { Block, NoteVisibility } from '@webbook/shared';
+import { DEFAULT_NOTE_STAGE, isAbsoluteBlock } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useNotesStore } from '@/store/useNotesStore';
 import { BlockEditor } from './editor/BlockEditor';
+import { OutlinePanel } from './editor/OutlinePanel';
+import { centerStageOn } from './editor/StageViewport';
 import { AiChatPanel } from './AiChatPanel';
 import { NoteHistoryPanel } from './NoteHistoryPanel';
 import { toast } from '@/store/useToastStore';
+import { outlineCollapseState } from '@/lib/storage';
 
 export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const { id } = useParams();
@@ -22,9 +26,49 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const setActiveTitle = useNotesStore((s) => s.setActiveTitle);
   const setActiveVisibility = useNotesStore((s) => s.setActiveVisibility);
   const updateActiveBlocks = useNotesStore((s) => s.updateActiveBlocks);
+  const updateActiveStage = useNotesStore((s) => s.updateActiveStage);
   const saving = useNotesStore((s) => s.saving);
   const saveError = useNotesStore((s) => s.saveError);
   const [preview, setPreview] = useState(false);
+  const [outlineCollapsed, setOutlineCollapsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!id) return;
+    setOutlineCollapsed(outlineCollapseState.load(id));
+  }, [id]);
+
+  const collapsedHeadingIds = useMemo(
+    () => new Set(Object.keys(outlineCollapsed).filter((k) => outlineCollapsed[k])),
+    [outlineCollapsed],
+  );
+
+  function toggleHeadingCollapse(headingId: string) {
+    if (!id) return;
+    setOutlineCollapsed((prev) => {
+      const next = { ...prev, [headingId]: !prev[headingId] };
+      outlineCollapseState.save(id, next);
+      return next;
+    });
+  }
+
+  function onSelectOutlineBlock(blockIndex: number) {
+    if (!activeNote) return;
+    const block = activeNote.blocks[blockIndex];
+    if (!block) return;
+    const stage = activeNote.stage ?? DEFAULT_NOTE_STAGE;
+    if (isAbsoluteBlock(block) && block.placement) {
+      updateActiveStage(
+        centerStageOn(stage, block.placement.x ?? 0, block.placement.y ?? 0),
+      );
+      return;
+    }
+    requestAnimationFrame(() => {
+      const row = document.querySelector(`[data-block-index="${blockIndex}"]`) as HTMLElement | null;
+      if (!row) return;
+      const y = row.offsetTop + row.offsetHeight / 2;
+      updateActiveStage({ ...stage, viewCenterY: y });
+    });
+  }
 
   useEffect(() => {
     if (!id || !treeReady) return;
@@ -84,7 +128,9 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   }
 
   return (
-    <main className={`editor editor-with-ai ${showPreview ? 'editor-preview' : ''}`}>
+    <main
+      className={`editor editor-with-ai editor-workbench ${showPreview ? 'editor-preview' : ''}`}
+    >
       <div className="editor-head">
         {showPreview ? (
           <h1 className="note-title">{activeNote.title}</h1>
@@ -155,11 +201,24 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
           <strong>AI 摘要：</strong> {activeNote.summary}
         </div>
       )}
-      <BlockEditor
-        blocks={activeNote.blocks}
-        onChange={updateActiveBlocks}
-        readOnly={showPreview}
-      />
+      <div className="editor-body">
+        <OutlinePanel
+          blocks={activeNote.blocks}
+          collapsed={outlineCollapsed}
+          onToggleCollapse={toggleHeadingCollapse}
+          onSelectBlock={onSelectOutlineBlock}
+          readOnly={showPreview}
+        />
+        <BlockEditor
+          blocks={activeNote.blocks}
+          onChange={updateActiveBlocks}
+          readOnly={showPreview}
+          stage={activeNote.stage ?? DEFAULT_NOTE_STAGE}
+          onStageChange={updateActiveStage}
+          collapsedHeadingIds={collapsedHeadingIds}
+          onToggleHeadingCollapse={toggleHeadingCollapse}
+        />
+      </div>
       {!readOnly && (
         <AiChatPanel
           note={activeNote}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { LinkPreviewBlock } from '@webbook/shared';
 import { apiClient } from '@/lib/api';
 
@@ -6,10 +6,18 @@ interface Props {
   block: LinkPreviewBlock;
   patch: (patch: Partial<LinkPreviewBlock>) => void;
   readOnly?: boolean;
+  autoFocus?: boolean;
 }
 
-export function LinkPreviewBlockView({ block, patch, readOnly }: Props) {
+export function LinkPreviewBlockView({ block, patch, readOnly, autoFocus }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (autoFocus && !readOnly) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [autoFocus, readOnly]);
 
   async function fetchMeta() {
     if (!block.url) return;
@@ -49,6 +57,7 @@ export function LinkPreviewBlockView({ block, patch, readOnly }: Props) {
   return (
     <div className="link-input-row">
       <input
+        ref={inputRef}
         className="url-input"
         placeholder="粘贴链接 URL"
         value={block.url}

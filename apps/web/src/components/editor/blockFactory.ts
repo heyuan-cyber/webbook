@@ -1,4 +1,5 @@
-import type { Block, BlockType } from '@webbook/shared';
+import type { Block, BlockPlacement, BlockType } from '@webbook/shared';
+import { defaultStickyPlacement } from '@webbook/shared';
 import { uid } from '@/lib/id';
 
 export function createBlock(type: BlockType): Block {
@@ -24,9 +25,47 @@ export function createBlock(type: BlockType): Block {
       return { id, type, tone: 'info', text: '' };
     case 'canvas':
       return { id, type, height: 320, elements: [] };
+    case 'sticky':
+      return {
+        id,
+        type: 'sticky',
+        text: '',
+        color: '#fde68a',
+        placement: defaultStickyPlacement(),
+      };
     default:
       return { id, type: 'paragraph', text: '' };
   }
+}
+
+export type StageAbsoluteType = 'sticky' | 'image' | 'link-preview';
+
+export function createAbsoluteBlock(
+  type: StageAbsoluteType,
+  x: number,
+  y: number,
+): Block {
+  const placement: BlockPlacement = {
+    mode: 'absolute',
+    x,
+    y,
+    z: 1,
+    width: type === 'sticky' ? 200 : type === 'image' ? 280 : 260,
+    height: type === 'sticky' ? 140 : type === 'image' ? 210 : undefined,
+  };
+  if (type === 'sticky') {
+    const block = createBlock('sticky');
+    if (block.type !== 'sticky') return block;
+    return { ...block, placement, color: '#fde68a' };
+  }
+  if (type === 'image') {
+    const block = createBlock('image');
+    if (block.type !== 'image') return block;
+    return { ...block, placement };
+  }
+  const block = createBlock('link-preview');
+  if (block.type !== 'link-preview') return block;
+  return { ...block, placement };
 }
 
 export const BLOCK_MENU: { type: BlockType; label: string; icon: string; slash?: string[] }[] = [
@@ -38,6 +77,7 @@ export const BLOCK_MENU: { type: BlockType; label: string; icon: string; slash?:
   { type: 'video', label: '视频', icon: '▶', slash: ['视频', 'video'] },
   { type: 'link-preview', label: '链接预览', icon: '🔗', slash: ['链接', 'link', 'url'] },
   { type: 'callout', label: '标注', icon: '💡', slash: ['标注', 'callout', '提示'] },
+  { type: 'sticky', label: '便签', icon: '📌', slash: ['便签', 'sticky', '贴纸'] },
   { type: 'canvas', label: '自由画布', icon: '🎨', slash: ['画布', 'canvas', '画板'] },
   { type: 'divider', label: '分割线', icon: '―', slash: ['分割', 'divider', 'hr'] },
 ];

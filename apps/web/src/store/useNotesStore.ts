@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Block, Note, NoteTree, TreeNode, NoteVisibility } from '@webbook/shared';
+import type { Block, Note, NoteStage, NoteTree, TreeNode, NoteVisibility } from '@webbook/shared';
 import { createEmptyNote, createEmptyTree, findNode, normalizeNote } from '@webbook/shared';
 import { uid } from '@/lib/id';
 import { foldState } from '@/lib/storage';
@@ -32,6 +32,7 @@ interface NotesState {
   moveNode: (id: string, newParentId: string | null, index: number) => Promise<void>;
 
   updateActiveBlocks: (blocks: Block[]) => void;
+  updateActiveStage: (stage: NoteStage) => void;
   setActiveTitle: (title: string) => void;
   setActiveVisibility: (visibility: NoteVisibility) => void;
 }
@@ -250,6 +251,14 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     const { activeNote } = getState();
     if (!activeNote) return;
     const updated: Note = { ...activeNote, blocks, updatedAt: new Date().toISOString() };
+    setState({ activeNote: updated });
+    scheduleSave(getState);
+  },
+
+  updateActiveStage(stage) {
+    const { activeNote } = getState();
+    if (!activeNote) return;
+    const updated: Note = { ...activeNote, stage, updatedAt: new Date().toISOString() };
     setState({ activeNote: updated });
     scheduleSave(getState);
   },

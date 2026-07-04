@@ -1,5 +1,6 @@
 import type { Env } from './env';
-import { getBinaryFile, putBinaryFile } from './github';
+import { putBinaryFile } from './github';
+import { resolveAssetBytes } from './assets';
 import { summarizeNote, extractTodos, assistNoteChat } from './ai';
 import { extractBearer, verifyUserToken } from './auth';
 import { syncNoteVisibility } from './tree-filter';
@@ -644,8 +645,7 @@ export default {
         if (!/^[\w.-]+\.(png|jpe?g|gif|webp)$/i.test(name)) {
           return json({ error: 'invalid asset' }, 400);
         }
-        let bytes = user ? await getBinaryFile(env, `data/users/${user.id}/assets/${name}`) : null;
-        if (!bytes) bytes = await getBinaryFile(env, `data/assets/${name}`);
+        const bytes = await resolveAssetBytes(env, name, user);
         if (!bytes) return json({ error: 'not found' }, 404);
         const ext = name.split('.').pop()?.toLowerCase() ?? 'png';
         const mime =

@@ -1,7 +1,9 @@
 import type { Block } from './blocks.js';
 import type { ParagraphBlock } from './blocks.js';
+import type { NoteStage } from './blocks.js';
+import { DEFAULT_NOTE_STAGE } from './blocks.js';
 
-export const NOTE_SCHEMA_VERSION = 2;
+export const NOTE_SCHEMA_VERSION = 3;
 
 export type NoteVisibility = 'private' | 'circle' | 'public';
 
@@ -10,6 +12,8 @@ export interface Note {
   id: string;
   title: string;
   blocks: Block[];
+  /** 舞台相机；未设则使用默认中心 */
+  stage?: NoteStage;
   /** 公开可被匿名访问；私密仅登录用户可读 */
   visibility: NoteVisibility;
   /** AI 归纳产出 */
@@ -35,6 +39,7 @@ export function createEmptyNote(id: string, title = '未命名笔记'): Note {
     id,
     title,
     blocks: [createDefaultParagraph()],
+    stage: { ...DEFAULT_NOTE_STAGE },
     visibility: 'private',
     createdAt: now,
     updatedAt: now,
@@ -51,6 +56,7 @@ export function normalizeNote(raw: Partial<Note> & { id: string }): Note {
     id: raw.id,
     title: raw.title ?? '未命名笔记',
     blocks,
+    stage: raw.stage ?? { ...DEFAULT_NOTE_STAGE },
     visibility: raw.visibility ?? 'private',
     summary: raw.summary,
     tags: raw.tags,
