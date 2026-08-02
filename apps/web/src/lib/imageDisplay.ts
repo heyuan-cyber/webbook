@@ -11,12 +11,41 @@ export function normalizeCrop(crop?: ImageCrop): ImageCrop {
   return { x, y, width, height };
 }
 
-export function cropFrameStyle(crop: ImageCrop, displayWidth?: number) {
+/**
+ * @param naturalAspect 原图像素宽/高。裁剪框的归一化 w/h 不是像素比；
+ *   显示宽高比 = (crop.w / crop.h) * naturalAspect。未提供时不写 aspectRatio，
+ *   避免全图 crop(1,1) 被误当成 1:1 正方形。
+ */
+export function cropFrameStyle(
+  crop: ImageCrop,
+  displayWidth?: number,
+  naturalAspect?: number,
+) {
   const c = normalizeCrop(crop);
-  return {
+  const style: {
+    width: string;
+    maxWidth: string;
+    overflow: 'hidden';
+    position: 'relative';
+    aspectRatio?: string;
+  } = {
     width: displayWidth ? `${displayWidth}px` : '100%',
     maxWidth: '100%',
-    aspectRatio: `${c.width} / ${c.height}`,
+    overflow: 'hidden',
+    position: 'relative',
+  };
+  if (naturalAspect && naturalAspect > 0) {
+    const aspect = (c.width / c.height) * naturalAspect;
+    style.aspectRatio = `${aspect} / 1`;
+  }
+  return style;
+}
+
+/** 舞台绝对图：外框尺寸已由 placement 决定，只需裁剪容器样式 */
+export function stageCropFrameStyle(height: number) {
+  return {
+    width: '100%' as const,
+    height,
     overflow: 'hidden' as const,
     position: 'relative' as const,
   };

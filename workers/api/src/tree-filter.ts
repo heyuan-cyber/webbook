@@ -20,6 +20,28 @@ function filterNodes(nodes: TreeNode[]): TreeNode[] {
   return out;
 }
 
+/** 读取树中某笔记节点的可见性（找不到返回 undefined） */
+export function getNoteVisibilityInTree(
+  tree: NoteTree,
+  noteId: string,
+): TreeNodeVisibility | undefined {
+  return findVisibility(tree.roots, noteId);
+}
+
+function findVisibility(
+  nodes: TreeNode[],
+  noteId: string,
+): TreeNodeVisibility | undefined {
+  for (const n of nodes) {
+    if (n.kind === 'note' && (n.noteId ?? n.id) === noteId) return n.visibility;
+    if (n.children) {
+      const v = findVisibility(n.children, noteId);
+      if (v !== undefined) return v;
+    }
+  }
+  return undefined;
+}
+
 /** 同步 note 可见性到树节点 */
 export function syncNoteVisibility(
   tree: NoteTree,

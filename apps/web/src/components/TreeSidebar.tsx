@@ -8,10 +8,13 @@ export function TreeSidebar({
   editable = true,
   className,
   onNavigate,
+  onCollapse,
 }: {
   editable?: boolean;
   className?: string;
   onNavigate?: () => void;
+  /** 桌面端收起侧栏 */
+  onCollapse?: () => void;
 }) {
   const tree = useNotesStore((s) => s.tree);
   const searchNotes = useNotesStore((s) => s.searchNotes);
@@ -44,6 +47,17 @@ export function TreeSidebar({
     <aside className={className ? `sidebar ${className}` : 'sidebar'}>
       <div className="sidebar-head">
         <span className="logo">📓 WebBook</span>
+        {onCollapse && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm sidebar-collapse-btn"
+            aria-label="收起目录"
+            title="收起目录"
+            onClick={onCollapse}
+          >
+            «
+          </button>
+        )}
       </div>
       <div className="sidebar-search">
         <input

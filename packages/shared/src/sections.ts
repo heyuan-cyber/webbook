@@ -88,6 +88,34 @@ export function isBlockHiddenByCollapse(
   return false;
 }
 
+const STAGE_ORDER_EPS = 1;
+
+/**
+ * 按舞台视觉位置重排：flow 块保持相对顺序并排在前面；
+ * absolute 块按 placement.y 再 x（稳定：原下标）。
+ * 拖动 absolute 标题/卡片后调用，使大纲与折叠节区间与所见位置一致。
+ */
+export function reorderBlocksByStagePosition(blocks: Block[]): Block[] {
+  const indexed = blocks.map((b, i) => ({ b, i }));
+  indexed.sort((a, c) => {
+    const aAbs = a.b.placement?.mode === 'absolute';
+    const cAbs = c.b.placement?.mode === 'absolute';
+    if (!aAbs && !cAbs) return a.i - c.i;
+    if (!aAbs) return -1;
+    if (!cAbs) return 1;
+    const dy = (a.b.placement!.y ?? 0) - (c.b.placement!.y ?? 0);
+    if (Math.abs(dy) > STAGE_ORDER_EPS) return dy;
+    const dx = (a.b.placement!.x ?? 0) - (c.b.placement!.x ?? 0);
+    if (Math.abs(dx) > STAGE_ORDER_EPS) return dx;
+    return a.i - c.i;
+  });
+  const next = indexed.map(({ b }) => b);
+  for (let i = 0; i < next.length; i++) {
+    if (next[i]!.id !== blocks[i]!.id) return next;
+  }
+  return blocks;
+}
+
 /** 由 blocks[] 顺序构建大纲树；节归属不存字段，仅由索引区间推导 */
 export function buildOutline(blocks: Block[]): OutlineDocument {
   const preamble: OutlineBlockRef[] = [];

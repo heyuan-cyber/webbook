@@ -2,22 +2,8 @@ import type { Block } from '@webbook/shared';
 import {
   buildOutline,
   headingHasSectionBody,
-  type OutlineBlockRef,
   type OutlineSectionNode,
 } from '@webbook/shared';
-
-const BLOCK_ICONS: Partial<Record<Block['type'], string>> = {
-  sticky: '📌',
-  image: '🖼',
-  video: '▶',
-  canvas: '🎨',
-  'link-preview': '🔗',
-  paragraph: '¶',
-  list: '•',
-  checkbox: '☑',
-  callout: '💡',
-  divider: '―',
-};
 
 interface Props {
   blocks: Block[];
@@ -25,6 +11,12 @@ interface Props {
   onToggleCollapse: (headingId: string) => void;
   onSelectBlock: (blockIndex: number) => void;
   readOnly?: boolean;
+  panelCollapsed?: boolean;
+  onTogglePanel?: () => void;
+}
+
+function sectionChildren(node: OutlineSectionNode): OutlineSectionNode[] {
+  return node.children.filter((e): e is OutlineSectionNode => e.kind === 'section');
 }
 
 export function OutlinePanel({
@@ -33,20 +25,44 @@ export function OutlinePanel({
   onToggleCollapse,
   onSelectBlock,
   readOnly,
+  panelCollapsed,
+  onTogglePanel,
 }: Props) {
   const doc = buildOutline(blocks);
-  const hasContent = doc.preamble.length > 0 || doc.sections.length > 0;
+  const hasContent = doc.sections.length > 0;
+
+  if (panelCollapsed) {
+    return (
+      <button
+        type="button"
+        className="outline-panel-rail"
+        aria-label="展开大纲"
+        title="展开大纲"
+        onClick={onTogglePanel}
+      >
+        <span className="outline-panel-rail-label">大纲</span>
+      </button>
+    );
+  }
 
   return (
     <aside className="outline-panel" aria-label="文档大纲">
       <div className="outline-panel-head">
         <span className="outline-panel-title">大纲</span>
+        {onTogglePanel && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm outline-panel-toggle"
+            aria-label="收起大纲"
+            title="收起大纲"
+            onClick={onTogglePanel}
+          >
+            «
+          </button>
+        )}
       </div>
       <div className="outline-panel-body">
-        {!hasContent && <p className="muted outline-empty">添加标题后显示结构</p>}
-        {doc.preamble.map((item) => (
-          <BlockRow key={item.blockId} blockRef={item} depth={0} onSelect={onSelectBlock} />
-        ))}
+        {!hasContent && <p className="muted outline-empty">添加标题后显示目录</p>}
         {doc.sections.map((node) => (
           <SectionTree
             key={node.blockId}
@@ -82,12 +98,14 @@ function SectionTree({
   readOnly?: boolean;
 }) {
   const isCollapsed = collapsed[node.blockId] ?? false;
+  const nested = sectionChildren(node);
   const hasBody = headingHasSectionBody(blocks, node.blockIndex);
+  const showTwisty = hasBody || nested.length > 0;
 
   return (
     <div className="outline-section" style={{ paddingLeft: depth * 10 }}>
       <div className="outline-row outline-row-heading">
-        {hasBody && !readOnly ? (
+        {showTwisty && !readOnly ? (
           <button
             type="button"
             className="outline-twisty"
@@ -109,48 +127,18 @@ function SectionTree({
         </button>
       </div>
       {!isCollapsed &&
-        node.children.map((entry) =>
-          entry.kind === 'section' ? (
-            <SectionTree
-              key={entry.blockId}
-              node={entry}
-              depth={depth + 1}
-              blocks={blocks}
-              collapsed={collapsed}
-              onToggleCollapse={onToggleCollapse}
-              onSelectBlock={onSelectBlock}
-              readOnly={readOnly}
-            />
-          ) : (
-            <BlockRow
-              key={entry.blockId}
-              blockRef={entry}
-              depth={depth + 1}
-              onSelect={onSelectBlock}
-            />
-          ),
-        )}
-    </div>
-  );
-}
-
-function BlockRow({
-  blockRef,
-  depth,
-  onSelect,
-}: {
-  blockRef: OutlineBlockRef;
-  depth: number;
-  onSelect: (blockIndex: number) => void;
-}) {
-  const icon = BLOCK_ICONS[blockRef.type] ?? '▪';
-  return (
-    <div className="outline-row outline-row-block" style={{ paddingLeft: 8 + depth * 10 }}>
-      <span className="outline-twisty leaf">·</span>
-      <button type="button" className="outline-label" onClick={() => onSelect(blockRef.blockIndex)}>
-        <span className="outline-block-icon">{icon}</span>
-        {blockRef.label}
-      </button>
+        nested.map((child) => (
+          <SectionTree
+            key={child.blockId}
+            node={child}
+            depth={depth + 1}
+            blocks={blocks}
+            collapsed={collapsed}
+            onToggleCollapse={onToggleCollapse}
+            onSelectBlock={onSelectBlock}
+            readOnly={readOnly}
+          />
+        ))}
     </div>
   );
 }

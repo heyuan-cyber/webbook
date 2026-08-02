@@ -2,10 +2,7 @@ import { useState } from 'react';
 import type { BlockType } from '@webbook/shared';
 import { BLOCK_MENU } from './blockFactory';
 
-const STAGE_TYPES = new Set<BlockType>(['sticky', 'image', 'link-preview']);
-
-const STAGE_MENU = BLOCK_MENU.filter((m) => STAGE_TYPES.has(m.type));
-
+/** 双击舞台：完整块菜单（与文档插入一致；不含已废弃的 canvas） */
 export function StageInsertMenu({
   onInsert,
   defaultOpen = false,
@@ -33,7 +30,7 @@ export function StageInsertMenu({
           onPointerDown={(e) => e.stopPropagation()}
           onMouseLeave={defaultOpen ? undefined : () => setOpen(false)}
         >
-          {STAGE_MENU.map((m) => (
+          {BLOCK_MENU.map((m) => (
             <button
               key={m.type}
               type="button"

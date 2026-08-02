@@ -71,3 +71,33 @@ export const foldState = {
     localStorage.setItem(FOLD_KEY, JSON.stringify(state));
   },
 };
+
+/** 布局沉浸偏好：侧栏 / 大纲面板是否收起 */
+const LAYOUT_UI_KEY = 'webbook:layout-ui';
+
+export interface LayoutUiState {
+  sidebarCollapsed: boolean;
+  outlineCollapsed: boolean;
+}
+
+export const layoutUiState = {
+  load(): LayoutUiState {
+    try {
+      const raw = JSON.parse(localStorage.getItem(LAYOUT_UI_KEY) ?? '{}') as Partial<LayoutUiState>;
+      return {
+        sidebarCollapsed: Boolean(raw.sidebarCollapsed),
+        outlineCollapsed: Boolean(raw.outlineCollapsed),
+      };
+    } catch {
+      return { sidebarCollapsed: false, outlineCollapsed: false };
+    }
+  },
+  save(patch: Partial<LayoutUiState>): void {
+    try {
+      const next = { ...layoutUiState.load(), ...patch };
+      localStorage.setItem(LAYOUT_UI_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  },
+};

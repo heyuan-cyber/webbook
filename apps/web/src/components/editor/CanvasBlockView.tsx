@@ -38,7 +38,11 @@ export function CanvasBlockView({
   isGuest,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  const drag = useRef<{ id: string; dx: number; dy: number; startX: number; startY: number } | null>(
+    null,
+  );
+  const liveRef = useRef<{ id: string; x: number; y: number } | null>(null);
+  const [livePos, setLivePos] = useState<{ id: string; x: number; y: number } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [dropHint, setDropHint] = useState(false);
 
@@ -87,21 +91,35 @@ export function CanvasBlockView({
       id: el.id,
       dx: e.clientX - rect.left - el.x,
       dy: e.clientY - rect.top - el.y,
+      startX: el.x,
+      startY: el.y,
     };
+    liveRef.current = { id: el.id, x: el.x, y: el.y };
+    setLivePos({ id: el.id, x: el.x, y: el.y });
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: React.PointerEvent) {
     if (!drag.current || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
-    updateEl(drag.current.id, {
+    const pos = {
+      id: drag.current.id,
       x: Math.max(0, e.clientX - rect.left - drag.current.dx),
       y: Math.max(0, e.clientY - rect.top - drag.current.dy),
-    });
+    };
+    liveRef.current = pos;
+    setLivePos(pos);
   }
 
   function onPointerUp() {
+    const pos = liveRef.current;
+    const d = drag.current;
+    if (pos && d && (pos.x !== d.startX || pos.y !== d.startY)) {
+      updateEl(pos.id, { x: pos.x, y: pos.y });
+    }
     drag.current = null;
+    liveRef.current = null;
+    setLivePos(null);
   }
 
   function onSurfacePointerDown(e: React.PointerEvent) {
@@ -189,13 +207,16 @@ export function CanvasBlockView({
         onDragLeave={() => setDropHint(false)}
         onDrop={onSurfaceDrop}
       >
-        {block.elements.map((el) => (
+        {block.elements.map((el) => {
+          const left = livePos?.id === el.id ? livePos.x : el.x;
+          const top = livePos?.id === el.id ? livePos.y : el.y;
+          return (
           <div
             key={el.id}
             className={`canvas-el canvas-el-${el.kind} ${selected === el.id ? 'selected' : ''}`}
             style={{
-              left: el.x,
-              top: el.y,
+              left,
+              top,
               width: el.width,
               height: el.height,
               background: el.kind === 'text' || el.kind === 'link' ? 'transparent' : el.color,
@@ -245,7 +266,8 @@ export function CanvasBlockView({
               />
             )}
           </div>
-        ))}
+          );
+        })}
         {block.elements.length === 0 && (
           <div className="canvas-empty muted">
             点击画布选中 · Ctrl+V 粘贴文字/图片/链接 · 可将图片块拖入

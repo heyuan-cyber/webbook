@@ -10,3 +10,4 @@ export * from './circle.js';
 export * from './paths.js';
 export * from './settings.js';
 export * from './migrateLegacy.js';
+export * from './migrateBlocks.js';

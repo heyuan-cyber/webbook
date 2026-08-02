@@ -1,5 +1,13 @@
 import { create } from 'zustand';
-import type { Block, Note, NoteStage, NoteTree, TreeNode, NoteVisibility } from '@webbook/shared';
+import type {
+  Block,
+  BlockEdge,
+  Note,
+  NoteStage,
+  NoteTree,
+  TreeNode,
+  NoteVisibility,
+} from '@webbook/shared';
 import { createEmptyNote, createEmptyTree, findNode, normalizeNote } from '@webbook/shared';
 import { uid } from '@/lib/id';
 import { foldState } from '@/lib/storage';
@@ -7,6 +15,13 @@ import { makeRepository, type Repository } from './repository';
 import type { Session } from '@/auth/types';
 import { localStore } from '@/lib/storage';
 import { toast } from '@/store/useToastStore';
+
+/** 乐观插图的本地预览，不可写入本地/远端笔记 */
+function noteHasTransientImageSrc(note: Note): boolean {
+  return note.blocks.some(
+    (b) => b.type === 'image' && typeof b.src === 'string' && b.src.startsWith('blob:'),
+  );
+}
 
 interface NotesState {
   repo: Repository;
@@ -32,6 +47,7 @@ interface NotesState {
   moveNode: (id: string, newParentId: string | null, index: number) => Promise<void>;
 
   updateActiveBlocks: (blocks: Block[]) => void;
+  updateActiveEdges: (edges: BlockEdge[]) => void;
   updateActiveStage: (stage: NoteStage) => void;
   setActiveTitle: (title: string) => void;
   setActiveVisibility: (visibility: NoteVisibility) => void;
@@ -44,6 +60,12 @@ export interface SearchHit {
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+/** 目录结构/标题等变更后才需要额外 PUT /api/tree（正文编辑由笔记 PUT 覆盖） */
+let treeDirty = false;
+
+function markTreeDirty() {
+  treeDirty = true;
+}
 
 function insertChild(
   nodes: TreeNode[],
@@ -101,6 +123,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
 
   async init(session) {
     const repo = makeRepository(session);
+    treeDirty = false;
     setState({ repo, treeReady: false, treeLoading: true, saveError: false });
     try {
       const tree = await repo.loadTree();
@@ -250,7 +273,26 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
   updateActiveBlocks(blocks) {
     const { activeNote } = getState();
     if (!activeNote) return;
-    const updated: Note = { ...activeNote, blocks, updatedAt: new Date().toISOString() };
+    const ids = new Set(blocks.map((b) => b.id));
+    const edges = (activeNote.edges ?? []).filter((e) => ids.has(e.from) && ids.has(e.to));
+    const updated: Note = {
+      ...activeNote,
+      blocks,
+      edges,
+      updatedAt: new Date().toISOString(),
+    };
+    setState({ activeNote: updated });
+    scheduleSave(getState);
+  },
+
+  updateActiveEdges(edges) {
+    const { activeNote } = getState();
+    if (!activeNote) return;
+    const updated: Note = {
+      ...activeNote,
+      edges,
+      updatedAt: new Date().toISOString(),
+    };
     setState({ activeNote: updated });
     scheduleSave(getState);
   },
@@ -269,6 +311,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     const updated: Note = { ...activeNote, title, updatedAt: new Date().toISOString() };
     const next = { ...tree, roots: patchNode(tree.roots, activeNote.id, { title }) };
     setState({ activeNote: updated, tree: next });
+    markTreeDirty();
     scheduleSave(getState);
   },
 
@@ -285,19 +328,27 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
       roots: patchNode(tree.roots, activeNote.id, { visibility }),
     };
     setState({ activeNote: updated, tree: next });
+    // 可见性由笔记 PUT 在 Worker 侧同步到 tree，无需额外 saveTree
     scheduleSave(getState);
   },
 }));
 
-/** 防抖保存：编辑停止 800ms 后落盘（本地 + 远端） */
+/** 防抖保存：编辑停止 800ms 后落盘（本地 + 远端）；含 blob: 预览时推迟 */
 function scheduleSave(getState: () => NotesState) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     const { repo, activeNote, tree } = getState();
     if (!activeNote) return;
+    if (noteHasTransientImageSrc(activeNote)) {
+      scheduleSave(getState);
+      return;
+    }
     useNotesStore.setState({ saving: true, saveError: false });
     const result = await repo.saveNote(activeNote);
-    await repo.saveTree(tree);
+    if (treeDirty) {
+      await repo.saveTree(tree);
+      treeDirty = false;
+    }
     useNotesStore.setState({ saving: false, saveError: !result.noteOk });
     if (!result.noteOk && repo.authed) {
       toast('error', '云端保存失败，内容已存本地');
@@ -309,7 +360,6 @@ function blocksToText(blocks: Block[]): string {
   return blocks
     .map((b) => {
       if ('text' in b && typeof b.text === 'string') return b.text;
-      if (b.type === 'list') return b.items.join(' ');
       return '';
     })
     .join('\n');

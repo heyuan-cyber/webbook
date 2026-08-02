@@ -3,23 +3,14 @@ import type { Block, BlockType } from '@webbook/shared';
 import { isSlashInput } from './slashCommand';
 
 export function isEditableBlock(block: Block): boolean {
-  return (
-    block.type === 'heading' ||
-    block.type === 'paragraph' ||
-    block.type === 'checkbox' ||
-    block.type === 'list'
-  );
+  return block.type === 'heading' || block.type === 'paragraph';
 }
 
 export function isEmptyBlock(block: Block): boolean {
   switch (block.type) {
     case 'heading':
     case 'paragraph':
-    case 'checkbox':
-    case 'callout':
       return !block.text.trim();
-    case 'list':
-      return block.items.length === 0 || block.items.every((i) => !i.trim());
     default:
       return false;
   }

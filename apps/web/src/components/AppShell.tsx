@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { layoutUiState } from '@/lib/storage';
 import { TreeSidebar } from './TreeSidebar';
 import { InstallPrompt } from './InstallPrompt';
 import { RemindersPanel } from './RemindersPanel';
@@ -17,13 +18,36 @@ export function AppShell({
   const isMobile = useIsMobile();
   const [navOpen, setNavOpen] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => layoutUiState.load().sidebarCollapsed,
+  );
 
   function closeNav() {
     setNavOpen(false);
   }
 
+  function toggleSidebar() {
+    if (isMobile) {
+      setNavOpen((o) => !o);
+      return;
+    }
+    setSidebarCollapsed((c) => {
+      const next = !c;
+      layoutUiState.save({ sidebarCollapsed: next });
+      return next;
+    });
+  }
+
+  const desktopCollapsed = !isMobile && sidebarCollapsed;
+  const sidebarClass = [
+    isMobile && navOpen ? 'open' : '',
+    desktopCollapsed ? 'is-collapsed' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="shell">
+    <div className={`shell ${desktopCollapsed ? 'sidebar-collapsed' : ''}`}>
       {isMobile && navOpen && (
         <button
           type="button"
@@ -34,22 +58,22 @@ export function AppShell({
       )}
       <TreeSidebar
         editable={editable}
-        className={isMobile && navOpen ? 'open' : undefined}
+        className={sidebarClass || undefined}
         onNavigate={isMobile ? closeNav : undefined}
+        onCollapse={isMobile ? undefined : () => toggleSidebar()}
       />
       <div className="shell-main">
         <header className="topbar">
           <div className="topbar-left">
-            {isMobile && (
-              <button
-                type="button"
-                className="btn btn-ghost nav-toggle"
-                aria-label="打开目录"
-                onClick={() => setNavOpen(true)}
-              >
-                ☰
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn btn-ghost nav-toggle"
+              aria-label={desktopCollapsed || isMobile ? '打开目录' : '收起目录'}
+              aria-expanded={isMobile ? navOpen : !sidebarCollapsed}
+              onClick={toggleSidebar}
+            >
+              ☰
+            </button>
             <span className="topbar-status muted">
               {isGuest ? '游客模式' : session?.email}
             </span>

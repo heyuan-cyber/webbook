@@ -29,16 +29,16 @@ export async function saveUsersIndex(env: Env, index: UsersIndex): Promise<void>
   await putFile(env, USERS_INDEX_PATH, JSON.stringify(index, null, 2), 'meta: users index');
 }
 
-/** 注册用户；已存在则更新 email / updatedAt */
+/** 注册用户；已存在且 email 未变则跳过写 index（避免每次保存多一次 Contents 提交） */
 export async function registerUser(env: Env, id: string, email: string): Promise<void> {
   const index = await loadUsersIndex(env);
-  const now = new Date().toISOString();
   const existing = index.users.find((u) => u.id === id);
   if (existing) {
+    if (existing.email === email) return;
     existing.email = email;
-    existing.updatedAt = now;
+    existing.updatedAt = new Date().toISOString();
   } else {
-    index.users.push({ id, email, updatedAt: now });
+    index.users.push({ id, email, updatedAt: new Date().toISOString() });
   }
   await saveUsersIndex(env, index);
 }

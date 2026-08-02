@@ -159,13 +159,29 @@ export async function summarizeNote(env: Env, note: Note): Promise<string> {
   );
 }
 
-/** extract_todos 动作：返回待办文本数组 */
+const OPEN_TASK_RE = /^[-*+]\s+\[\s\]\s+(.+)$/gm;
+
+/** extract_todos：从 Markdown 未完成任务行提取（兼容旧 checkbox 块） */
 export async function extractTodos(_env: Env, note: Note): Promise<string[]> {
-  // 先用结构化 checkbox 块直接提取（零成本）
-  const structural = note.blocks
-    .filter((b): b is Extract<Note['blocks'][number], { type: 'checkbox' }> => b.type === 'checkbox')
-    .filter((b) => !b.checked)
-    .map((b) => b.text)
-    .filter(Boolean);
-  return structural;
+  const out: string[] = [];
+  for (const b of note.blocks) {
+    if (b.type === 'checkbox') {
+      if (!b.checked && b.text.trim()) out.push(b.text.trim());
+      continue;
+    }
+    const text =
+      'text' in b && typeof b.text === 'string'
+        ? b.text
+        : b.type === 'list'
+          ? b.items.map((it) => `- [ ] ${it}`).join('\n')
+          : '';
+    if (!text) continue;
+    OPEN_TASK_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = OPEN_TASK_RE.exec(text)) !== null) {
+      const t = m[1].trim();
+      if (t) out.push(t);
+    }
+  }
+  return out;
 }

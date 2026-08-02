@@ -12,7 +12,7 @@ import { centerStageOn } from './editor/StageViewport';
 import { AiChatPanel } from './AiChatPanel';
 import { NoteHistoryPanel } from './NoteHistoryPanel';
 import { toast } from '@/store/useToastStore';
-import { outlineCollapseState } from '@/lib/storage';
+import { outlineCollapseState, layoutUiState } from '@/lib/storage';
 
 export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const { id } = useParams();
@@ -26,12 +26,23 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const setActiveTitle = useNotesStore((s) => s.setActiveTitle);
   const setActiveVisibility = useNotesStore((s) => s.setActiveVisibility);
   const updateActiveBlocks = useNotesStore((s) => s.updateActiveBlocks);
+  const updateActiveEdges = useNotesStore((s) => s.updateActiveEdges);
   const updateActiveStage = useNotesStore((s) => s.updateActiveStage);
   const saving = useNotesStore((s) => s.saving);
   const saveError = useNotesStore((s) => s.saveError);
   const [preview, setPreview] = useState(false);
   const [outlineCollapsed, setOutlineCollapsed] = useState<Record<string, boolean>>({});
+  const [outlinePanelCollapsed, setOutlinePanelCollapsed] = useState(
+    () => layoutUiState.load().outlineCollapsed,
+  );
 
+  function toggleOutlinePanel() {
+    setOutlinePanelCollapsed((c) => {
+      const next = !c;
+      layoutUiState.save({ outlineCollapsed: next });
+      return next;
+    });
+  }
   useEffect(() => {
     if (!id) return;
     setOutlineCollapsed(outlineCollapseState.load(id));
@@ -192,6 +203,7 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
             onRestore={(note) => {
               setActiveTitle(note.title);
               updateActiveBlocks(note.blocks);
+              updateActiveEdges(note.edges ?? []);
             }}
           />
         )}
@@ -208,10 +220,14 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
           onToggleCollapse={toggleHeadingCollapse}
           onSelectBlock={onSelectOutlineBlock}
           readOnly={showPreview}
+          panelCollapsed={outlinePanelCollapsed}
+          onTogglePanel={toggleOutlinePanel}
         />
         <BlockEditor
           blocks={activeNote.blocks}
           onChange={updateActiveBlocks}
+          edges={activeNote.edges ?? []}
+          onEdgesChange={updateActiveEdges}
           readOnly={showPreview}
           stage={activeNote.stage ?? DEFAULT_NOTE_STAGE}
           onStageChange={updateActiveStage}

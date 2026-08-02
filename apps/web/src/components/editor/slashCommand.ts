@@ -10,25 +10,42 @@ export function slashFilter(text: string): string {
   return text.startsWith('/') ? text.slice(1) : '';
 }
 
+/** `/h1` `/h2` `/h3` → 对应级别；其它标题查询默认 H2 */
+export function headingLevelFromSlashQuery(query: string): 1 | 2 | 3 {
+  const q = query.trim().toLowerCase();
+  if (q === 'h1' || q === '1') return 1;
+  if (q === 'h3' || q === '3') return 3;
+  return 2;
+}
+
 /** 将当前块转换为另一类型（保留 id） */
-export function convertBlock(block: Block, type: BlockType): Block {
+export function convertBlock(
+  block: Block,
+  type: BlockType,
+  opts?: { headingLevel?: 1 | 2 | 3 },
+): Block {
   const base = createBlock(type);
   const id = block.id;
   switch (type) {
     case 'heading':
-      return { ...base, id, type: 'heading', level: 2, text: '' };
+      return {
+        ...base,
+        id,
+        type: 'heading',
+        level: opts?.headingLevel ?? 2,
+        text: '',
+      };
     case 'paragraph':
-      return { ...base, id, type: 'paragraph', text: '' };
     case 'list':
-      return { ...base, id, type: 'list', ordered: false, items: [''] };
     case 'checkbox':
-      return { ...base, id, type: 'checkbox', checked: false, text: '' };
+    case 'callout':
+      return { ...base, id, type: 'paragraph', text: base.type === 'paragraph' ? base.text : '' };
     default:
       return { ...base, id } as Block;
   }
 }
 
-const IN_PLACE_TYPES: BlockType[] = ['paragraph', 'heading', 'list', 'checkbox'];
+const IN_PLACE_TYPES: BlockType[] = ['paragraph', 'heading'];
 
 export function isInPlaceSlashType(type: BlockType): boolean {
   return IN_PLACE_TYPES.includes(type);

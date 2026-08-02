@@ -21,7 +21,25 @@ export interface BlockPlacement {
   z?: number;
   width?: number;
   height?: number;
+  /** 块自身显示缩放（相对默认尺寸），默认 1 */
+  scale?: number;
+  /**
+   * 文本类 absolute 卡是否随内容自动调整宽高。
+   * 未设置视为 true；用户手动缩放后应设为 false。
+   */
+  autoSize?: boolean;
 }
+
+/** 未显式关闭时，文本卡默认随内容自适应 */
+export function isPlacementAutoSize(pl?: BlockPlacement | null): boolean {
+  return pl?.autoSize !== false;
+}
+
+/** 自动长高上限（超出后盒内滚动） */
+export const AUTO_SIZE_MAX_HEIGHT = 480;
+
+/** 自动拉宽上限（超出后折行） */
+export const AUTO_SIZE_MAX_WIDTH = 640;
 
 export interface BaseBlock {
   id: string;
@@ -154,13 +172,28 @@ export type Block =
   | StickyBlock
   | CanvasBlock;
 
-/** 笔记舞台相机（固定视口，平移 viewCenter 浏览无限平面） */
+/** 笔记舞台相机（固定视口，平移 viewCenter / 缩放 viewScale 浏览无限平面） */
 export interface NoteStage {
   viewCenterX: number;
   viewCenterY: number;
+  /** 画布缩放，默认 1 */
+  viewScale?: number;
 }
 
-export const DEFAULT_NOTE_STAGE: NoteStage = { viewCenterX: 0, viewCenterY: 0 };
+export const DEFAULT_NOTE_STAGE: NoteStage = { viewCenterX: 0, viewCenterY: 0, viewScale: 1 };
+
+export const STAGE_MIN_SCALE = 0.25;
+/** 无上限（历史兼容导出） */
+export const STAGE_MAX_SCALE = Number.POSITIVE_INFINITY;
+
+export function clampStageScale(scale: number): number {
+  if (!Number.isFinite(scale) || scale <= 0) return STAGE_MIN_SCALE;
+  return Math.max(STAGE_MIN_SCALE, scale);
+}
+
+export function stageScale(stage: NoteStage): number {
+  return clampStageScale(stage.viewScale ?? 1);
+}
 
 export function isAbsoluteBlock(block: Block): boolean {
   return block.placement?.mode === 'absolute';
@@ -175,4 +208,82 @@ export function defaultStickyPlacement(offset = 0): BlockPlacement {
     width: 200,
     height: 140,
   };
+}
+
+/** 有向边锚点：北/东/南/西 */
+export type BlockEdgeSide = 'n' | 'e' | 's' | 'w';
+
+/** 舞台块之间的有向连线 */
+export interface BlockEdge {
+  id: string;
+  from: string;
+  to: string;
+  fromSide: BlockEdgeSide;
+  toSide: BlockEdgeSide;
+}
+
+export function defaultCardSize(type: BlockType): { width: number; height: number } {
+  switch (type) {
+    case 'heading':
+      // 源码态需容纳模式切换 + 格式工具栏
+      return { width: 360, height: 120 };
+    case 'paragraph':
+      // 源码态需完整显示标题工具栏（含色点一行或折行）
+      return { width: 380, height: 168 };
+    case 'list':
+    case 'checkbox':
+      return { width: 280, height: 120 };
+    case 'callout':
+      return { width: 300, height: 120 };
+    case 'sticky':
+      return { width: 200, height: 140 };
+    case 'image':
+      return { width: 280, height: 210 };
+    case 'link-preview':
+      return { width: 260, height: 120 };
+    case 'video':
+      return { width: 320, height: 100 };
+    case 'divider':
+      return { width: 240, height: 40 };
+    default:
+      return { width: 380, height: 168 };
+  }
+}
+
+export function sideAnchor(
+  pl: Pick<BlockPlacement, 'x' | 'y' | 'width' | 'height' | 'scale'>,
+  side: BlockEdgeSide,
+): { x: number; y: number } {
+  const x = pl.x ?? 0;
+  const y = pl.y ?? 0;
+  const scale = pl.scale ?? 1;
+  const w = (pl.width ?? 200) * scale;
+  const h = (pl.height ?? 80) * scale;
+  switch (side) {
+    case 'n':
+      return { x: x + w / 2, y };
+    case 's':
+      return { x: x + w / 2, y: y + h };
+    case 'e':
+      return { x: x + w, y: y + h / 2 };
+    case 'w':
+      return { x, y: y + h / 2 };
+  }
+}
+
+export function edgeKey(e: Pick<BlockEdge, 'from' | 'to' | 'fromSide' | 'toSide'>): string {
+  return `${e.from}:${e.fromSide}->${e.to}:${e.toSide}`;
+}
+
+export function oppositeSide(side: BlockEdgeSide): BlockEdgeSide {
+  switch (side) {
+    case 'n':
+      return 's';
+    case 's':
+      return 'n';
+    case 'e':
+      return 'w';
+    case 'w':
+      return 'e';
+  }
 }

@@ -1,37 +1,76 @@
-import { useRef, useCallback, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import type { Block, BlockType, CanvasBlock, ImageBlock, NoteStage } from '@webbook/shared';
+import {
+  useRef,
+  useCallback,
+  useState,
+  useEffect,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
+import type {
+  Block,
+  BlockEdge,
+  BlockEdgeSide,
+  BlockType,
+  ImageBlock,
+  NoteStage,
+} from '@webbook/shared';
+import { uid } from '@/lib/id';
 import {
   DEFAULT_NOTE_STAGE,
+  defaultCardSize,
+  edgeKey,
   headingHasSectionBody,
   isAbsoluteBlock,
   isBlockHiddenByCollapse,
+  oppositeSide,
+  reorderBlocksByStagePosition,
 } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
-import { apiClient } from '@/lib/api';
-import { createBlock, createAbsoluteBlock, type StageAbsoluteType } from './blockFactory';
+import { createBlock, createAbsoluteBlock } from './blockFactory';
 import { InsertMenu } from './InsertMenu';
 import { SlashMenu } from './SlashMenu';
-import { CanvasBlockView } from './CanvasBlockView';
-import { pasteIntoCanvas, createImageElement } from './canvasPaste';
-import type { ImageBlockDragPayload } from './canvasDrag';
-import { handleImageFile, readAsDataUrl } from './imageUpload';
+import {
+  beginOptimisticImageUpload,
+  revokeLocalImagePreview,
+} from './imageUpload';
 import { LinkPreviewBlockView } from './LinkPreviewBlockView';
 import { handleBlockKeyDown, isEditableBlock } from './blockKeyboard';
-import { convertBlock, isInPlaceSlashType, isSlashInput, slashFilter } from './slashCommand';
+import {
+  convertBlock,
+  headingLevelFromSlashQuery,
+  isInPlaceSlashType,
+  isSlashInput,
+  slashFilter,
+} from './slashCommand';
 import { EditableMarkdownField } from './EditableMarkdownField';
 import { ImageBlockView } from './ImageBlockView';
 import { StickyBlockView } from './StickyBlockView';
-import { AbsoluteImageBlockView } from './AbsoluteImageBlockView';
+import {
+  AbsoluteImageBlockView,
+  type ImageLayerAction,
+} from './AbsoluteImageBlockView';
 import { AbsoluteLinkBlockView } from './AbsoluteLinkBlockView';
+import { AbsoluteCardBlockView, type EdgePanClient } from './AbsoluteCardBlockView';
+import { StageEdgesLayer, type LiveBlockGeometry } from './StageEdgesLayer';
 import { StageBlockPicker } from './StageBlockPicker';
-import { StageViewport } from './StageViewport';
-import { findInsertIndexForWorldY, type WorldPoint } from './stageCoords';
+import { StageViewport, type WorldRect } from './StageViewport';
+import { findInsertIndexForWorldY, worldPointFromClient, type WorldPoint } from './stageCoords';
+import { stageImagePlacementSizeFromFile } from './imageSize';
 import { renderInlineMarkdown, renderMultilineMarkdown } from '@/lib/markdown';
 import { toast } from '@/store/useToastStore';
+
+/** 舞台插入选择器：双击空白，或拉线到空白松手 */
+type StageComposer = {
+  point: WorldPoint;
+  wire?: { fromId: string; fromSide: BlockEdgeSide };
+};
+
+const WIRE_PICKER_DRAG_PX = 10;
 
 interface Props {
   blocks: Block[];
   onChange: (blocks: Block[]) => void;
+  edges?: BlockEdge[];
+  onEdgesChange?: (edges: BlockEdge[]) => void;
   readOnly?: boolean;
   stage?: NoteStage;
   onStageChange?: (stage: NoteStage) => void;
@@ -42,6 +81,8 @@ interface Props {
 export function BlockEditor({
   blocks,
   onChange,
+  edges: edgesProp,
+  onEdgesChange,
   readOnly,
   stage: stageProp,
   onStageChange,
@@ -49,19 +90,165 @@ export function BlockEditor({
   onToggleHeadingCollapse,
 }: Props) {
   const stage = stageProp ?? DEFAULT_NOTE_STAGE;
+  const edges = edgesProp ?? [];
   const collapsed = collapsedHeadingIds ?? new Set<string>();
   const { session, isGuest } = useAuth();
   const editorRef = useRef<HTMLDivElement | null>(null);
   const focusRefs = useRef(new Map<string, HTMLElement>());
   const activeIndexRef = useRef<number | null>(null);
-  const [activeCanvas, setActiveCanvas] = useState<{
-    blockId: string;
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+  const [dragBlockIndex, setDragBlockIndex] = useState<number | null>(null);
+  const [composer, setComposer] = useState<StageComposer | null>(null);
+  const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set<string>());
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [wire, setWire] = useState<{
+    fromId: string;
+    fromSide: BlockEdgeSide;
     x: number;
     y: number;
   } | null>(null);
-  const [dragBlockIndex, setDragBlockIndex] = useState<number | null>(null);
-  const [composer, setComposer] = useState<WorldPoint | null>(null);
-  const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
+  const wireRef = useRef(wire);
+  wireRef.current = wire;
+  const [livePlacements, setLivePlacements] = useState(
+    () => new Map<string, LiveBlockGeometry>(),
+  );
+  const [edgePanClient, setEdgePanClient] = useState<EdgePanClient | null>(null);
+  const edgePanClientRef = useRef(edgePanClient);
+  edgePanClientRef.current = edgePanClient;
+  const hasFlowBlocks = blocks.some((b) => !isAbsoluteBlock(b));
+
+  const selectBlock = useCallback((id: string, additive?: boolean) => {
+    setSelectedEdgeId(null);
+    setSelectedIds((prev) => {
+      if (additive) {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }
+      if (prev.has(id) && prev.size > 1) return prev;
+      return new Set([id]);
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectedEdgeId(null);
+  }, []);
+
+  const setBlockLiveGeometry = useCallback(
+    (blockId: string, geo: LiveBlockGeometry | null) => {
+      if (!geo) {
+        setLivePlacements((prev) => {
+          if (prev.size > 1) {
+            const latest = blocksRef.current;
+            const nextBlocks = latest.map((b) => {
+              const l = prev.get(b.id);
+              if (!l || !b.placement || b.placement.mode !== 'absolute') return b;
+              return {
+                ...b,
+                placement: {
+                  ...b.placement,
+                  x: l.x,
+                  y: l.y,
+                  width: l.width,
+                  height: l.height,
+                  scale: l.scale ?? 1,
+                },
+              } as Block;
+            });
+            queueMicrotask(() => onChange(reorderBlocksByStagePosition(nextBlocks)));
+          }
+          return new Map();
+        });
+        return;
+      }
+
+      const ids = selectedIdsRef.current;
+      const primary = blocksRef.current.find((b) => b.id === blockId);
+      if (
+        primary?.placement?.mode === 'absolute' &&
+        ids.has(blockId) &&
+        ids.size > 1
+      ) {
+        const ox = primary.placement.x ?? 0;
+        const oy = primary.placement.y ?? 0;
+        const dx = geo.x - ox;
+        const dy = geo.y - oy;
+        setLivePlacements(() => {
+          const next = new Map<string, LiveBlockGeometry>();
+          for (const id of ids) {
+            const b = blocksRef.current.find((x) => x.id === id);
+            if (!b?.placement || b.placement.mode !== 'absolute') continue;
+            if (id === blockId) {
+              next.set(id, geo);
+            } else {
+              const scale = b.placement.scale ?? 1;
+              next.set(id, {
+                x: (b.placement.x ?? 0) + dx,
+                y: (b.placement.y ?? 0) + dy,
+                width: (b.placement.width ?? 200) * scale,
+                height: (b.placement.height ?? 80) * scale,
+                scale: 1,
+              });
+            }
+          }
+          return next;
+        });
+        return;
+      }
+
+      setLivePlacements((prev) => {
+        const cur = prev.get(blockId);
+        if (
+          cur &&
+          cur.x === geo.x &&
+          cur.y === geo.y &&
+          cur.width === geo.width &&
+          cur.height === geo.height &&
+          (cur.scale ?? 1) === (geo.scale ?? 1)
+        ) {
+          return prev;
+        }
+        const next = new Map(prev);
+        next.set(blockId, geo);
+        return next;
+      });
+    },
+    [onChange],
+  );
+
+  const applyMarqueeSelection = useCallback((rect: WorldRect) => {
+    const hit = new Set<string>();
+    for (const b of blocksRef.current) {
+      if (!isAbsoluteBlock(b) || !b.placement) continue;
+      const scale = b.placement.scale ?? 1;
+      const x = b.placement.x ?? 0;
+      const y = b.placement.y ?? 0;
+      const w = (b.placement.width ?? 200) * scale;
+      const h = (b.placement.height ?? 80) * scale;
+      const intersects =
+        !(x + w < rect.minX || x > rect.maxX || y + h < rect.minY || y > rect.maxY);
+      if (intersects) hit.add(b.id);
+    }
+    setSelectedIds(hit);
+    setSelectedEdgeId(null);
+  }, []);
+
+  const deleteEdge = useCallback(
+    (id: string) => {
+      if (!onEdgesChange) return;
+      onEdgesChange(edgesRef.current.filter((ed) => ed.id !== id));
+      setSelectedEdgeId((cur) => (cur === id ? null : cur));
+    },
+    [onEdgesChange],
+  );
 
   const registerRef = useCallback((id: string, el: HTMLElement | null) => {
     if (el) focusRefs.current.set(id, el);
@@ -106,21 +293,243 @@ export function BlockEditor({
   }
 
   function patch(id: string, patchBlock: Partial<Block>) {
+    const prev = blocks.find((b) => b.id === id);
+    const next = blocks.map((b) => (b.id === id ? ({ ...b, ...patchBlock } as Block) : b));
+    const pl = patchBlock.placement;
+    const movedXY =
+      Boolean(pl) &&
+      Boolean(prev?.placement) &&
+      ((pl!.x !== undefined && pl!.x !== prev!.placement!.x) ||
+        (pl!.y !== undefined && pl!.y !== prev!.placement!.y));
+    onChange(movedXY ? reorderBlocksByStagePosition(next) : next);
+  }
+
+  function layerAbsolute(blockId: string, action: ImageLayerAction) {
+    const ranked = blocks
+      .filter(isAbsoluteBlock)
+      .map((b) => ({ id: b.id, z: b.placement?.z ?? 1 }))
+      .sort((a, b) => a.z - b.z);
+    const idx = ranked.findIndex((r) => r.id === blockId);
+    if (idx < 0) return;
+    const self = blocks.find((b) => b.id === blockId);
+    if (!self?.placement) return;
+
+    if (action === 'front') {
+      const maxZ = ranked[ranked.length - 1]!.z;
+      patch(blockId, {
+        placement: { ...self.placement, mode: 'absolute', z: maxZ + 1 },
+      } as Partial<Block>);
+      return;
+    }
+    if (action === 'back') {
+      const minZ = ranked[0]!.z;
+      patch(blockId, {
+        placement: { ...self.placement, mode: 'absolute', z: minZ - 1 },
+      } as Partial<Block>);
+      return;
+    }
+
+    const swapWith =
+      action === 'forward' && idx < ranked.length - 1
+        ? ranked[idx + 1]
+        : action === 'backward' && idx > 0
+          ? ranked[idx - 1]
+          : null;
+    if (!swapWith) return;
+    const zMe = ranked[idx]!.z;
+    const zOther = swapWith.z;
     onChange(
-      blocks.map((b) => (b.id === id ? ({ ...b, ...patchBlock } as Block) : b)),
+      blocks.map((b) => {
+        if (b.id === blockId && b.placement) {
+          return { ...b, placement: { ...b.placement, z: zOther } } as Block;
+        }
+        if (b.id === swapWith.id && b.placement) {
+          return { ...b, placement: { ...b.placement, z: zMe } } as Block;
+        }
+        return b;
+      }),
     );
   }
 
   function remove(id: string) {
     const next = blocks.filter((b) => b.id !== id);
-    onChange(next.length ? next : [createBlock('paragraph')]);
+    onChange(next.length ? next : [createAbsoluteBlock('paragraph', -140, -48)]);
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const n = new Set(prev);
+      n.delete(id);
+      return n;
+    });
   }
+
+  function removeSelected() {
+    const ids = selectedIdsRef.current;
+    if (ids.size === 0) return;
+    const next = blocksRef.current.filter((b) => !ids.has(b.id));
+    onChange(next.length ? next : [createAbsoluteBlock('paragraph', -140, -48)]);
+    setSelectedIds(new Set());
+  }
+
+  function duplicateStageImage(blockId: string) {
+    if (readOnly) return;
+    const srcBlock = blocks.find((b) => b.id === blockId && b.type === 'image');
+    if (!srcBlock || srcBlock.type !== 'image') return;
+    const pl = srcBlock.placement ?? { mode: 'absolute' as const, x: 0, y: 0 };
+    const copy: ImageBlock = {
+      ...srcBlock,
+      id: uid('blk'),
+      placement: {
+        ...pl,
+        mode: 'absolute',
+        x: (pl.x ?? 0) + 24,
+        y: (pl.y ?? 0) + 24,
+        z: (pl.z ?? 1) + 1,
+      },
+    };
+    const idx = blocks.findIndex((b) => b.id === blockId);
+    const next = [...blocks];
+    next.splice(idx + 1, 0, copy);
+    onChange(next);
+    setSelectedIds(new Set([copy.id]));
+  }
+
+  const addEdge = useCallback(
+    (from: string, to: string, fromSide: BlockEdgeSide, toSide: BlockEdgeSide) => {
+      if (!onEdgesChange || from === to) return;
+      const draft = { from, to, fromSide, toSide };
+      const k = edgeKey(draft);
+      if (edgesRef.current.some((e) => edgeKey(e) === k)) return;
+      onEdgesChange([
+        ...edgesRef.current,
+        { id: uid('edge'), from, to, fromSide, toSide },
+      ]);
+    },
+    [onEdgesChange],
+  );
+
+  const stageRefForWire = useRef(stage);
+  stageRefForWire.current = stage;
+
+  const onPortPointerDown = useCallback(
+    (blockId: string, side: BlockEdgeSide, e: React.PointerEvent) => {
+      if (readOnly || !onEdgesChange) return;
+      const viewport = (e.target as HTMLElement).closest('.stage-viewport') as HTMLElement | null;
+      const pt = worldPointFromClient(viewport, stageRefForWire.current, e.clientX, e.clientY);
+      if (!pt) return;
+      const startClient = { x: e.clientX, y: e.clientY };
+      setComposer(null);
+      setSelectedIds(new Set([blockId]));
+      setSelectedEdgeId(null);
+      setWire({ fromId: blockId, fromSide: side, x: pt.x, y: pt.y });
+      setEdgePanClient({ clientX: e.clientX, clientY: e.clientY });
+
+      function onMove(ev: PointerEvent) {
+        setEdgePanClient({ clientX: ev.clientX, clientY: ev.clientY });
+        const p = worldPointFromClient(viewport, stageRefForWire.current, ev.clientX, ev.clientY);
+        if (!p) return;
+        setWire((w) => (w ? { ...w, x: p.x, y: p.y } : null));
+      }
+      function onUp(ev: PointerEvent) {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        setEdgePanClient(null);
+        const cur = wireRef.current;
+        if (!cur) return;
+
+        const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+        const port = el?.closest('[data-stage-port]') as HTMLElement | null;
+        if (port) {
+          setWire(null);
+          const toId = port.getAttribute('data-port-block');
+          const toSide = port.getAttribute('data-port-side') as BlockEdgeSide | null;
+          if (!toId || !toSide) return;
+          addEdge(cur.fromId, toId, cur.fromSide, toSide);
+          return;
+        }
+
+        const dragged =
+          Math.hypot(ev.clientX - startClient.x, ev.clientY - startClient.y) >= WIRE_PICKER_DRAG_PX;
+        const release = worldPointFromClient(
+          viewport,
+          stageRefForWire.current,
+          ev.clientX,
+          ev.clientY,
+        );
+        if (!dragged || !release) {
+          setWire(null);
+          return;
+        }
+
+        // 空白松手：保留草稿线并打开块选择器
+        setWire({ ...cur, x: release.x, y: release.y });
+        setComposer({
+          point: release,
+          wire: { fromId: cur.fromId, fromSide: cur.fromSide },
+        });
+      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [readOnly, onEdgesChange, addEdge],
+  );
+
+  useEffect(() => {
+    if (!wireRef.current) return;
+    const pointer = edgePanClientRef.current;
+    if (!pointer) return;
+    const viewport = document.querySelector('.stage-viewport') as HTMLElement | null;
+    const p = worldPointFromClient(
+      viewport,
+      stage,
+      pointer.clientX,
+      pointer.clientY,
+    );
+    if (!p) return;
+    setWire((w) => (w ? { ...w, x: p.x, y: p.y } : null));
+  }, [stage.viewCenterX, stage.viewCenterY, stage.viewScale]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const t = e.target;
+      if (
+        t instanceof HTMLElement &&
+        (t.isContentEditable ||
+          t.tagName === 'INPUT' ||
+          t.tagName === 'TEXTAREA' ||
+          t.tagName === 'SELECT')
+      ) {
+        return;
+      }
+      if (selectedEdgeId && onEdgesChange) {
+        e.preventDefault();
+        onEdgesChange(edgesRef.current.filter((ed) => ed.id !== selectedEdgeId));
+        setSelectedEdgeId(null);
+        return;
+      }
+      if (selectedIdsRef.current.size > 0) {
+        e.preventDefault();
+        removeSelected();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [readOnly, selectedEdgeId, onEdgesChange, blocks, onChange]);
 
   function applySlash(index: number, blockId: string, type: BlockType) {
     const block = blocks[index];
     if (!block) return;
     if (isInPlaceSlashType(type)) {
-      onChange(blocks.map((b) => (b.id === blockId ? convertBlock(block, type) : b)));
+      const headingLevel =
+        type === 'heading' && block.type === 'paragraph'
+          ? headingLevelFromSlashQuery(slashFilter(block.text))
+          : undefined;
+      onChange(
+        blocks.map((b) =>
+          b.id === blockId ? convertBlock(block, type, { headingLevel }) : b,
+        ),
+      );
       focusBlock(blockId);
       return;
     }
@@ -135,9 +544,10 @@ export function BlockEditor({
   }
 
   function ensureWritingSurface() {
-    const para = createBlock('paragraph');
+    const para = createAbsoluteBlock('paragraph', -140, -48);
     onChange([para]);
-    focusBlock(para.id);
+    setSelectedIds(new Set([para.id]));
+    setFocusBlockId(para.id);
   }
 
   if (blocks.length === 0 && !readOnly) {
@@ -158,24 +568,70 @@ export function BlockEditor({
     onChange(next);
   }
 
-  const insertImageAt = useCallback(
-    (src: string, atIndex?: number) => {
-      const imgBlock = createBlock('image') as ImageBlock;
-      imgBlock.src = src;
-      const base =
-        atIndex ??
-        (activeIndexRef.current !== null ? activeIndexRef.current + 1 : blocks.length);
-      const insertAt = Math.max(0, Math.min(base, blocks.length));
-      const next = [...blocks];
-      next.splice(insertAt, 0, imgBlock);
-      onChange(next);
+  const commitImageSrc = useCallback(
+    (blockId: string, nextSrc: string, previewSrc: string) => {
+      const latest = blocksRef.current;
+      if (!latest.some((b) => b.id === blockId)) {
+        revokeLocalImagePreview(previewSrc);
+        return;
+      }
+      onChange(
+        latest.map((b) =>
+          b.id === blockId && b.type === 'image' ? { ...b, src: nextSrc } : b,
+        ),
+      );
+      revokeLocalImagePreview(previewSrc);
     },
-    [blocks, onChange],
+    [onChange],
   );
 
-  const handleImage = useCallback(
-    (src: string, atIndex?: number) => insertImageAt(src, atIndex),
-    [insertImageAt],
+  const removeImageBlock = useCallback(
+    (blockId: string, previewSrc?: string) => {
+      const latest = blocksRef.current;
+      if (!latest.some((b) => b.id === blockId)) {
+        if (previewSrc) revokeLocalImagePreview(previewSrc);
+        return;
+      }
+      const next = latest.filter((b) => b.id !== blockId);
+      onChange(next.length ? next : [createAbsoluteBlock('paragraph', -140, -48)]);
+      if (previewSrc) revokeLocalImagePreview(previewSrc);
+    },
+    [onChange],
+  );
+
+  const insertImageAt = useCallback(
+    (src: string, atIndex?: number): string => {
+      const imgBlock = createAbsoluteBlock('image', stage.viewCenterX - 140, stage.viewCenterY - 100) as ImageBlock;
+      imgBlock.src = src;
+      const latest = blocksRef.current;
+      const base =
+        atIndex ??
+        (activeIndexRef.current !== null ? activeIndexRef.current + 1 : latest.length);
+      const insertAt = Math.max(0, Math.min(base, latest.length));
+      const next = [...latest];
+      next.splice(insertAt, 0, imgBlock);
+      onChange(next);
+      setSelectedIds(new Set([imgBlock.id]));
+      return imgBlock.id;
+    },
+    [onChange, stage.viewCenterX, stage.viewCenterY],
+  );
+
+  const insertImageOptimistic = useCallback(
+    (file: File, atIndex?: number, failToast = '图片上传失败') => {
+      const { previewSrc, finalize } = beginOptimisticImageUpload(file, session, isGuest);
+      const blockId = insertImageAt(previewSrc, atIndex);
+      void finalize()
+        .then((src) => {
+          commitImageSrc(blockId, src, previewSrc);
+          if (isGuest) toast('info', '游客模式：图片仅存本地');
+        })
+        .catch(() => {
+          toast('error', failToast);
+          removeImageBlock(blockId, previewSrc);
+        });
+    },
+    [session, isGuest, insertImageAt, commitImageSrc, removeImageBlock],
   );
 
   const editorRefCallback = useCallback(
@@ -185,78 +641,22 @@ export function BlockEditor({
     [],
   );
 
-  const migrateImageToCanvas = useCallback(
-    (payload: ImageBlockDragPayload, canvasBlockId: string, x: number, y: number) => {
-      const canvas = blocks.find((b) => b.id === canvasBlockId && b.type === 'canvas');
-      if (!canvas || canvas.type !== 'canvas') return;
-      const el = createImageElement(payload.src, x, y, {
-        width: payload.width,
-        crop: payload.crop,
-      });
-      const next = blocks
-        .filter((b) => b.id !== payload.blockId)
-        .map((b) =>
-          b.id === canvasBlockId && b.type === 'canvas'
-            ? { ...b, elements: [...b.elements, el] }
-            : b,
-        );
-      onChange(next.length ? next : [createBlock('paragraph')]);
-      setActiveCanvas({ blockId: canvasBlockId, x, y });
-    },
-    [blocks, onChange],
-  );
-
-  const activateCanvas = useCallback((blockId: string, x: number, y: number) => {
-    setActiveCanvas({ blockId, x, y });
-    activeIndexRef.current = null;
-  }, []);
-
   const onPaste = useCallback(
     async (e: React.ClipboardEvent) => {
       if (readOnly) return;
-      if (activeCanvas) {
-        const block = blocks.find((b) => b.id === activeCanvas.blockId);
-        if (block?.type === 'canvas') {
-          const file = e.clipboardData.files?.[0];
-          const text = e.clipboardData.getData('text/plain')?.trim();
-          if ((file && file.type.startsWith('image/')) || text) {
-            e.preventDefault();
-            try {
-              const updated = await pasteIntoCanvas(
-                e.clipboardData,
-                block,
-                { x: activeCanvas.x, y: activeCanvas.y },
-                session,
-                isGuest,
-              );
-              if (updated) {
-                onChange(blocks.map((b) => (b.id === block.id ? updated : b)));
-                return;
-              }
-            } catch {
-              toast('error', '粘贴到画布失败');
-              return;
-            }
-          }
-        }
-      }
       const file = e.clipboardData.files?.[0];
       if (!file || !file.type.startsWith('image/')) return;
       e.preventDefault();
-      handleImageFile(file, session, isGuest)
-        .then((src) => handleImage(src))
-        .catch(() => toast('error', '粘贴图片失败'));
+      insertImageOptimistic(file, undefined, '粘贴图片失败');
     },
-    [activeCanvas, blocks, onChange, session, isGuest, handleImage, readOnly],
+    [insertImageOptimistic, readOnly],
   );
 
   const dropImageFile = useCallback(
     (file: File, blockIndex: number) => {
-      handleImageFile(file, session, isGuest)
-        .then((src) => handleImage(src, blockIndex + 1))
-        .catch(() => toast('error', '拖入图片失败'));
+      insertImageOptimistic(file, blockIndex + 1, '拖入图片失败');
     },
-    [handleImage, session, isGuest],
+    [insertImageOptimistic],
   );
 
   const onEditorDrop = useCallback(
@@ -285,20 +685,46 @@ export function BlockEditor({
     [blocks, onChange],
   );
 
+  const dismissComposer = useCallback(() => {
+    setComposer(null);
+    setWire(null);
+  }, []);
+
   const onBlankDoubleClick = useCallback(
     (point: WorldPoint) => {
       if (readOnly) return;
-      setComposer(point);
-      setActiveCanvas(null);
+      setWire(null);
+      setComposer({ point });
     },
     [readOnly],
+  );
+
+  const connectWireToBlock = useCallback(
+    (wireIntent: NonNullable<StageComposer['wire']>, blockId: string) => {
+      addEdge(wireIntent.fromId, blockId, wireIntent.fromSide, oppositeSide(wireIntent.fromSide));
+      setWire(null);
+    },
+    [addEdge],
   );
 
   const insertFromPicker = useCallback(
     (type: BlockType) => {
       if (!composer) return;
-      const point = composer;
+      const point = composer.point;
+      const wireIntent = composer.wire;
       setComposer(null);
+      if (type === 'canvas') {
+        setWire(null);
+        return;
+      }
+
+      const finishInsert = (block: Block) => {
+        setSelectedIds(new Set([block.id]));
+        if (wireIntent) connectWireToBlock(wireIntent, block.id);
+        else setWire(null);
+      };
+
+      // 画板物件：absolute
       if (type === 'image') {
         const input = document.createElement('input');
         input.type = 'file';
@@ -306,26 +732,73 @@ export function BlockEditor({
         input.onchange = () => {
           void (async () => {
             const file = input.files?.[0];
-            if (!file) return;
+            if (!file) {
+              setWire(null);
+              return;
+            }
             try {
-              const src = await handleImageFile(file, session, isGuest);
-              const block = createAbsoluteBlock('image', point.x, point.y) as ImageBlock;
-              block.src = src;
-              insertAbsoluteAt(point, block);
+              const size = await stageImagePlacementSizeFromFile(file);
+              const { previewSrc, finalize } = beginOptimisticImageUpload(
+                file,
+                session,
+                isGuest,
+              );
+              const x = wireIntent ? point.x - size.width / 2 : point.x;
+              const y = wireIntent ? point.y - size.height / 2 : point.y;
+              const block = createAbsoluteBlock('image', x, y) as ImageBlock;
+              block.src = previewSrc;
+              block.placement = {
+                ...block.placement!,
+                mode: 'absolute',
+                width: size.width,
+                height: size.height,
+                scale: 1,
+              };
+              insertAbsoluteAt({ x, y }, block);
+              finishInsert(block);
+              void finalize()
+                .then((src) => {
+                  commitImageSrc(block.id, src, previewSrc);
+                  if (isGuest) toast('info', '游客模式：图片仅存本地');
+                })
+                .catch(() => {
+                  toast('error', '图片上传失败');
+                  removeImageBlock(block.id, previewSrc);
+                  setSelectedIds((prev) => {
+                    if (!prev.has(block.id)) return prev;
+                    const n = new Set(prev);
+                    n.delete(block.id);
+                    return n;
+                  });
+                });
             } catch {
-              toast('error', '图片上传失败');
+              toast('error', '图片插入失败');
+              setWire(null);
             }
           })();
         };
         input.click();
         return;
       }
-      if (type !== 'sticky' && type !== 'link-preview') return;
-      const block = createAbsoluteBlock(type as StageAbsoluteType, point.x, point.y);
-      insertAbsoluteAt(point, block);
+
+      // 图谱：双击点为左上角；拉线松手点为卡片中心
+      const size = defaultCardSize(type);
+      const x = wireIntent ? point.x - size.width / 2 : point.x;
+      const y = wireIntent ? point.y - size.height / 2 : point.y;
+      const block = createAbsoluteBlock(type, x, y);
+      insertAbsoluteAt({ x, y }, block);
+      finishInsert(block);
       setFocusBlockId(block.id);
     },
-    [composer, insertAbsoluteAt, session, isGuest],
+    [
+      composer,
+      insertAbsoluteAt,
+      session,
+      isGuest,
+      commitImageSrc,
+      removeImageBlock,
+      connectWireToBlock,
+    ],
   );
 
   return (
@@ -334,16 +807,21 @@ export function BlockEditor({
       onStageChange={onStageChange ?? (() => {})}
       readOnly={readOnly}
       onBlankDoubleClick={onBlankDoubleClick}
+      onPaste={readOnly ? undefined : onPaste}
+      edgePanClient={edgePanClient}
+      onBackgroundInteract={() => {
+        clearSelection();
+        if (composer?.wire) dismissComposer();
+      }}
+      onMarqueeEnd={readOnly ? undefined : applyMarqueeSelection}
+      composerAt={composer?.point ?? null}
       composer={
         composer && !readOnly ? (
-          <StageBlockPicker
-            point={composer}
-            onDismiss={() => setComposer(null)}
-            onInsertType={insertFromPicker}
-          />
+          <StageBlockPicker onDismiss={dismissComposer} onInsertType={insertFromPicker} />
         ) : null
       }
       flow={
+        hasFlowBlocks ? (
         <div
           className="block-editor"
           data-stage-interactive
@@ -421,18 +899,12 @@ export function BlockEditor({
                   registerRef={registerRef}
                   onActivate={() => {
                     activeIndexRef.current = i;
-                    setActiveCanvas(null);
                   }}
                   onInsertAfter={(type) => insertAt(i + 1, type ?? 'paragraph')}
                   onRemoveAt={() => removeAt(i)}
                   onFocusAt={focusBlockAt}
                   onSlashPick={(type) => applySlash(i, block.id, type)}
                   blocks={blocks}
-                  activeCanvas={activeCanvas}
-                  onActivateCanvas={activateCanvas}
-                  onMigrateImageToCanvas={migrateImageToCanvas}
-                  session={session}
-                  isGuest={isGuest}
                   collapsed={collapsed}
                   onToggleHeadingCollapse={onToggleHeadingCollapse}
                 />
@@ -442,20 +914,48 @@ export function BlockEditor({
           })}
           {blocks.length === 0 && readOnly && <p className="muted">（空笔记）</p>}
         </div>
+        ) : null
       }
       absolute={
         <>
+          <StageEdgesLayer
+            blocks={blocks}
+            edges={edges}
+            stage={stage}
+            selectedEdgeId={selectedEdgeId}
+            wire={wire}
+            livePlacements={livePlacements}
+            onSelectEdge={(id) => {
+              setSelectedEdgeId(id);
+              setSelectedIds(new Set());
+            }}
+            onDeleteEdge={readOnly ? undefined : deleteEdge}
+          />
           {blocks.map((block, i) => {
             if (!isAbsoluteBlock(block)) return null;
             if (isBlockHiddenByCollapse(blocks, collapsed, i)) return null;
+            const selected = selectedIds.has(block.id);
+            const portHandler = (side: BlockEdgeSide, e: React.PointerEvent) =>
+              onPortPointerDown(block.id, side, e);
+            const liveHandler = (geo: LiveBlockGeometry | null) =>
+              setBlockLiveGeometry(block.id, geo);
+            const liveOverride = livePlacements.get(block.id) ?? null;
             if (block.type === 'sticky') {
               return (
                 <StickyBlockView
                   key={block.id}
                   block={block}
                   readOnly={readOnly}
+                  selected={selected}
+                  showPorts={Boolean(wire)}
                   autoFocus={focusBlockId === block.id}
+                  stage={stage}
+                  onSelect={(additive) => selectBlock(block.id, additive)}
                   onPatch={(p) => patch(block.id, p)}
+                  onPortPointerDown={portHandler}
+                  onLiveGeometry={liveHandler}
+                  onEdgePanPointer={setEdgePanClient}
+                  liveOverride={liveOverride}
                 />
               );
             }
@@ -465,7 +965,18 @@ export function BlockEditor({
                   key={block.id}
                   block={block}
                   readOnly={readOnly}
+                  selected={selected}
+                  showPorts={Boolean(wire)}
+                  stage={stage}
+                  onSelect={(additive) => selectBlock(block.id, additive)}
                   onPatch={(p) => patch(block.id, p)}
+                  onLayer={(action) => layerAbsolute(block.id, action)}
+                  onDuplicate={() => duplicateStageImage(block.id)}
+                  onDelete={() => remove(block.id)}
+                  onPortPointerDown={portHandler}
+                  onLiveGeometry={liveHandler}
+                  onEdgePanPointer={setEdgePanClient}
+                  liveOverride={liveOverride}
                 />
               );
             }
@@ -475,12 +986,39 @@ export function BlockEditor({
                   key={block.id}
                   block={block}
                   readOnly={readOnly}
+                  selected={selected}
+                  showPorts={Boolean(wire)}
                   autoFocus={focusBlockId === block.id}
+                  stage={stage}
+                  onSelect={(additive) => selectBlock(block.id, additive)}
                   onPatch={(p) => patch(block.id, p)}
+                  onPortPointerDown={portHandler}
+                  onLiveGeometry={liveHandler}
+                  onEdgePanPointer={setEdgePanClient}
+                  liveOverride={liveOverride}
                 />
               );
             }
-            return null;
+            if (block.type === 'canvas') {
+              return null;
+            }
+            return (
+              <AbsoluteCardBlockView
+                key={block.id}
+                block={block}
+                readOnly={readOnly}
+                selected={selected}
+                showPorts={Boolean(wire)}
+                autoFocus={focusBlockId === block.id}
+                stage={stage}
+                onSelect={(additive) => selectBlock(block.id, additive)}
+                onPatch={(p) => patch(block.id, p)}
+                onPortPointerDown={portHandler}
+                onLiveGeometry={liveHandler}
+                onEdgePanPointer={setEdgePanClient}
+                liveOverride={liveOverride}
+              />
+            );
           })}
         </>
       }
@@ -509,16 +1047,6 @@ interface BlockViewProps {
   onRemoveAt: () => void;
   onFocusAt: (index: number) => void;
   onSlashPick: (type: BlockType) => void;
-  activeCanvas: { blockId: string; x: number; y: number } | null;
-  onActivateCanvas: (blockId: string, x: number, y: number) => void;
-  onMigrateImageToCanvas: (
-    payload: ImageBlockDragPayload,
-    canvasBlockId: string,
-    x: number,
-    y: number,
-  ) => void;
-  session: { token: string } | null;
-  isGuest: boolean;
   collapsed: ReadonlySet<string>;
   onToggleHeadingCollapse?: (headingId: string) => void;
 }
@@ -536,11 +1064,6 @@ function BlockView({
   onRemoveAt,
   onFocusAt,
   onSlashPick,
-  activeCanvas,
-  onActivateCanvas,
-  onMigrateImageToCanvas,
-  session,
-  isGuest,
   collapsed,
   onToggleHeadingCollapse,
 }: BlockViewProps) {
@@ -647,64 +1170,6 @@ function BlockView({
         </div>
       );
 
-    case 'checkbox':
-      return (
-        <div className="block block-checkbox">
-          <input
-            type="checkbox"
-            checked={block.checked}
-            disabled={ro}
-            onChange={(e) => patch(block.id, { checked: e.target.checked })}
-          />
-          {ro ? (
-            <span className={block.checked ? 'done' : ''}>
-              {renderMultilineMarkdown(block.text, 'preview-line')}
-            </span>
-          ) : (
-            <EditableMarkdownField
-              blockId={block.id}
-              value={block.text}
-              onChange={(text) => patch(block.id, { text })}
-              onKeyDown={(e) => makeKeyNav(e.currentTarget)(e)}
-              onActivate={onActivate}
-              placeholder="待办事项"
-              registerRef={registerRef}
-              multiline={false}
-              inputClassName="cb-input"
-            />
-          )}
-          {delBtn}
-        </div>
-      );
-
-    case 'list':
-      return (
-        <div className="block block-list">
-          {ro ? (
-            <ul>
-              {block.items.map((it, i) => (
-                <li key={i} className="preview-md">
-                  {renderMultilineMarkdown(it, 'preview-line')}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EditableMarkdownField
-              blockId={block.id}
-              value={block.items.join('\n')}
-              onChange={(text) => patch(block.id, { items: text.split('\n') })}
-              onKeyDown={(e) => makeKeyNav(e.currentTarget)(e)}
-              onActivate={onActivate}
-              placeholder="每行一项（Enter 新行，Shift+Enter 新块）"
-              registerRef={registerRef}
-              inputClassName="list-input"
-              rows={Math.max(1, block.items.length)}
-            />
-          )}
-          {delBtn}
-        </div>
-      );
-
     case 'image':
       return (
         <div className="block block-image">
@@ -745,27 +1210,6 @@ function BlockView({
         </div>
       );
 
-    case 'callout':
-      return (
-        <div className={`block block-callout tone-${block.tone}`}>
-          {ro ? (
-            <div className="preview-md">{renderMultilineMarkdown(block.text, 'preview-line')}</div>
-          ) : (
-            <EditableMarkdownField
-              blockId={block.id}
-              value={block.text}
-              onChange={(text) => patch(block.id, { text })}
-              onActivate={onActivate}
-              placeholder="标注内容"
-              registerRef={registerRef}
-              inputClassName="callout-input"
-              rows={2}
-            />
-          )}
-          {delBtn}
-        </div>
-      );
-
     case 'divider':
       return (
         <div className="block block-divider">
@@ -776,17 +1220,9 @@ function BlockView({
 
     case 'canvas':
       return (
-        <div className="block block-canvas">
-          <CanvasBlockView
-            block={block as CanvasBlock}
-            onChange={(b) => patch(block.id, b)}
-            readOnly={ro}
-            isActive={activeCanvas?.blockId === block.id}
-            onActivate={(x, y) => onActivateCanvas(block.id, x, y)}
-            onImageBlockDrop={(payload, x, y) => onMigrateImageToCanvas(payload, block.id, x, y)}
-            session={session}
-            isGuest={isGuest}
-          />
+        <div className="block block-canvas-deprecated muted">
+          <p>自由画布已废弃，请使用无限舞台摆放图片 / 便签 / 链接。</p>
+          <p className="muted">可删除本块；内容不再交互编辑。</p>
           {delBtn}
         </div>
       );
@@ -810,18 +1246,18 @@ function ImageUploadRow({ onUploaded }: { onUploaded: (src: string) => void }) {
 
   async function onFile(file: File | undefined) {
     if (!file || !file.type.startsWith('image/')) return;
+    const { previewSrc, finalize } = beginOptimisticImageUpload(file, session, isGuest);
+    onUploaded(previewSrc);
     setBusy(true);
     try {
-      if (isGuest || !session?.token) {
-        const dataUrl = await readAsDataUrl(file);
-        onUploaded(dataUrl);
-        toast('info', '游客模式：图片仅存本地');
-      } else {
-        const { url } = await apiClient.uploadAsset(file, session.token);
-        onUploaded(url);
-        toast('success', '图片已上传');
-      }
+      const src = await finalize();
+      onUploaded(src);
+      revokeLocalImagePreview(previewSrc);
+      if (isGuest) toast('info', '游客模式：图片仅存本地');
+      else toast('success', '图片已上传');
     } catch {
+      onUploaded('');
+      revokeLocalImagePreview(previewSrc);
       toast('error', '图片上传失败');
     } finally {
       setBusy(false);

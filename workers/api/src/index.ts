@@ -3,7 +3,7 @@ import { putBinaryFile } from './github';
 import { resolveAssetBytes } from './assets';
 import { summarizeNote, extractTodos, assistNoteChat } from './ai';
 import { extractBearer, verifyUserToken } from './auth';
-import { syncNoteVisibility } from './tree-filter';
+import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
 import type { Note, NoteTree, NoteVisibility } from '@webbook/shared';
 import { normalizeNote } from '@webbook/shared';
@@ -619,8 +619,11 @@ export default {
           await saveUserNote(env, user.id, user.email, note);
 
           const tree = await loadUserTree(env, user.id);
-          const synced = syncNoteVisibility(tree, id, note.visibility);
-          await saveUserTree(env, user.id, user.email, synced);
+          const prevVis = getNoteVisibilityInTree(tree, id);
+          if (prevVis !== note.visibility) {
+            const synced = syncNoteVisibility(tree, id, note.visibility);
+            await saveUserTree(env, user.id, user.email, synced);
+          }
 
           try {
             await mergeTodosFromNote(env, user.id, note);

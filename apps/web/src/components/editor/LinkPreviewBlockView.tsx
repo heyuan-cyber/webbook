@@ -7,9 +7,22 @@ interface Props {
   patch: (patch: Partial<LinkPreviewBlock>) => void;
   readOnly?: boolean;
   autoFocus?: boolean;
+  /** 舞台壳自己处理双击打开时关闭卡面 dblclick，避免重复打开 */
+  disableCardDoubleClick?: boolean;
 }
 
-export function LinkPreviewBlockView({ block, patch, readOnly, autoFocus }: Props) {
+function openUrl(url: string) {
+  if (!url) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+export function LinkPreviewBlockView({
+  block,
+  patch,
+  readOnly,
+  autoFocus,
+  disableCardDoubleClick,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,22 +48,51 @@ export function LinkPreviewBlockView({ block, patch, readOnly, autoFocus }: Prop
 
   if (block.title || block.description) {
     return (
-      <a className="link-card" href={block.url} target="_blank" rel="noreferrer">
+      <div
+        className="link-card"
+        onDoubleClick={
+          disableCardDoubleClick
+            ? undefined
+            : (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openUrl(block.url);
+              }
+        }
+      >
         {block.image && <img className="link-thumb" src={block.image} alt="" />}
         <div className="link-meta">
           <div className="link-title">{block.title ?? block.url}</div>
           {block.description && <div className="link-desc">{block.description}</div>}
-          <div className="link-url muted">{block.url}</div>
+          <div className="link-url-row">
+            <div className="link-url muted">{block.url}</div>
+            <button
+              type="button"
+              className="btn link-open-btn"
+              title="在新标签打开"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                openUrl(block.url);
+              }}
+            >
+              打开
+            </button>
+          </div>
         </div>
-      </a>
+      </div>
     );
   }
 
   if (readOnly) {
     return (
-      <a href={block.url} target="_blank" rel="noreferrer">
+      <button
+        type="button"
+        className="link-readonly-open"
+        onClick={() => openUrl(block.url)}
+      >
         {block.url || '(空链接)'}
-      </a>
+      </button>
     );
   }
 

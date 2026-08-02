@@ -24,7 +24,13 @@ function isBlockStarter(line: string): boolean {
   );
 }
 
-/** 将 AI 输出的 Markdown 草稿转为 WebBook blocks[] */
+function pushParagraph(blocks: Block[], lines: string[]) {
+  const text = lines.join('\n').trimEnd();
+  if (!text) return;
+  blocks.push({ id: newBlockId(), type: 'paragraph', text });
+}
+
+/** 将 AI 输出的 Markdown 草稿转为 WebBook blocks[]（列表/待办/引用并入 paragraph） */
 export function markdownToBlocks(markdown: string): Block[] {
   const text = markdown.replace(/\r\n/g, '\n').trim();
   if (!text) return [];
@@ -54,56 +60,36 @@ export function markdownToBlocks(markdown: string): Block[] {
       continue;
     }
 
-    const checkbox = trimmed.match(CHECKBOX_RE);
-    if (checkbox) {
-      blocks.push({
-        id: newBlockId(),
-        type: 'checkbox',
-        checked: checkbox[1].toLowerCase() === 'x',
-        text: checkbox[2].trim(),
-      });
-      i++;
-      continue;
-    }
-
-    const quote = trimmed.match(BLOCKQUOTE_RE);
-    if (quote) {
-      blocks.push({ id: newBlockId(), type: 'callout', tone: 'info', text: quote[1].trim() });
-      i++;
-      continue;
-    }
-
     if (URL_RE.test(trimmed)) {
       blocks.push({ id: newBlockId(), type: 'link-preview', url: trimmed });
       i++;
       continue;
     }
 
-    const ordered = trimmed.match(OL_RE);
-    if (ordered) {
-      const items: string[] = [];
+    // 任务列表 / 无序 / 有序 / 引用 → 连续行写入同一个 paragraph
+    if (
+      CHECKBOX_RE.test(trimmed) ||
+      BLOCKQUOTE_RE.test(trimmed) ||
+      OL_RE.test(trimmed) ||
+      UL_RE.test(trimmed)
+    ) {
+      const chunk: string[] = [];
       while (i < lines.length) {
         const t = lines[i].trim();
-        const m = t.match(OL_RE);
-        if (!m) break;
-        items.push(m[1].trim());
-        i++;
+        if (!t) break;
+        if (
+          CHECKBOX_RE.test(t) ||
+          BLOCKQUOTE_RE.test(t) ||
+          OL_RE.test(t) ||
+          UL_RE.test(t)
+        ) {
+          chunk.push(t);
+          i++;
+          continue;
+        }
+        break;
       }
-      if (items.length) blocks.push({ id: newBlockId(), type: 'list', ordered: true, items });
-      continue;
-    }
-
-    const unordered = trimmed.match(UL_RE);
-    if (unordered) {
-      const items: string[] = [];
-      while (i < lines.length) {
-        const t = lines[i].trim();
-        const m = t.match(UL_RE);
-        if (!m) break;
-        items.push(m[1].trim());
-        i++;
-      }
-      if (items.length) blocks.push({ id: newBlockId(), type: 'list', ordered: false, items });
+      pushParagraph(blocks, chunk);
       continue;
     }
 
@@ -114,9 +100,7 @@ export function markdownToBlocks(markdown: string): Block[] {
       paraLines.push(t);
       i++;
     }
-    if (paraLines.length) {
-      blocks.push({ id: newBlockId(), type: 'paragraph', text: paraLines.join('\n') });
-    }
+    pushParagraph(blocks, paraLines);
   }
 
   return blocks;
