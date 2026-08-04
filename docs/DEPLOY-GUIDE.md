@@ -58,7 +58,7 @@ WebBook 把一个块编辑器笔记应用直接搬上 GitHub Pages + Cloudflare 
 |------|------|
 | 干什么 | 在全球 300+ 节点运行的 Serverless 函数。有 HTTP 请求时被唤醒，执行完即销毁。 |
 | WebBook 用它 | 全部的「业务逻辑」：JWT 校验、读写 GitHub 数据仓、调 AI、过滤公开/私密、圈子鉴权 |
-| 线上地址 | `https://webbook-api.heyuan-webbook.workers.dev` |
+| 线上地址 | `https://webbook-api.1060707057.workers.dev` |
 
 **Worker 就是后端，它负责任的完整清单：**
 
@@ -634,6 +634,6 @@ WebBook/
 | 用户端 | `https://heyuan-cyber.github.io/webbook/app` |
 | 管理后台 | `https://heyuan-cyber.github.io/webbook/admin` |
 | 博客广场 | `https://heyuan-cyber.github.io/webbook/blog` |
-| API | `https://webbook-api.heyuan-webbook.workers.dev` |
+| API | `https://webbook-api.1060707057.workers.dev` |
 | 代码仓 | `https://github.com/heyuan-cyber/webbook` |
 | 数据仓 | `heyuan-cyber/webbook-data`（私有） |
