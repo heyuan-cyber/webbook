@@ -3,6 +3,7 @@ export * from './sections.js';
 export * from './note.js';
 export * from './tree.js';
 export * from './ai.js';
+export * from './aiGenerate.js';
 export * from './markdownBlocks.js';
 export * from './aiChatParse.js';
 export * from './comment.js';

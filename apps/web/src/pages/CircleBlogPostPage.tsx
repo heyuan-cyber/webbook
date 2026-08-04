@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Note } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
 import { apiClient } from '@/lib/api';
-import { BlockEditor } from '@/components/editor/BlockEditor';
+import { BlogArticleView } from '@/components/blog/BlogArticleView';
 import { blogHubPath } from '@/lib/blog';
 
 export function CircleBlogPostPage() {
@@ -46,7 +46,7 @@ export function CircleBlogPostPage() {
       <main className="blog-main blog-article">
         {loading && <p className="muted">加载中…</p>}
         {error && <p className="auth-error">{error}</p>}
-        {note && <BlockEditor blocks={note.blocks} onChange={() => {}} readOnly />}
+        {note && <BlogArticleView blocks={note.blocks} />}
       </main>
     </div>
   );

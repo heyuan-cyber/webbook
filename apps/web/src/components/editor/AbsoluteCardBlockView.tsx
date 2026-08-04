@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Block, BlockEdgeSide, BlockPlacement, NoteStage } from '@webbook/shared';
+import type { Block, BlockEdgeSide, BlockPlacement, NoteStage, VideoBlock } from '@webbook/shared';
 import {
   AUTO_SIZE_MAX_HEIGHT,
   AUTO_SIZE_MAX_WIDTH,
@@ -7,12 +7,15 @@ import {
   isPlacementAutoSize,
   stageScale,
 } from '@webbook/shared';
+import { assetUrl } from '@/lib/api';
 import { EditableMarkdownField } from './EditableMarkdownField';
 import { LinkPreviewBlockView } from './LinkPreviewBlockView';
+import { BlockAiPanel } from './BlockAiPanel';
 import { StageBlockPorts } from './StageBlockPorts';
 import type { LiveBlockGeometry } from './StageEdgesLayer';
 import { worldPointFromClient } from './stageCoords';
 import { useAutoSizeHeight } from './useAutoSizeHeight';
+import { toast } from '@/store/useToastStore';
 
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const HANDLES: Handle[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
@@ -213,13 +216,27 @@ export function AbsoluteCardBlockView({
     }
   }
 
-  function beginDrag(dx: number, dy: number, clientX: number, clientY: number) {
+  function beginDrag(
+    dx: number,
+    dy: number,
+    clientX: number,
+    clientY: number,
+    pointerId?: number,
+  ) {
     drag.current = { dx, dy };
     const start = { x, y, w, h };
     liveRef.current = start;
     setLive(start);
     reportLive(start);
     setPointer(clientX, clientY);
+    // 仅在确认拖拽后再 capture，避免第一次按下就抢走预览区的 dblclick
+    if (pointerId != null && rootRef.current) {
+      try {
+        rootRef.current.setPointerCapture(pointerId);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   function onShellPointerDown(e: React.PointerEvent) {
@@ -233,7 +250,7 @@ export function AbsoluteCardBlockView({
       return;
     }
     if ((e.target as HTMLElement).closest('.stage-port, .stage-card-handle')) return;
-    // 不在此处 preventDefault，以免吞掉预览区 dblclick → 源码
+    // 不 preventDefault、不立刻 setPointerCapture，以免吞掉预览区 dblclick → 源码
     e.stopPropagation();
     onSelect(e.shiftKey);
     const viewport = viewportOf(e.currentTarget as HTMLElement);
@@ -246,7 +263,6 @@ export function AbsoluteCardBlockView({
       dx: pt.x - x,
       dy: pt.y - y,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -254,7 +270,7 @@ export function AbsoluteCardBlockView({
     if (p && !drag.current && !resize.current) {
       if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) >= DRAG_THRESHOLD_PX) {
         pending.current = null;
-        beginDrag(p.dx, p.dy, e.clientX, e.clientY);
+        beginDrag(p.dx, p.dy, e.clientX, e.clientY, p.pointerId);
         e.preventDefault();
       }
       return;
@@ -264,7 +280,7 @@ export function AbsoluteCardBlockView({
     applyFromClient(e.clientX, e.clientY);
   }
 
-  function onPointerUp() {
+  function onPointerUp(e: React.PointerEvent) {
     const pos = liveRef.current;
     const wasResize = Boolean(resize.current);
     const wasDragging = Boolean(drag.current);
@@ -276,6 +292,13 @@ export function AbsoluteCardBlockView({
         height: pos.h,
         ...(wasResize ? { autoSize: false } : {}),
       });
+    }
+    if (rootRef.current?.hasPointerCapture(e.pointerId)) {
+      try {
+        rootRef.current.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
     }
     pending.current = null;
     drag.current = null;
@@ -328,47 +351,110 @@ export function AbsoluteCardBlockView({
   }, [autoFocus, readOnly]);
 
   return (
-    <div
-      ref={rootRef}
-      data-stage-block
-      className={`stage-absolute-block stage-absolute-card ${selected ? 'is-selected' : ''} ${
-        autoSize ? 'is-autosize' : ''
-      } ${autoSize && displayH >= AUTO_SIZE_MAX_HEIGHT - 1 ? 'is-autosize-capped' : ''} ${
-        autoSize && displayW >= AUTO_SIZE_MAX_WIDTH - 1 ? 'is-autosize-wide-capped' : ''
-      }`}
-      style={{
-        left: displayX,
-        top: displayY,
-        width: displayW,
-        height: displayH,
-        zIndex: z,
-      }}
-      onPointerDown={onShellPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      <div className="stage-card-body">
-        {renderCardBody(block, Boolean(readOnly), onPatch, Boolean(autoFocus))}
+    <>
+      <div
+        ref={rootRef}
+        data-stage-block
+        className={`stage-absolute-block stage-absolute-card ${selected ? 'is-selected' : ''} ${
+          autoSize ? 'is-autosize' : ''
+        } ${autoSize && displayH >= AUTO_SIZE_MAX_HEIGHT - 1 ? 'is-autosize-capped' : ''} ${
+          autoSize && displayW >= AUTO_SIZE_MAX_WIDTH - 1 ? 'is-autosize-wide-capped' : ''
+        }`}
+        style={{
+          left: displayX,
+          top: displayY,
+          width: displayW,
+          height: displayH,
+          zIndex: z,
+        }}
+        onPointerDown={onShellPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <div className="stage-card-body">
+          {renderCardBody(block, Boolean(readOnly), onPatch, Boolean(autoFocus))}
+        </div>
+        {selected &&
+          !readOnly &&
+          HANDLES.map((handle) => (
+            <button
+              key={handle}
+              type="button"
+              className={`stage-img-handle stage-card-handle stage-img-handle-${handle}`}
+              onPointerDown={(e) => onHandleDown(handle, e)}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+            />
+          ))}
+        <StageBlockPorts
+          blockId={block.id}
+          visible={Boolean(showPorts || selected) && !readOnly}
+          onPortPointerDown={onPortPointerDown}
+        />
       </div>
-      {selected &&
-        !readOnly &&
-        HANDLES.map((handle) => (
-          <button
-            key={handle}
-            type="button"
-            className={`stage-img-handle stage-card-handle stage-img-handle-${handle}`}
-            onPointerDown={(e) => onHandleDown(handle, e)}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-          />
-        ))}
-      <StageBlockPorts
-        blockId={block.id}
-        visible={Boolean(showPorts || selected) && !readOnly}
-        onPortPointerDown={onPortPointerDown}
-      />
-    </div>
+      {selected && !readOnly && block.type === 'paragraph' && (
+        <BlockAiPanel
+          kind="text"
+          ai={block.ai}
+          style={{
+            left: displayX,
+            top: displayY + displayH + 8,
+            width: Math.max(displayW, 300),
+            zIndex: z + 20,
+          }}
+          onAiChange={(next) => onPatch({ ai: next } as Partial<Block>)}
+          onTextResult={(text) =>
+            onPatch({
+              text,
+              ai: { ...block.ai, status: 'done' },
+            } as Partial<Block>)
+          }
+        />
+      )}
+      {selected && !readOnly && block.type === 'video' && (
+        <BlockAiPanel
+          kind="video"
+          ai={block.ai}
+          importLabel="导入"
+          onImport={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'video/*';
+            input.onchange = () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              if (file.size > 80 * 1024 * 1024) {
+                toast('error', '本地视频暂限 80MB');
+                return;
+              }
+              const url = URL.createObjectURL(file);
+              const prev = block.src;
+              onPatch({
+                src: url,
+                ai: { ...block.ai, source: 'upload', status: 'done' },
+              } as Partial<Block>);
+              if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+              toast('info', '本地视频仅存本机预览；持久化需后续云存储');
+            };
+            input.click();
+          }}
+          style={{
+            left: displayX,
+            top: displayY + displayH + 8,
+            width: Math.max(displayW, 300),
+            zIndex: z + 20,
+          }}
+          onAiChange={(next) => onPatch({ ai: next } as Partial<Block>)}
+          onVideoResult={(url) =>
+            onPatch({
+              src: url,
+              ai: { ...block.ai, status: 'done', source: 'ai' },
+            } as Partial<Block>)
+          }
+        />
+      )}
+    </>
   );
 }
 
@@ -431,13 +517,34 @@ function renderCardBody(
       });
     case 'video':
       return (
-        <input
-          className="url-input stage-card-input"
-          value={block.src}
-          readOnly={readOnly}
-          placeholder="视频 URL"
-          onChange={(e) => onPatch({ src: e.target.value } as Partial<Block>)}
-        />
+        <div className="stage-video-body">
+          {block.src ? (
+            <video
+              className="stage-video-el"
+              src={assetUrl(block.src)}
+              controls
+              playsInline
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div className="stage-video-empty muted">空视频 · 下方可导入或 AI</div>
+          )}
+          {!readOnly && (
+            <input
+              className="url-input stage-card-input"
+              value={block.src.startsWith('blob:') ? '' : block.src}
+              placeholder="或粘贴视频 URL"
+              data-stage-interactive
+              onPointerDown={(e) => e.stopPropagation()}
+              onChange={(e) =>
+                onPatch({
+                  src: e.target.value,
+                  ai: { ...(block as VideoBlock).ai, source: 'url' },
+                } as Partial<Block>)
+              }
+            />
+          )}
+        </div>
       );
     case 'divider':
       return <hr />;

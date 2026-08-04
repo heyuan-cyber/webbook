@@ -1,3 +1,5 @@
+import type { BlockAiState } from './aiGenerate.js';
+
 /** 笔记由有序的块组成；canvas 块内部是自由排版的元素集合。 */
 
 export type BlockType =
@@ -51,12 +53,14 @@ export interface HeadingBlock extends BaseBlock {
   type: 'heading';
   level: 1 | 2 | 3;
   text: string;
+  ai?: BlockAiState;
 }
 
 export interface ParagraphBlock extends BaseBlock {
   type: 'paragraph';
   /** Markdown 内联文本 */
   text: string;
+  ai?: BlockAiState;
 }
 
 export interface ListBlock extends BaseBlock {
@@ -92,12 +96,14 @@ export interface ImageBlock extends BaseBlock {
   layout?: 'inline' | 'free';
   freeX?: number;
   freeY?: number;
+  ai?: BlockAiState;
 }
 
 export interface VideoBlock extends BaseBlock {
   type: 'video';
   src: string;
   caption?: string;
+  ai?: BlockAiState;
 }
 
 export interface LinkPreviewBlock extends BaseBlock {
@@ -242,7 +248,7 @@ export function defaultCardSize(type: BlockType): { width: number; height: numbe
     case 'link-preview':
       return { width: 260, height: 120 };
     case 'video':
-      return { width: 320, height: 100 };
+      return { width: 320, height: 200 };
     case 'divider':
       return { width: 240, height: 40 };
     default:

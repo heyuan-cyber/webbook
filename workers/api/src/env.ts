@@ -29,4 +29,20 @@ export interface Env {
   SEARCH_API_KEY?: string;
   SEARCH_API_KEY_DOMESTIC?: string;
   SEARCH_API_KEY_INTERNATIONAL?: string;
+
+  /** Workers AI binding（wrangler.toml `[ai]`） */
+  AI?: {
+    run: (model: string, inputs: Record<string, unknown>) => Promise<unknown>;
+  };
+  /** 无 AI binding 时用 REST 调用 Workers AI */
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
+  /** 火山引擎（Seedance / Seedream） */
+  VOLC_ACCESS_KEY_ID?: string;
+  VOLC_SECRET_ACCESS_KEY?: string;
+  VOLC_API_KEY?: string;
+  GEMINI_API_KEY?: string;
+  OPENAI_API_KEY?: string;
+  TRIPO_API_KEY?: string;
+  KLING_API_KEY?: string;
 }

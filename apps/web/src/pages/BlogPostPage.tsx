@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { Note } from '@webbook/shared';
 import { apiClient } from '@/lib/api';
 import { userBlogPath } from '@/lib/blog';
-import { BlockEditor } from '@/components/editor/BlockEditor';
+import { BlogArticleView } from '@/components/blog/BlogArticleView';
 import { CommentSection } from '@/components/CommentSection';
 
 export function BlogPostPage() {
@@ -63,7 +63,7 @@ export function BlogPostPage() {
             {note.summary && (
               <p className="blog-summary muted">{note.summary}</p>
             )}
-            <BlockEditor blocks={note.blocks} onChange={() => {}} readOnly />
+            <BlogArticleView blocks={note.blocks} />
             <CommentSection ownerId={owner} noteId={note.id} />
           </>
         )}

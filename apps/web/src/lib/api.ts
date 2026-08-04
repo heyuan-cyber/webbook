@@ -1,4 +1,4 @@
-import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings } from '@webbook/shared';
+import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings, AiProvidersResponse, AiGenerateRequest, AiGenerateResult } from '@webbook/shared';
 import { normalizeNote } from '@webbook/shared';
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -119,6 +119,13 @@ export const apiClient = {
     if (!res.ok) throw new Error(`upload failed: ${res.status}`);
     return res.json() as Promise<{ url: string }>;
   },
+  aiProviders: (token: string) => http<AiProvidersResponse>('/api/ai/providers', { token }),
+  aiGenerate: (body: AiGenerateRequest, token: string) =>
+    http<AiGenerateResult>('/api/ai/generate', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(body),
+    }),
   aiChat: (
     note: Note,
     messages: { role: 'user' | 'assistant'; content: string }[],

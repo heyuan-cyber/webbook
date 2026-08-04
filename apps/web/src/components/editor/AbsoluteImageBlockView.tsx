@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { BlockEdgeSide, BlockPlacement, ImageBlock, ImageCrop, NoteStage } from '@webbook/shared';
+import { useAuth } from '@/auth/AuthContext';
 import { assetUrl } from '@/lib/api';
 import { cropImageStyle, normalizeCrop, stageCropFrameStyle } from '@/lib/imageDisplay';
+import {
+  beginOptimisticImageUpload,
+  revokeLocalImagePreview,
+} from './imageUpload';
+import { stageImagePlacementSizeFromFile } from './imageSize';
 import { ImageLightbox } from './ImageLightbox';
 import type { EdgePanClient } from './AbsoluteCardBlockView';
+import { BlockAiPanel } from './BlockAiPanel';
 import { StageBlockPorts } from './StageBlockPorts';
 import type { LiveBlockGeometry } from './StageEdgesLayer';
 import { worldPointFromClient } from './stageCoords';
+import { toast } from '@/store/useToastStore';
 
 export type ImageLayerAction = 'front' | 'forward' | 'backward' | 'back';
 
@@ -63,6 +71,7 @@ export function AbsoluteImageBlockView({
   onEdgePanPointer,
   liveOverride,
 }: Props) {
+  const { session, isGuest } = useAuth();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const onLiveGeometryRef = useRef(onLiveGeometry);
   onLiveGeometryRef.current = onLiveGeometry;
@@ -395,17 +404,102 @@ export function AbsoluteImageBlockView({
   const showHandles = selected && !readOnly && !lightbox;
   const activeHandles = cropMode ? EDGE_HANDLES : HANDLES;
 
+  function importLocalImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      void (async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        try {
+          const size = await stageImagePlacementSizeFromFile(file);
+          const { previewSrc, finalize } = beginOptimisticImageUpload(file, session, isGuest);
+          const prev = block.src;
+          onPatch({
+            src: previewSrc,
+            ai: { ...block.ai, source: 'upload', status: 'done' },
+            placement: {
+              ...pl,
+              mode: 'absolute',
+              width: size.width,
+              height: size.height,
+              scale: 1,
+            },
+          });
+          if (prev && prev.startsWith('blob:')) revokeLocalImagePreview(prev);
+          void finalize()
+            .then((src) => {
+              onPatch({ src });
+              revokeLocalImagePreview(previewSrc);
+              if (isGuest) toast('info', '游客模式：图片仅存本地');
+            })
+            .catch(() => {
+              toast('error', '图片上传失败');
+              onPatch({ src: '' });
+              revokeLocalImagePreview(previewSrc);
+            });
+        } catch {
+          toast('error', '图片导入失败');
+        }
+      })();
+    };
+    input.click();
+  }
+
+  const aiPanel =
+    selected && !readOnly ? (
+      <BlockAiPanel
+        kind="image"
+        ai={block.ai}
+        importLabel="导入"
+        onImport={importLocalImage}
+        style={{
+          left: displayX,
+          top: displayY + displayH + 8,
+          width: Math.max(displayW, 300),
+          zIndex: z + 20,
+        }}
+        onAiChange={(next) => onPatch({ ai: next })}
+        onImageResult={(url) =>
+          onPatch({
+            src: url,
+            ai: { ...block.ai, status: 'done', source: 'ai' },
+          })
+        }
+      />
+    ) : null;
+
   if (!block.src) {
     return (
-      <div
-        ref={rootRef}
-        data-stage-block
-        className={`stage-absolute-block stage-absolute-image muted ${selected ? 'is-selected' : ''}`}
-        style={{ left: displayX, top: displayY, width: displayW, minHeight: displayH, zIndex: z }}
-        onPointerDown={onPointerDown}
-      >
-        （空图片）
-      </div>
+      <>
+        <div
+          ref={rootRef}
+          data-stage-block
+          className={`stage-absolute-block stage-absolute-image muted ${selected ? 'is-selected' : ''}`}
+          style={{ left: displayX, top: displayY, width: displayW, minHeight: displayH, zIndex: z }}
+          onPointerDown={onPointerDown}
+        >
+          <div className="stage-image-empty">
+            <span>空图片</span>
+            {!readOnly && (
+              <button
+                type="button"
+                className="block-ai-import"
+                data-stage-interactive
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  importLocalImage();
+                }}
+              >
+                导入本地
+              </button>
+            )}
+          </div>
+        </div>
+        {aiPanel}
+      </>
     );
   }
 
@@ -589,6 +683,7 @@ export function AbsoluteImageBlockView({
           onClose={() => setLightbox(false)}
         />
       )}
+      {aiPanel}
     </>
   );
 }

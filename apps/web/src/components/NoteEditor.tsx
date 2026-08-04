@@ -7,6 +7,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useNotesStore } from '@/store/useNotesStore';
 import { BlockEditor } from './editor/BlockEditor';
+import { BlogArticleView } from './blog/BlogArticleView';
 import { OutlinePanel } from './editor/OutlinePanel';
 import { centerStageOn } from './editor/StageViewport';
 import { AiChatPanel } from './AiChatPanel';
@@ -223,17 +224,23 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
           panelCollapsed={outlinePanelCollapsed}
           onTogglePanel={toggleOutlinePanel}
         />
-        <BlockEditor
-          blocks={activeNote.blocks}
-          onChange={updateActiveBlocks}
-          edges={activeNote.edges ?? []}
-          onEdgesChange={updateActiveEdges}
-          readOnly={showPreview}
-          stage={activeNote.stage ?? DEFAULT_NOTE_STAGE}
-          onStageChange={updateActiveStage}
-          collapsedHeadingIds={collapsedHeadingIds}
-          onToggleHeadingCollapse={toggleHeadingCollapse}
-        />
+        {showPreview ? (
+          <div className="editor-blog-preview">
+            <BlogArticleView blocks={activeNote.blocks} />
+          </div>
+        ) : (
+          <BlockEditor
+            blocks={activeNote.blocks}
+            onChange={updateActiveBlocks}
+            edges={activeNote.edges ?? []}
+            onEdgesChange={updateActiveEdges}
+            readOnly={false}
+            stage={activeNote.stage ?? DEFAULT_NOTE_STAGE}
+            onStageChange={updateActiveStage}
+            collapsedHeadingIds={collapsedHeadingIds}
+            onToggleHeadingCollapse={toggleHeadingCollapse}
+          />
+        )}
       </div>
       {!readOnly && (
         <AiChatPanel

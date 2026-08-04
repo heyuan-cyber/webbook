@@ -4,6 +4,12 @@ compatibility_date = "2024-10-01"
 
 # 通过 `wrangler secret put <NAME>` 设置以下机密（不要写入此文件）：
 #   GITHUB_TOKEN, AI_API_KEY, SUPABASE_SERVICE_ROLE_KEY, SEARCH_API_KEY
+# 可选生图/视频：CLOUDFLARE_API_TOKEN, VOLC_*, GEMINI_API_KEY, OPENAI_API_KEY, TRIPO_API_KEY, KLING_API_KEY
+#
+# Workers AI（默认免费生图）；部署账号需开通 Workers AI
+[ai]
+binding = "AI"
+
 [vars]
 GITHUB_REPO = "heyuan-cyber/webbook-data"
 GITHUB_BRANCH = "main"

@@ -54,7 +54,6 @@ import { StageEdgesLayer, type LiveBlockGeometry } from './StageEdgesLayer';
 import { StageBlockPicker } from './StageBlockPicker';
 import { StageViewport, type WorldRect } from './StageViewport';
 import { findInsertIndexForWorldY, worldPointFromClient, type WorldPoint } from './stageCoords';
-import { stageImagePlacementSizeFromFile } from './imageSize';
 import { renderInlineMarkdown, renderMultilineMarkdown } from '@/lib/markdown';
 import { toast } from '@/store/useToastStore';
 
@@ -724,60 +723,14 @@ export function BlockEditor({
         else setWire(null);
       };
 
-      // 画板物件：absolute
-      if (type === 'image') {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = () => {
-          void (async () => {
-            const file = input.files?.[0];
-            if (!file) {
-              setWire(null);
-              return;
-            }
-            try {
-              const size = await stageImagePlacementSizeFromFile(file);
-              const { previewSrc, finalize } = beginOptimisticImageUpload(
-                file,
-                session,
-                isGuest,
-              );
-              const x = wireIntent ? point.x - size.width / 2 : point.x;
-              const y = wireIntent ? point.y - size.height / 2 : point.y;
-              const block = createAbsoluteBlock('image', x, y) as ImageBlock;
-              block.src = previewSrc;
-              block.placement = {
-                ...block.placement!,
-                mode: 'absolute',
-                width: size.width,
-                height: size.height,
-                scale: 1,
-              };
-              insertAbsoluteAt({ x, y }, block);
-              finishInsert(block);
-              void finalize()
-                .then((src) => {
-                  commitImageSrc(block.id, src, previewSrc);
-                  if (isGuest) toast('info', '游客模式：图片仅存本地');
-                })
-                .catch(() => {
-                  toast('error', '图片上传失败');
-                  removeImageBlock(block.id, previewSrc);
-                  setSelectedIds((prev) => {
-                    if (!prev.has(block.id)) return prev;
-                    const n = new Set(prev);
-                    n.delete(block.id);
-                    return n;
-                  });
-                });
-            } catch {
-              toast('error', '图片插入失败');
-              setWire(null);
-            }
-          })();
-        };
-        input.click();
+      // 画板物件：absolute — 图片/视频先建空块，再导入或 AI，不强制文件选择器
+      if (type === 'image' || type === 'video') {
+        const size = defaultCardSize(type);
+        const x = wireIntent ? point.x - size.width / 2 : point.x;
+        const y = wireIntent ? point.y - size.height / 2 : point.y;
+        const block = createAbsoluteBlock(type, x, y);
+        insertAbsoluteAt({ x, y }, block);
+        finishInsert(block);
         return;
       }
 
@@ -793,10 +746,6 @@ export function BlockEditor({
     [
       composer,
       insertAbsoluteAt,
-      session,
-      isGuest,
-      commitImageSrc,
-      removeImageBlock,
       connectWireToBlock,
     ],
   );

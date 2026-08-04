@@ -2,6 +2,8 @@ import type { Env } from './env';
 import { putBinaryFile } from './github';
 import { resolveAssetBytes } from './assets';
 import { summarizeNote, extractTodos, assistNoteChat } from './ai';
+import { listAiProviders, runAiGenerate } from './ai/generateProviders';
+import type { AiGenerateRequest } from '@webbook/shared';
 import { extractBearer, verifyUserToken } from './auth';
 import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
@@ -687,6 +689,31 @@ export default {
         const target = url.searchParams.get('url');
         if (!target) return json({ error: 'missing url' }, 400);
         return json(await fetchLinkMeta(target));
+      }
+
+      if (pathname === '/api/ai/providers' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json(listAiProviders(env));
+      }
+
+      if (pathname === '/api/ai/generate' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as AiGenerateRequest;
+        if (!body?.kind || !body.provider || !body.model || typeof body.prompt !== 'string') {
+          return json({ error: 'kind, provider, model, prompt required' }, 400);
+        }
+        const result = await runAiGenerate(env, body, async (bytes, mime) => {
+          const ext = mimeToExt(mime);
+          const filename = `${crypto.randomUUID()}.${ext}`;
+          await putBinaryFile(
+            env,
+            `data/users/${user.id}/assets/${filename}`,
+            bytes,
+            `ai asset: ${filename}`,
+          );
+          return `/api/assets/${filename}`;
+        });
+        return json(result);
       }
 
       if (pathname === '/api/ai/chat' && req.method === 'POST') {
