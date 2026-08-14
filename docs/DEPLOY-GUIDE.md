@@ -343,6 +343,8 @@ WebBook 是从单用户版本迁移过来的。旧数据路径 `data/tree.json` 
 | `POST /api/assets/upload` | 上传图片 |
 | `POST /api/ai/chat` | AI 对话（含笔记上下文） |
 | `POST /api/ai/run` | AI 动作（总结 / 提取 TODO） |
+| `GET /api/ai/providers` | 节点生成：按密钥列出可用模型 |
+| `POST /api/ai/generate` | 节点生成：文 / 图（等） |
 | `POST /api/migrate/legacy` | 手动触发旧数据迁移 |
 
 ### 5.3 圈子（需登录 + 是成员）
@@ -528,21 +530,36 @@ npx wrangler deploy
 
 ## 九、本地开发
 
+根路径 `/` 会重定向到 **`/app`**。日常地址：`http://localhost:5173/app`（博客 `/blog`，后台 `/admin`）。
+
+复制 `.env.example` 为 `.env` 后，二选一：
+
+### 模式 A（推荐）— 前端连已部署 Worker
+
 ```bash
 cd WebBook
 npm install
-npm run dev        # 前端 http://localhost:5173
-npm run dev:api    # API   http://localhost:8787
+# .env: VITE_API_BASE_URL=https://webbook-api.1060707057.workers.dev
+#       + VITE_SUPABASE_* （真登录）
+npm run dev        # 仅前端；不必起 localhost:8787
 ```
 
-| | 本地 | 线上 |
-|--|------|------|
-| 前端 | Vite dev server | GitHub Pages |
-| API | wrangler dev 本机 | Cloudflare 边缘 |
-| 数据 | 同一 GitHub 私有仓 | 同上 |
-| 认证 | Mock（无 Supabase 时）或真实 Supabase | Supabase |
+### 模式 B — 全本地（改 Worker 时）
 
-复制 `.env.example` 为 `.env`。未配置 Supabase 时自动用 Mock 认证 + IndexedDB，核心功能可离线体验。
+```bash
+# .env: VITE_API_BASE_URL=http://localhost:8787
+npm run dev        # 前端 http://localhost:5173
+npm run dev:api    # API   http://localhost:8787（.dev.vars + [ai] binding）
+```
+
+| | 模式 A | 模式 B | 线上 |
+|--|--------|--------|------|
+| 前端 | Vite `:5173` | Vite `:5173` | GitHub Pages `/webbook/` |
+| API | 已部署 Worker | `wrangler dev` | Cloudflare 边缘 |
+| 数据 | GitHub 数据仓 | 同上 | 同上 |
+| 认证 | 有 `VITE_SUPABASE_URL` → Supabase；否则 Mock | 同左 | Supabase |
+
+未配置 Supabase 时自动 Mock + IndexedDB，可体验舞台；云同步与节点 AI 需要登录 + 可用的 API。
 
 ---
 
@@ -591,8 +608,10 @@ WebBook/
 │   ├── userData.ts               #   用户笔记/树读写
 │   ├── usersRegistry.ts          #   用户注册索引
 │   ├── migrateLegacy.ts          #   旧版数据迁移
-│   ├── ai.ts                     #   AI 代理（简单版）
-│   ├── ai/                       #   AI 全套（对话 + 工具 + 联网）
+│   ├── ai.ts                     #   AI 代理（简单版 chat / run）
+│   ├── ai/                       #   对话工具 + 联网 + 节点 generateProviders
+│   │   ├── generateProviders.ts  #   providers 目录与 generate 分发
+│   │   └── adapters/             #   DeepSeek 文、CF Workers AI 图等
 │   └── env.ts                    #   环境变量类型
 ├── packages/shared/              # 共享类型
 │   └── src/

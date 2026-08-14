@@ -220,3 +220,66 @@ select {
   gap: 10px;
   padding: 40px 0;
 }
+
+.feishu-zip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.feishu-export-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(20, 18, 16, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.feishu-export-card {
+  background: var(--bg, #fff);
+  color: var(--fg, #222);
+  border-radius: 12px;
+  padding: 20px;
+  width: min(420px, 100%);
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+.feishu-export-card h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+}
+.feishu-export-path {
+  font-size: 0.85rem;
+  margin: 8px 0 12px;
+  word-break: break-all;
+}
+.feishu-export-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  max-height: 40vh;
+  overflow: auto;
+}
+.feishu-export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.feishu-export-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+}
+.feishu-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}

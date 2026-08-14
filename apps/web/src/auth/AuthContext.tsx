@@ -9,10 +9,9 @@ import type { AuthProvider, Session } from './types';
 import { mockProvider } from './mockProvider';
 import { supabaseProvider } from './supabaseProvider';
 
-// 有 Supabase 配置时用真实认证，否则回退 mock（本地无 .env 时）
-const provider: AuthProvider = import.meta.env.VITE_SUPABASE_URL
-  ? supabaseProvider
-  : mockProvider;
+// 默认走真实 Supabase（见 publicDefaults）；仅当显式 VITE_USE_MOCK_AUTH=1 时用 Mock
+const provider: AuthProvider =
+  import.meta.env.VITE_USE_MOCK_AUTH === '1' ? mockProvider : supabaseProvider;
 
 interface AuthState {
   session: Session | null;

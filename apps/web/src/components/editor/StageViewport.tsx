@@ -35,6 +35,8 @@ interface Props {
   onMarqueeEnd?: (rect: WorldRect) => void;
   onPaste?: (e: React.ClipboardEvent) => void;
   edgePanClient?: { clientX: number; clientY: number } | null;
+  /** 指针在视口内移动时采样世界坐标（粘贴落点等） */
+  onPointerSample?: (point: WorldPoint) => void;
 }
 
 const PAN_THRESHOLD = 5;
@@ -66,6 +68,7 @@ export function StageViewport({
   onMarqueeEnd,
   onPaste,
   edgePanClient,
+  onPointerSample,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef(stage);
@@ -76,6 +79,14 @@ export function StageViewport({
   onStageChangeRef.current = onStageChange;
   const onMarqueeRef = useRef(onMarquee);
   onMarqueeRef.current = onMarquee;
+  const onPointerSampleRef = useRef(onPointerSample);
+  onPointerSampleRef.current = onPointerSample;
+  const onPasteRef = useRef(onPaste);
+  onPasteRef.current = onPaste;
+  /** 用户最近与舞台交互过，用于 body 焦点时仍接收 Ctrl+V */
+  const stageArmedRef = useRef(false);
+  /** 左键在 viewport 内按下（用于「按住左键+滚轮」缩放） */
+  const primaryHeldRef = useRef(false);
   const panDrag = useRef<{
     sx: number;
     sy: number;
@@ -148,22 +159,32 @@ export function StageViewport({
     const el = viewportRef.current;
     if (!el) return;
 
-    function onWheel(e: WheelEvent) {
-      if (readOnly) return;
-      if (shouldSkipStageWheel(e.target)) return;
+    function zoomAt(e: WheelEvent) {
       const viewport = viewportRef.current;
       if (!viewport) return;
-      e.preventDefault();
       const cur = stageRef.current;
+      const factor = e.deltaY > 0 ? 1 / WHEEL_ZOOM_STEP : WHEEL_ZOOM_STEP;
+      const next = clampStageScale(stageScale(cur) * factor);
+      if (next === stageScale(cur)) return;
+      onStageChange(zoomStageAtClient(viewport, cur, e.clientX, e.clientY, next));
+    }
 
-      if (e.ctrlKey || e.metaKey) {
-        const factor = e.deltaY > 0 ? 1 / WHEEL_ZOOM_STEP : WHEEL_ZOOM_STEP;
-        const next = clampStageScale(stageScale(cur) * factor);
-        if (next === stageScale(cur)) return;
-        onStageChange(zoomStageAtClient(viewport, cur, e.clientX, e.clientY, next));
+    function onWheel(e: WheelEvent) {
+      if (readOnly) return;
+      const viewport = viewportRef.current;
+      if (!viewport) return;
+
+      const wantZoom = e.ctrlKey || e.metaKey || primaryHeldRef.current;
+      // Ctrl/Meta 或左键按住：viewport 内强制画板缩放，禁止浏览器整页缩放
+      if (wantZoom) {
+        e.preventDefault();
+        zoomAt(e);
         return;
       }
 
+      if (shouldSkipStageWheel(e.target)) return;
+      e.preventDefault();
+      const cur = stageRef.current;
       const dx = e.shiftKey ? e.deltaY * WHEEL_PAN_FACTOR : e.deltaX * WHEEL_PAN_FACTOR;
       const dy = e.shiftKey ? 0 : e.deltaY * WHEEL_PAN_FACTOR;
       onStageChange({
@@ -178,16 +199,70 @@ export function StageViewport({
       if (e.button === 1) e.preventDefault();
     }
 
+    function clearPrimaryHeld() {
+      primaryHeldRef.current = false;
+    }
+
+    function onPointerDownCapture(e: PointerEvent) {
+      if (e.button === 0) primaryHeldRef.current = true;
+    }
+
+    function onPointerUpCapture(e: PointerEvent) {
+      if (e.button === 0) clearPrimaryHeld();
+    }
+
     el.addEventListener('wheel', onWheel, { passive: false });
     el.addEventListener('auxclick', onAuxClick);
+    el.addEventListener('pointerdown', onPointerDownCapture, true);
+    el.addEventListener('pointerup', onPointerUpCapture, true);
+    el.addEventListener('pointercancel', clearPrimaryHeld, true);
+    window.addEventListener('blur', clearPrimaryHeld);
     return () => {
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('auxclick', onAuxClick);
+      el.removeEventListener('pointerdown', onPointerDownCapture, true);
+      el.removeEventListener('pointerup', onPointerUpCapture, true);
+      el.removeEventListener('pointercancel', clearPrimaryHeld, true);
+      window.removeEventListener('blur', clearPrimaryHeld);
     };
   }, [onStageChange, readOnly]);
 
+  // 焦点落在 body 时（常见），仍把粘贴转给舞台处理器
+  useEffect(() => {
+    if (readOnly || !onPaste) return;
+    function onDocPaste(e: ClipboardEvent) {
+      const handler = onPasteRef.current;
+      const vp = viewportRef.current;
+      if (!handler || !vp || !e.clipboardData) return;
+      if (!stageArmedRef.current) return;
+      const ae = document.activeElement as HTMLElement | null;
+      if (ae && ae !== document.body && ae !== document.documentElement) {
+        // 已在 viewport 内时由 React onPaste 处理，避免双触发
+        if (vp === ae || vp.contains(ae)) return;
+        return;
+      }
+      const fake = {
+        clipboardData: e.clipboardData,
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation(),
+        target: vp,
+        currentTarget: vp,
+      } as unknown as React.ClipboardEvent;
+      void handler(fake);
+    }
+    document.addEventListener('paste', onDocPaste);
+    return () => document.removeEventListener('paste', onDocPaste);
+  }, [readOnly, onPaste]);
+
   function onPointerDown(e: React.PointerEvent) {
     if (readOnly) return;
+
+    // 让 Ctrl+V 能落到舞台：非文本编辑区时聚焦 viewport
+    const t = e.target as HTMLElement;
+    if (!t.closest?.('input, textarea, select, [contenteditable="true"], .block-ai-panel')) {
+      stageArmedRef.current = true;
+      viewportRef.current?.focus({ preventScroll: true });
+    }
 
     // 中键：平移
     if (e.button === 1) {
@@ -220,6 +295,9 @@ export function StageViewport({
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    const sample = worldPointFromClient(viewportRef.current, stageRef.current, e.clientX, e.clientY);
+    if (sample) onPointerSampleRef.current?.(sample);
+
     const pan = panDrag.current;
     if (pan) {
       const dx = e.clientX - pan.sx;
@@ -346,6 +424,7 @@ export function StageViewport({
     <div
       ref={viewportRef}
       className={`stage-viewport ${panning ? 'is-panning' : ''} ${marqueeScreen ? 'is-marquee' : ''}`}
+      tabIndex={readOnly ? undefined : 0}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -391,7 +470,8 @@ export function StageViewport({
       )}
       {!readOnly && (
         <p className="stage-hint muted">
-          中键拖平移 · 左键框选 · 滚轮平移 · Ctrl+滚轮缩放 · 双击选块 · Shift+点多选
+          中键拖平移 · 左键框选 · 滚轮平移 · Ctrl+滚轮缩放画板 ·
+          按住左键+滚轮亦可缩放 · Ctrl+V 粘贴 · 双击空白插入
         </p>
       )}
     </div>

@@ -1,9 +1,21 @@
 import { createClient, type Session as SupaSession, type User } from '@supabase/supabase-js';
 import type { AuthProvider, Session } from './types';
+import {
+  DEFAULT_ADMIN_EMAIL,
+  DEFAULT_SUPABASE_ANON_KEY,
+  DEFAULT_SUPABASE_URL,
+} from '@/lib/publicDefaults';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL as string | undefined)?.toLowerCase();
+const url =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ||
+  DEFAULT_SUPABASE_URL;
+const anon =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ||
+  DEFAULT_SUPABASE_ANON_KEY;
+const adminEmail = (
+  (import.meta.env.VITE_ADMIN_EMAIL as string | undefined)?.trim() ||
+  DEFAULT_ADMIN_EMAIL
+).toLowerCase();
 
 export const supabase = createClient(url, anon);
 

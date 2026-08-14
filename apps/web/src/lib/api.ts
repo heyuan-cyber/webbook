@@ -1,7 +1,10 @@
-import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings, AiProvidersResponse, AiGenerateRequest, AiGenerateResult } from '@webbook/shared';
+import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings, AiProvidersResponse, AiGenerateRequest, AiGenerateResult, AiJobRecord } from '@webbook/shared';
 import { normalizeNote } from '@webbook/shared';
+import { DEFAULT_API_BASE_URL } from '@/lib/publicDefaults';
 
-const BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+const BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+  DEFAULT_API_BASE_URL;
 
 export function assetUrl(src: string): string {
   if (!src) return src;
@@ -116,7 +119,16 @@ export const apiClient = {
       headers: { Authorization: `Bearer ${token}` },
       body: form,
     });
-    if (!res.ok) throw new Error(`upload failed: ${res.status}`);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const body = (await res.json()) as { error?: string };
+        if (body?.error) detail = `: ${body.error}`;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(`upload failed: ${res.status}${detail}`);
+    }
     return res.json() as Promise<{ url: string }>;
   },
   aiProviders: (token: string) => http<AiProvidersResponse>('/api/ai/providers', { token }),
@@ -125,6 +137,10 @@ export const apiClient = {
       method: 'POST',
       token,
       body: JSON.stringify(body),
+    }),
+  aiJob: (jobId: string, token: string) =>
+    http<AiJobRecord>(`/api/ai/jobs/${encodeURIComponent(jobId)}`, {
+      token,
     }),
   aiChat: (
     note: Note,
@@ -318,4 +334,67 @@ export const apiClient = {
       method: 'DELETE',
       token,
     }),
+
+  feishuStatus: (token: string) =>
+    http<{
+      configured: boolean;
+      bound: boolean;
+      needsReauth?: boolean;
+      lastFolderToken: string | null;
+    }>('/api/feishu/status', { token }),
+  feishuOAuthStart: (token: string, returnTo: string) =>
+    http<{ url: string }>(
+      `/api/feishu/oauth/start?return_to=${encodeURIComponent(returnTo)}`,
+      { token },
+    ),
+  feishuOAuthUnbind: (token: string) =>
+    http<{ ok: true }>('/api/feishu/oauth', { method: 'DELETE', token }),
+  feishuFolders: (token: string, parent?: string | null) =>
+    http<{
+      parent: string | null;
+      folders: { token: string; name: string }[];
+      lastFolderToken: string | null;
+    }>(
+      `/api/feishu/folders${parent ? `?parent=${encodeURIComponent(parent)}` : ''}`,
+      { token },
+    ),
+  feishuExport: async (
+    token: string,
+    payload: {
+      title: string;
+      markdown: string;
+      folder_token: string | null;
+      files: { relativePath: string; file: File }[];
+    },
+  ) => {
+    const form = new FormData();
+    form.append('title', payload.title);
+    form.append('markdown', payload.markdown);
+    if (payload.folder_token) form.append('folder_token', payload.folder_token);
+    for (const f of payload.files) {
+      form.append('media', f.file, f.relativePath);
+    }
+    const res = await fetch(`${BASE}/api/feishu/export`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    const data = (await res.json()) as {
+      ok?: boolean;
+      url?: string;
+      documentId?: string;
+      warnings?: string[];
+      error?: string;
+      message?: string;
+      needsReauth?: boolean;
+    };
+    if (!res.ok) {
+      const err = new Error(data.message || data.error || `export failed: ${res.status}`) as Error & {
+        needsReauth?: boolean;
+      };
+      err.needsReauth = Boolean(data.needsReauth || data.error === 'feishu_needs_reauth');
+      throw err;
+    }
+    return data;
+  },
 };

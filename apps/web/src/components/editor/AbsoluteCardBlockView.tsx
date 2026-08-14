@@ -10,7 +10,7 @@ import {
 import { assetUrl } from '@/lib/api';
 import { EditableMarkdownField } from './EditableMarkdownField';
 import { LinkPreviewBlockView } from './LinkPreviewBlockView';
-import { BlockAiPanel } from './BlockAiPanel';
+import { BlockAiPanel, type NoteAiAsset } from './BlockAiPanel';
 import { StageBlockPorts } from './StageBlockPorts';
 import type { LiveBlockGeometry } from './StageEdgesLayer';
 import { worldPointFromClient } from './stageCoords';
@@ -39,6 +39,11 @@ interface Props {
   onEdgePanPointer?: (pointer: EdgePanClient | null) => void;
   /** 组拖时由父级下发的临时几何 */
   liveOverride?: LiveBlockGeometry | null;
+  noteAssets?: NoteAiAsset[];
+  /** absolute 标题卡：是否显示节折叠按钮 */
+  showHeadingCollapse?: boolean;
+  headingCollapsed?: boolean;
+  onToggleHeadingCollapse?: () => void;
 }
 
 function viewportOf(el: HTMLElement): HTMLElement | null {
@@ -72,6 +77,10 @@ export function AbsoluteCardBlockView({
   onLiveGeometry,
   onEdgePanPointer,
   liveOverride,
+  noteAssets,
+  showHeadingCollapse,
+  headingCollapsed,
+  onToggleHeadingCollapse,
 }: Props) {
   const onLiveGeometryRef = useRef(onLiveGeometry);
   onLiveGeometryRef.current = onLiveGeometry;
@@ -350,6 +359,51 @@ export function AbsoluteCardBlockView({
     });
   }, [autoFocus, readOnly]);
 
+  /** 防止 pointerup 丢失导致 edge pan 不停平移 */
+  useEffect(() => {
+    function forceEnd(ev: Event) {
+      if (!drag.current && !resize.current && !pending.current) return;
+      const pointerId =
+        'pointerId' in ev && typeof (ev as PointerEvent).pointerId === 'number'
+          ? (ev as PointerEvent).pointerId
+          : undefined;
+      if (pointerId != null && rootRef.current?.hasPointerCapture(pointerId)) {
+        try {
+          rootRef.current.releasePointerCapture(pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+      const pos = liveRef.current;
+      if (pos && (drag.current || resize.current)) {
+        commitPlacement({
+          x: pos.x,
+          y: pos.y,
+          width: pos.w,
+          height: pos.h,
+          ...(resize.current ? { autoSize: false } : {}),
+        });
+      }
+      pending.current = null;
+      drag.current = null;
+      resize.current = null;
+      liveRef.current = null;
+      setLive(null);
+      reportLive(null);
+      clearPointer();
+    }
+    window.addEventListener('pointerup', forceEnd);
+    window.addEventListener('pointercancel', forceEnd);
+    window.addEventListener('blur', forceEnd);
+    return () => {
+      window.removeEventListener('pointerup', forceEnd);
+      window.removeEventListener('pointercancel', forceEnd);
+      window.removeEventListener('blur', forceEnd);
+    };
+    // commitPlacement / reportLive / clearPointer 经 ref 稳定；仅挂载一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <>
       <div
@@ -373,7 +427,27 @@ export function AbsoluteCardBlockView({
         onPointerCancel={onPointerUp}
       >
         <div className="stage-card-body">
-          {renderCardBody(block, Boolean(readOnly), onPatch, Boolean(autoFocus))}
+          {block.type === 'heading' && showHeadingCollapse && onToggleHeadingCollapse ? (
+            <div className="stage-card-heading-row">
+              <button
+                type="button"
+                className="heading-collapse-btn"
+                data-stage-interactive
+                aria-expanded={!headingCollapsed}
+                title={headingCollapsed ? '展开本节' : '折叠本节'}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleHeadingCollapse();
+                }}
+              >
+                {headingCollapsed ? '▸' : '▾'}
+              </button>
+              {renderCardBody(block, Boolean(readOnly), onPatch, Boolean(autoFocus))}
+            </div>
+          ) : (
+            renderCardBody(block, Boolean(readOnly), onPatch, Boolean(autoFocus))
+          )}
         </div>
         {selected &&
           !readOnly &&
@@ -397,6 +471,7 @@ export function AbsoluteCardBlockView({
         <BlockAiPanel
           kind="text"
           ai={block.ai}
+          noteAssets={noteAssets}
           style={{
             left: displayX,
             top: displayY + displayH + 8,
@@ -416,6 +491,7 @@ export function AbsoluteCardBlockView({
         <BlockAiPanel
           kind="video"
           ai={block.ai}
+          noteAssets={noteAssets}
           importLabel="导入"
           onImport={() => {
             const input = document.createElement('input');
@@ -447,6 +523,44 @@ export function AbsoluteCardBlockView({
           }}
           onAiChange={(next) => onPatch({ ai: next } as Partial<Block>)}
           onVideoResult={(url) =>
+            onPatch({
+              src: url,
+              ai: { ...block.ai, status: 'done', source: 'ai' },
+            } as Partial<Block>)
+          }
+        />
+      )}
+      {selected && !readOnly && block.type === 'audio' && (
+        <BlockAiPanel
+          kind="audio"
+          ai={block.ai}
+          noteAssets={noteAssets}
+          importLabel="导入"
+          onImport={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'audio/*';
+            input.onchange = () => {
+              const file = input.files?.[0];
+              if (!file) return;
+              const url = URL.createObjectURL(file);
+              onPatch({
+                src: url,
+                title: file.name,
+                ai: { ...block.ai, source: 'upload', status: 'done' },
+              } as Partial<Block>);
+              toast('info', '本地音频仅本机预览');
+            };
+            input.click();
+          }}
+          style={{
+            left: displayX,
+            top: displayY + displayH + 8,
+            width: Math.max(displayW, 300),
+            zIndex: z + 20,
+          }}
+          onAiChange={(next) => onPatch({ ai: next } as Partial<Block>)}
+          onAudioResult={(url) =>
             onPatch({
               src: url,
               ai: { ...block.ai, status: 'done', source: 'ai' },
@@ -544,6 +658,22 @@ function renderCardBody(
               }
             />
           )}
+        </div>
+      );
+    case 'audio':
+      return (
+        <div className="stage-audio-body">
+          {block.src ? (
+            <audio
+              className="stage-audio-el"
+              src={assetUrl(block.src)}
+              controls
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div className="muted">空音频 · 下方可导入</div>
+          )}
+          {block.title ? <div className="stage-audio-title">{block.title}</div> : null}
         </div>
       );
     case 'divider':

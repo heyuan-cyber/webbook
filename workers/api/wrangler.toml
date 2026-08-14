@@ -5,6 +5,8 @@ compatibility_date = "2024-10-01"
 # 通过 `wrangler secret put <NAME>` 设置以下机密（不要写入此文件）：
 #   GITHUB_TOKEN, AI_API_KEY, SUPABASE_SERVICE_ROLE_KEY, SEARCH_API_KEY
 # 可选生图/视频：CLOUDFLARE_API_TOKEN, VOLC_*, GEMINI_API_KEY, OPENAI_API_KEY, TRIPO_API_KEY, KLING_API_KEY
+# 飞书导出：FEISHU_APP_ID, FEISHU_APP_SECRET；vars 设 FEISHU_REDIRECT_URI（如 https://xxx.workers.dev/api/feishu/oauth/callback）
+# 媒体分卷：meta 仓内 data/registry/volumes.json（缺省则 vol-01=GITHUB_REPO）；满仓后改 activeVolumeId 指向新 repo
 #
 # Workers AI（默认免费生图）；部署账号需开通 Workers AI
 [ai]
@@ -26,7 +28,7 @@ DOMESTIC_NEWS_RATIO = "0.7"
 # 国内搜索默认博查，国际默认 Tavily；secret: SEARCH_API_KEY 或分设 DOMESTIC/INTERNATIONAL
 SEARCH_PROVIDER_DOMESTIC = "bocha"
 SEARCH_PROVIDER_INTERNATIONAL = "tavily"
-
+FEISHU_REDIRECT_URI = "https://webbook-api.1060707057.workers.dev/api/feishu/oauth/callback"
 # 每晚定时整理（cron 策略）
 [triggers]
 crons = ["0 18 * * *"]

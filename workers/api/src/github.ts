@@ -9,16 +9,28 @@ interface ContentResponse {
   encoding: string;
 }
 
-/** Contents API 不能并行写同一仓库：全局串行化写操作 */
-let writeChain: Promise<void> = Promise.resolve();
+/** Contents API 不能并行写同一仓库：按 repo 串行化 */
+const writeChains = new Map<string, Promise<void>>();
 
-function enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
-  const run = writeChain.then(fn, fn);
-  writeChain = run.then(
-    () => undefined,
-    () => undefined,
+function enqueueWrite<T>(repo: string, fn: () => Promise<T>): Promise<T> {
+  const prev = writeChains.get(repo) ?? Promise.resolve();
+  const run = prev.then(fn, fn);
+  writeChains.set(
+    repo,
+    run.then(
+      () => undefined,
+      () => undefined,
+    ),
   );
   return run;
+}
+
+function metaRepo(env: Env): string {
+  return env.GITHUB_REPO;
+}
+
+function resolveRepo(env: Env, repo?: string): string {
+  return (repo?.trim() || metaRepo(env));
 }
 
 function headers(env: Env) {
@@ -57,26 +69,31 @@ function isRetryableWriteStatus(status: number): boolean {
   return status === 409 || status === 422;
 }
 
-/** 读取文件内容（不存在返回 null） */
-export async function getFile(env: Env, path: string): Promise<string | null> {
-  return getFileAtRef(env, path, env.GITHUB_BRANCH);
+/** 读取文件内容（不存在返回 null）；默认 meta 仓 */
+export async function getFile(env: Env, path: string, repo?: string): Promise<string | null> {
+  return getFileAtRef(env, path, env.GITHUB_BRANCH, repo);
 }
 
 /** 读取指定 ref 的文件内容 */
-export async function getFileAtRef(env: Env, path: string, ref: string): Promise<string | null> {
-  const res = await fetch(
-    `${API}/repos/${env.GITHUB_REPO}/contents/${path}?ref=${ref}`,
-    { headers: headers(env) },
-  );
+export async function getFileAtRef(
+  env: Env,
+  path: string,
+  ref: string,
+  repo?: string,
+): Promise<string | null> {
+  const r = resolveRepo(env, repo);
+  const res = await fetch(`${API}/repos/${r}/contents/${path}?ref=${ref}`, {
+    headers: headers(env),
+  });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub get ${path}@${ref}: ${res.status}`);
+  if (!res.ok) throw new Error(`GitHub get ${r}:${path}@${ref}: ${res.status}`);
   const data = (await res.json()) as ContentResponse;
   return b64decode(data.content.replace(/\n/g, ''));
 }
 
-async function getSha(env: Env, path: string): Promise<string | undefined> {
+async function getSha(env: Env, path: string, repo: string): Promise<string | undefined> {
   const res = await fetch(
-    `${API}/repos/${env.GITHUB_REPO}/contents/${path}?ref=${env.GITHUB_BRANCH}`,
+    `${API}/repos/${repo}/contents/${path}?ref=${env.GITHUB_BRANCH}`,
     { headers: headers(env) },
   );
   if (!res.ok) return undefined;
@@ -86,12 +103,13 @@ async function getSha(env: Env, path: string): Promise<string | undefined> {
 
 async function putContentOnce(
   env: Env,
+  repo: string,
   path: string,
   contentB64: string,
   message: string,
 ): Promise<Response> {
-  const sha = await getSha(env, path);
-  return fetch(`${API}/repos/${env.GITHUB_REPO}/contents/${path}`, {
+  const sha = await getSha(env, path, repo);
+  return fetch(`${API}/repos/${repo}/contents/${path}`, {
     method: 'PUT',
     headers: { ...headers(env), 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -105,6 +123,7 @@ async function putContentOnce(
 
 async function putContentWithRetry(
   env: Env,
+  repo: string,
   path: string,
   contentB64: string,
   message: string,
@@ -112,15 +131,15 @@ async function putContentWithRetry(
 ): Promise<void> {
   let lastStatus = 0;
   for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
-    const res = await putContentOnce(env, path, contentB64, message);
+    const res = await putContentOnce(env, repo, path, contentB64, message);
     if (res.ok) return;
     lastStatus = res.status;
     if (!isRetryableWriteStatus(res.status) || attempt === MAX_WRITE_ATTEMPTS - 1) {
-      throw new Error(`GitHub ${label} ${path}: ${res.status}`);
+      throw new Error(`GitHub ${label} ${repo}:${path}: ${res.status}`);
     }
     await sleep(120 * (attempt + 1));
   }
-  throw new Error(`GitHub ${label} ${path}: ${lastStatus}`);
+  throw new Error(`GitHub ${label} ${repo}:${path}: ${lastStatus}`);
 }
 
 /** 写入 / 更新文件（自动带上已有 sha 以更新） */
@@ -129,17 +148,25 @@ export async function putFile(
   path: string,
   content: string,
   message: string,
+  repo?: string,
 ): Promise<void> {
-  await enqueueWrite(() => putContentWithRetry(env, path, b64encode(content), message, 'put'));
+  const r = resolveRepo(env, repo);
+  await enqueueWrite(r, () => putContentWithRetry(env, r, path, b64encode(content), message, 'put'));
 }
 
-export async function deleteFile(env: Env, path: string, message: string): Promise<void> {
-  await enqueueWrite(async () => {
+export async function deleteFile(
+  env: Env,
+  path: string,
+  message: string,
+  repo?: string,
+): Promise<void> {
+  const r = resolveRepo(env, repo);
+  await enqueueWrite(r, async () => {
     let lastStatus = 0;
     for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
-      const sha = await getSha(env, path);
+      const sha = await getSha(env, path, r);
       if (!sha) return;
-      const res = await fetch(`${API}/repos/${env.GITHUB_REPO}/contents/${path}`, {
+      const res = await fetch(`${API}/repos/${r}/contents/${path}`, {
         method: 'DELETE',
         headers: { ...headers(env), 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, sha, branch: env.GITHUB_BRANCH }),
@@ -147,11 +174,11 @@ export async function deleteFile(env: Env, path: string, message: string): Promi
       if (res.ok) return;
       lastStatus = res.status;
       if (!isRetryableWriteStatus(res.status) || attempt === MAX_WRITE_ATTEMPTS - 1) {
-        throw new Error(`GitHub delete ${path}: ${res.status}`);
+        throw new Error(`GitHub delete ${r}:${path}: ${res.status}`);
       }
       await sleep(120 * (attempt + 1));
     }
-    throw new Error(`GitHub delete ${path}: ${lastStatus}`);
+    throw new Error(`GitHub delete ${r}:${path}: ${lastStatus}`);
   });
 }
 
@@ -164,11 +191,11 @@ interface BinaryContentResponse {
 }
 
 /** Contents API 对 >1MiB 文件不返回 inline content，需走 Blobs / download_url */
-async function fetchBlobBytes(env: Env, sha: string): Promise<Uint8Array> {
-  const res = await fetch(`${API}/repos/${env.GITHUB_REPO}/git/blobs/${sha}`, {
+async function fetchBlobBytes(env: Env, repo: string, sha: string): Promise<Uint8Array> {
+  const res = await fetch(`${API}/repos/${repo}/git/blobs/${sha}`, {
     headers: headers(env),
   });
-  if (!res.ok) throw new Error(`GitHub get blob ${sha}: ${res.status}`);
+  if (!res.ok) throw new Error(`GitHub get blob ${repo}:${sha}: ${res.status}`);
   const data = (await res.json()) as { content?: string; encoding?: string };
   if (data.encoding === 'base64' && data.content) {
     return b64ToBytes(data.content);
@@ -181,7 +208,6 @@ async function fetchDownloadUrlBytes(env: Env, url: string): Promise<Uint8Array>
     headers: {
       Authorization: `Bearer ${env.GITHUB_TOKEN}`,
       'User-Agent': 'webbook-api',
-      // 私有仓库 raw 下载需要 vnd.github.raw
       Accept: 'application/vnd.github.raw',
     },
   });
@@ -189,21 +215,25 @@ async function fetchDownloadUrlBytes(env: Env, url: string): Promise<Uint8Array>
   return new Uint8Array(await res.arrayBuffer());
 }
 
-/** 读取二进制文件（图片等）；兼容 Contents API 1MiB inline 限制 */
-export async function getBinaryFile(env: Env, path: string): Promise<Uint8Array | null> {
-  const res = await fetch(
-    `${API}/repos/${env.GITHUB_REPO}/contents/${path}?ref=${env.GITHUB_BRANCH}`,
-    { headers: headers(env) },
-  );
+/** 读取二进制文件；兼容 Contents API 1MiB inline 限制 */
+export async function getBinaryFile(
+  env: Env,
+  path: string,
+  repo?: string,
+): Promise<Uint8Array | null> {
+  const r = resolveRepo(env, repo);
+  const res = await fetch(`${API}/repos/${r}/contents/${path}?ref=${env.GITHUB_BRANCH}`, {
+    headers: headers(env),
+  });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub get binary ${path}: ${res.status}`);
+  if (!res.ok) throw new Error(`GitHub get binary ${r}:${path}: ${res.status}`);
   const data = (await res.json()) as BinaryContentResponse;
 
   if (data.encoding === 'base64' && data.content && data.content.length > 0) {
     return b64ToBytes(data.content);
   }
   if (data.sha) {
-    return fetchBlobBytes(env, data.sha);
+    return fetchBlobBytes(env, r, data.sha);
   }
   if (data.download_url) {
     return fetchDownloadUrlBytes(env, data.download_url);
@@ -217,32 +247,35 @@ export async function putBinaryFile(
   path: string,
   bytes: Uint8Array,
   message: string,
+  repo?: string,
 ): Promise<void> {
-  await enqueueWrite(() =>
-    putContentWithRetry(env, path, bytesToB64(bytes), message, 'put binary'),
+  const r = resolveRepo(env, repo);
+  await enqueueWrite(r, () =>
+    putContentWithRetry(env, r, path, bytesToB64(bytes), message, 'put binary'),
   );
 }
 
 /** 列出目录下条目名称（仅一层） */
-export async function listDirectory(env: Env, path: string): Promise<string[]> {
-  const res = await fetch(
-    `${API}/repos/${env.GITHUB_REPO}/contents/${path}?ref=${env.GITHUB_BRANCH}`,
-    { headers: headers(env) },
-  );
+export async function listDirectory(env: Env, path: string, repo?: string): Promise<string[]> {
+  const r = resolveRepo(env, repo);
+  const res = await fetch(`${API}/repos/${r}/contents/${path}?ref=${env.GITHUB_BRANCH}`, {
+    headers: headers(env),
+  });
   if (res.status === 404) return [];
-  if (!res.ok) throw new Error(`GitHub list ${path}: ${res.status}`);
+  if (!res.ok) throw new Error(`GitHub list ${r}:${path}: ${res.status}`);
   const entries = (await res.json()) as Array<{ name: string; type: string }>;
   if (!Array.isArray(entries)) return [];
   return entries.map((e) => e.name);
 }
 
-/** 文件提交历史 */
-export async function fileHistory(env: Env, path: string) {
+/** 文件提交历史（默认 meta 仓） */
+export async function fileHistory(env: Env, path: string, repo?: string) {
+  const r = resolveRepo(env, repo);
   const res = await fetch(
-    `${API}/repos/${env.GITHUB_REPO}/commits?path=${encodeURIComponent(path)}&sha=${env.GITHUB_BRANCH}`,
+    `${API}/repos/${r}/commits?path=${encodeURIComponent(path)}&sha=${env.GITHUB_BRANCH}`,
     { headers: headers(env) },
   );
-  if (!res.ok) throw new Error(`GitHub history ${path}: ${res.status}`);
+  if (!res.ok) throw new Error(`GitHub history ${r}:${path}: ${res.status}`);
   const commits = (await res.json()) as Array<{
     sha: string;
     commit: { message: string; author: { date: string } };

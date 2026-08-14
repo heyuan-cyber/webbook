@@ -1,8 +1,15 @@
 import type { Env } from './env';
-import { putBinaryFile } from './github';
 import { resolveAssetBytes } from './assets';
+import {
+  ensureVolumeRegistry,
+  isVolumeId,
+  loadVolumeRegistry,
+  MAX_ASSET_BYTES,
+  storeUserAsset,
+} from './volumes';
 import { summarizeNote, extractTodos, assistNoteChat } from './ai';
 import { listAiProviders, runAiGenerate } from './ai/generateProviders';
+import { refreshAiJob } from './ai/jobs';
 import type { AiGenerateRequest } from '@webbook/shared';
 import { extractBearer, verifyUserToken } from './auth';
 import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
@@ -78,6 +85,14 @@ import {
   adminSetNoteVisibility,
   adminDeleteNote,
 } from './adminContent';
+import {
+  handleFeishuStatus,
+  handleFeishuOAuthStart,
+  handleFeishuOAuthCallback,
+  handleFeishuOAuthUnbind,
+  handleFeishuFolders,
+  handleFeishuExport,
+} from './feishu';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -643,27 +658,25 @@ export default {
 
       // Public note read without auth (by id in own... no, use public routes)
 
-      // ── Assets ──
+      // ── Assets（分卷：/api/assets/vol-xx/name ；兼容旧 /api/assets/name）──
+      const assetVolGet = pathname.match(/^\/api\/assets\/(vol-[\w.-]+)\/([^/]+)$/i);
+      if (assetVolGet && req.method === 'GET') {
+        const volumeId = assetVolGet[1]!;
+        const name = assetVolGet[2]!;
+        if (!isSafeAssetName(name)) return json({ error: 'invalid asset' }, 400);
+        const bytes = await resolveAssetBytes(env, name, user, volumeId);
+        if (!bytes) return json({ error: 'not found' }, 404);
+        return assetResponse(name, bytes);
+      }
+
       const assetGet = pathname.match(/^\/api\/assets\/([^/]+)$/);
       if (assetGet && req.method === 'GET') {
         const name = assetGet[1]!;
-        if (!/^[\w.-]+\.(png|jpe?g|gif|webp)$/i.test(name)) {
-          return json({ error: 'invalid asset' }, 400);
-        }
-        const bytes = await resolveAssetBytes(env, name, user);
+        if (isVolumeId(name)) return json({ error: 'missing asset filename' }, 400);
+        if (!isSafeAssetName(name)) return json({ error: 'invalid asset' }, 400);
+        const bytes = await resolveAssetBytes(env, name, user, null);
         if (!bytes) return json({ error: 'not found' }, 404);
-        const ext = name.split('.').pop()?.toLowerCase() ?? 'png';
-        const mime =
-          ext === 'jpg' || ext === 'jpeg'
-            ? 'image/jpeg'
-            : ext === 'gif'
-              ? 'image/gif'
-              : ext === 'webp'
-                ? 'image/webp'
-                : 'image/png';
-        return new Response(bytes.buffer as ArrayBuffer, {
-          headers: { 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400', ...CORS },
-        });
+        return assetResponse(name, bytes);
       }
 
       if (pathname === '/api/assets/upload' && req.method === 'POST') {
@@ -671,18 +684,70 @@ export default {
         const form = await req.formData();
         const file = form.get('file');
         if (!(file instanceof File)) return json({ error: 'missing file' }, 400);
-        if (!file.type.startsWith('image/')) return json({ error: 'images only' }, 400);
-        if (file.size > 5 * 1024 * 1024) return json({ error: 'max 5MB' }, 400);
-        const ext = mimeToExt(file.type);
+        if (!isAllowedUploadMime(file.type, file.name)) {
+          return json({ error: 'unsupported type (image/video/glb)' }, 400);
+        }
+        if (file.size > MAX_ASSET_BYTES) {
+          return json({ error: `max ${MAX_ASSET_BYTES} bytes` }, 400);
+        }
+        const ext = mimeToExt(file.type || '', file.name);
         const filename = `${crypto.randomUUID()}.${ext}`;
         const bytes = new Uint8Array(await file.arrayBuffer());
-        await putBinaryFile(
-          env,
-          `data/users/${user.id}/assets/${filename}`,
-          bytes,
-          `asset: ${filename}`,
-        );
-        return json({ url: `/api/assets/${filename}` });
+        try {
+          const stored = await storeUserAsset(
+            env,
+            user.id,
+            filename,
+            bytes,
+            `asset: ${filename}`,
+          );
+          return json({ url: stored.url, volumeId: stored.volumeId });
+        } catch (e) {
+          return json({ error: (e as Error).message }, 400);
+        }
+      }
+
+      if (pathname === '/api/storage/volumes' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const registry = await loadVolumeRegistry(env);
+        return json(registry);
+      }
+
+      if (pathname === '/api/storage/volumes/ensure' && req.method === 'POST') {
+        if (!requireAdmin(user)) return unauthorized();
+        const registry = await ensureVolumeRegistry(env);
+        return json(registry);
+      }
+
+      if (pathname === '/api/feishu/oauth/callback' && req.method === 'GET') {
+        return handleFeishuOAuthCallback(env, req);
+      }
+
+      if (pathname === '/api/feishu/status' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return handleFeishuStatus(env, user);
+      }
+
+      if (pathname === '/api/feishu/oauth/start' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const returnTo = url.searchParams.get('return_to') || '';
+        return handleFeishuOAuthStart(env, user, returnTo);
+      }
+
+      if (pathname === '/api/feishu/oauth' && req.method === 'DELETE') {
+        if (!user) return unauthorized();
+        return handleFeishuOAuthUnbind(env, user);
+      }
+
+      if (pathname === '/api/feishu/folders' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const parent = url.searchParams.get('parent');
+        return handleFeishuFolders(env, user, parent);
+      }
+
+      if (pathname === '/api/feishu/export' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        return handleFeishuExport(env, user, req);
       }
 
       if (pathname === '/api/link-preview' && req.method === 'GET') {
@@ -702,18 +767,37 @@ export default {
         if (!body?.kind || !body.provider || !body.model || typeof body.prompt !== 'string') {
           return json({ error: 'kind, provider, model, prompt required' }, 400);
         }
-        const result = await runAiGenerate(env, body, async (bytes, mime) => {
-          const ext = mimeToExt(mime);
-          const filename = `${crypto.randomUUID()}.${ext}`;
-          await putBinaryFile(
-            env,
-            `data/users/${user.id}/assets/${filename}`,
-            bytes,
-            `ai asset: ${filename}`,
-          );
-          return `/api/assets/${filename}`;
-        });
+        const result = await runAiGenerate(
+          env,
+          body,
+          async (bytes, mime) => {
+            const ext = mimeToExt(mime);
+            const filename = `${crypto.randomUUID()}.${ext}`;
+            const stored = await storeUserAsset(
+              env,
+              user.id,
+              filename,
+              bytes,
+              `ai asset: ${filename}`,
+            );
+            return stored.url;
+          },
+          user,
+        );
         return json(result);
+      }
+
+      const aiJobMatch = pathname.match(/^\/api\/ai\/jobs\/([^/]+)$/);
+      if (aiJobMatch && req.method === 'GET') {
+        if (!user) return unauthorized();
+        try {
+          const job = await refreshAiJob(env, user, aiJobMatch[1]!);
+          return json(job);
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (msg === 'job not found') return json({ error: msg }, 404);
+          return json({ error: msg }, 400);
+        }
       }
 
       if (pathname === '/api/ai/chat' && req.method === 'POST') {
@@ -752,11 +836,64 @@ export default {
   },
 };
 
-function mimeToExt(mime: string): string {
+function mimeToExt(mime: string, fileName?: string): string {
+  const fromName = fileName?.split('.').pop()?.toLowerCase();
   if (mime.includes('jpeg')) return 'jpg';
+  if (mime.includes('png')) return 'png';
   if (mime.includes('gif')) return 'gif';
   if (mime.includes('webp')) return 'webp';
-  return 'png';
+  if (mime.includes('mp4') || mime === 'video/mp4') return 'mp4';
+  if (mime.includes('webm')) return 'webm';
+  if (mime.includes('gltf-binary') || mime === 'model/gltf-binary') return 'glb';
+  if (fromName && /^[\w]+$/.test(fromName)) return fromName;
+  return 'bin';
+}
+
+const UPLOAD_EXT_RE =
+  /\.(png|jpe?g|gif|webp|bmp|svg|avif|mp4|webm|mov|m4v|mkv|glb|bin)$/i;
+
+function isAllowedUploadMime(mime: string, fileName?: string): boolean {
+  const m = (mime || '').trim().toLowerCase();
+  if (
+    m.startsWith('image/') ||
+    m.startsWith('video/') ||
+    m === 'model/gltf-binary' ||
+    m === 'application/octet-stream' ||
+    m === 'application/mp4'
+  ) {
+    return true;
+  }
+  // 部分客户端/ zip 解出的 File.type 为空：按扩展名放行
+  if (!m && fileName && UPLOAD_EXT_RE.test(fileName)) return true;
+  return false;
+}
+
+function isSafeAssetName(name: string): boolean {
+  return /^[\w.-]+\.(png|jpe?g|gif|webp|mp4|webm|mov|m4v|mkv|glb|bin)$/i.test(name);
+}
+
+function mimeFromAssetName(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? 'bin';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'mp4' || ext === 'm4v') return 'video/mp4';
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'mov') return 'video/quicktime';
+  if (ext === 'mkv') return 'video/x-matroska';
+  if (ext === 'glb') return 'model/gltf-binary';
+  return 'application/octet-stream';
+}
+
+function assetResponse(name: string, bytes: Uint8Array): Response {
+  return new Response(bytes.buffer as ArrayBuffer, {
+    headers: {
+      'Content-Type': mimeFromAssetName(name),
+      'Cache-Control': 'public, max-age=86400',
+      ...CORS,
+    },
+  });
 }
 
 async function fetchLinkMeta(target: string) {

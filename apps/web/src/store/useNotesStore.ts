@@ -42,6 +42,12 @@ interface NotesState {
 
   addFolder: (parentId: string | null, title: string) => Promise<void>;
   addNote: (parentId: string | null, title: string) => Promise<string>;
+  /** 导入：用给定 blocks 新建笔记 */
+  createNoteWithContent: (
+    parentId: string | null,
+    title: string,
+    blocks: Block[],
+  ) => Promise<string>;
   renameNode: (id: string, title: string) => Promise<void>;
   deleteNode: (id: string) => Promise<void>;
   moveNode: (id: string, newParentId: string | null, index: number) => Promise<void>;
@@ -227,6 +233,25 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     setState({ tree: next, activeNoteId: id, activeNote: note, noteLoading: false });
     void repo.saveTree(next);
     void repo.saveNote(note);
+    return id;
+  },
+
+  async createNoteWithContent(parentId, title, blocks) {
+    const { tree, repo } = getState();
+    const id = uid('note');
+    const node: TreeNode = { id, kind: 'note', title, noteId: id, visibility: 'private' };
+    const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
+    const note: Note = {
+      ...createEmptyNote(id, title),
+      blocks: blocks.length > 0 ? blocks : createEmptyNote(id, title).blocks,
+      updatedAt: new Date().toISOString(),
+    };
+    setState({ tree: next, activeNoteId: id, activeNote: note, noteLoading: false });
+    await repo.saveTree(next);
+    const result = await repo.saveNote(note);
+    if (!result.noteOk && repo.authed) {
+      toast('error', '云端保存失败，内容已存本地');
+    }
     return id;
   },
 

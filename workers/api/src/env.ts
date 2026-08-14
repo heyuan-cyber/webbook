@@ -45,4 +45,8 @@ export interface Env {
   OPENAI_API_KEY?: string;
   TRIPO_API_KEY?: string;
   KLING_API_KEY?: string;
+  /** 飞书开放平台（User OAuth 导出文档） */
+  FEISHU_APP_ID?: string;
+  FEISHU_APP_SECRET?: string;
+  FEISHU_REDIRECT_URI?: string;
 }

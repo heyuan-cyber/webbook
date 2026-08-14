@@ -4,26 +4,24 @@
 
 ## 线上地址
 
-
-| 页面      | URL                                                                                          | 说明                       |
-| ------- | -------------------------------------------------------------------------------------------- | ------------------------ |
-| **入口站** | [https://heyuan-cyber.github.io/](https://heyuan-cyber.github.io/)                           | 域名根导航（独立用户主页仓）           |
-| 笔记本     | [https://heyuan-cyber.github.io/webbook/app](https://heyuan-cyber.github.io/webbook/app)     | 主应用                      |
-| 公开博客    | [https://heyuan-cyber.github.io/webbook/blog](https://heyuan-cyber.github.io/webbook/blog)   | `visibility: public` 的笔记 |
-| 管理后台    | [https://heyuan-cyber.github.io/webbook/admin](https://heyuan-cyber.github.io/webbook/admin) | 目录与策略                    |
-
+| 页面 | URL | 说明 |
+|------|-----|------|
+| **入口站** | [https://heyuan-cyber.github.io/](https://heyuan-cyber.github.io/) | 域名根导航（独立用户主页仓） |
+| 笔记本 | [https://heyuan-cyber.github.io/webbook/app](https://heyuan-cyber.github.io/webbook/app) | 主应用（统一舞台编辑器） |
+| 公开博客 | [https://heyuan-cyber.github.io/webbook/blog](https://heyuan-cyber.github.io/webbook/blog) | 博客枢纽 + 线性文章流 |
+| 管理后台 | [https://heyuan-cyber.github.io/webbook/admin](https://heyuan-cyber.github.io/webbook/admin) | 目录与策略 |
 
 入口站与 TWA 域名根配置见 **[user-pages/README.md](user-pages/README.md)**，部署：`npm run deploy:user-pages`。
 
 ## 特性
 
 - 🌲 **树形多层级目录** — 折叠、拖拽、跨设备同步
-- 🧱 **块编辑器** — 标题 / 文本 / 列表 / 待办 / 图片 / 视频 / 链接预览 / 标注
-- 🎨 **自由排版画布块** — 在笔记任意位置插入，元素可拖拽自由排布
+- 🧱 **统一舞台编辑器** — 标题 / 段落（Markdown）/ 图片 / 视频 / 链接预览 / 便签；双击空白插块、连线成图
 - 👤 **游客 / 登录双模式** — 游客数据仅存本机；登录后同步到 GitHub
-- 🛠 **管理后台** — 目录管理、AI 策略配置、用户管理、系统设置
-- 🤖 **可配置 AI 策略** — 写完即总结、每晚定时整理、TODO 提取提醒（DeepSeek 等）
-- 📱 **PWA** — 添加到主屏幕、离线读已缓存笔记、手机预览优先
+- 📰 **公开博客与圈子** — 可见性三档、博客广场、圈子协作
+- 🤖 **AI** — 底栏助手（DeepSeek）+ 节点内嵌生成条（生文 / 生图；视频等可扩展）
+- 🛠 **管理后台** — 目录管理、AI 策略、用户管理、公开内容审核
+- 📱 **PWA / TWA** — 添加到主屏幕、侧载 APK
 
 ## 目录结构
 
@@ -38,18 +36,66 @@ WebBook/
 
 ## 本地开发
 
+**双机接力（推荐）**：代码进 git，密钥住线上 Worker。任一台：
+
 ```bash
-cd WebBook
+git clone https://github.com/heyuan-cyber/webbook.git   # 或已有仓则 git pull
+cd webbook
 npm install
-
-# 前端（默认 http://localhost:5173），游客模式开箱即用
 npm run dev
-
-# Workers API（另开终端，默认 http://localhost:8787）
-npm run dev:api
+# → http://localhost:5173/app
 ```
 
-> 未配置任何密钥时，前端以 **本地 Mock 认证 + IndexedDB** 运行，所有核心交互（树、块编辑、画布）均可体验。
+**不必** `cp .env`：前端已内置公开默认（API → `webbook-api.*.workers.dev` + Supabase anon）。换机前 `git push`；改了 Worker 记得 `wrangler deploy`，另一台才能打到新 API。跨机接着改同一篇笔记请**登录**（游客 IndexedDB 不进 git）。
+
+根路径 `/` 会重定向到 **`/app`**。本地常用地址：
+
+| 页面 | 本地 URL |
+|------|----------|
+| 笔记本 | [http://localhost:5173/app](http://localhost:5173/app) |
+| 博客 | [http://localhost:5173/blog](http://localhost:5173/blog) |
+| 管理后台 | [http://localhost:5173/admin](http://localhost:5173/admin) |
+
+### 模式 A（默认）— 前端连已部署的 Worker
+
+适合改 UI / 舞台 / 飞书 zip / 博客，**不必**起本机 API，也**不必**本机飞书密钥。
+
+可选覆盖（`.env`）：
+
+```env
+VITE_API_BASE_URL=https://webbook-api.1060707057.workers.dev
+# 一般可省略；与代码 publicDefaults 相同
+```
+
+```bash
+npm run dev
+# → http://localhost:5173/app
+```
+
+默认 **真实登录**（Supabase）；云同步、飞书导出、节点 AI 走线上 Worker。强制 Mock：`VITE_USE_MOCK_AUTH=1`。
+
+### 模式 B — 全本地（改 Worker / 新 API 时）
+
+1. `.env`：
+
+```env
+VITE_API_BASE_URL=http://localhost:8787
+```
+
+2. `workers/api/.dev.vars` 放服务端密钥（含可选 `FEISHU_APP_ID` / `FEISHU_APP_SECRET`），**勿提交**。
+
+3. 两个终端：
+
+```bash
+npm run dev        # 前端 :5173
+npm run dev:api    # wrangler dev :8787
+```
+
+### 无密钥极简（显式 Mock）
+
+设置 `VITE_USE_MOCK_AUTH=1` → **Mock 认证 + IndexedDB**，可体验舞台；云同步 / 飞书导出 / 节点 AI 不可用。
+
+更细的架构与部署见 **[docs/DEPLOY-GUIDE.md](docs/DEPLOY-GUIDE.md)**。
 
 ## 接入真实后端
 
@@ -75,12 +121,14 @@ npm run migrate:legacy -- --user-id=<UUID> --email=你的邮箱
 
 登录用户打开笔记本时，若用户目录为空，API 也会**自动尝试**合并 legacy（`GET /api/tree`）。也可手动：`POST /api/migrate/legacy`（需登录）。
 
-### 2. AI Provider（DeepSeek）
+### 2. AI Provider（DeepSeek + 可选生图）
 
 ```bash
 npx wrangler secret put AI_API_KEY
-# wrangler.toml: AI_BASE_URL=https://api.deepseek.com, AI_MODEL=deepseek-chat
+# wrangler.toml: AI_BASE_URL / AI_MODEL；生图默认 Workers AI（[ai] binding = "AI"）
 ```
+
+节点生成：`GET /api/ai/providers`、`POST /api/ai/generate`（登录后）。无对应密钥时模型在 UI 中显示为未配置，不会假成功。
 
 ### 2b. 联网检索（可选）
 
@@ -92,43 +140,33 @@ npx wrangler secret put AI_API_KEY
 npx wrangler secret put SEARCH_API_KEY
 # 可选：国际搜索另设 Tavily key
 # npx wrangler secret put SEARCH_API_KEY_INTERNATIONAL
-
-# 比例与源可在 wrangler.toml 调整：
-# RSS_FEEDS_DOMESTIC / RSS_FEEDS_INTERNATIONAL / DOMESTIC_NEWS_RATIO=0.7
 ```
 
 本地 `workers/api/.dev.vars` 同样可加 `SEARCH_API_KEY`、`RSS_FEEDS_DOMESTIC` 等。
 
 ### 3. 认证（Supabase）
 
-在 `AuthContext.tsx` 的 seam 处切换为 `supabaseProvider`，并填写：
+日常开发已内置公开默认（见 `apps/web/src/lib/publicDefaults.ts`），无需再填。覆盖或换项目时在 `.env` 写 `VITE_SUPABASE_*`；强制 Mock：`VITE_USE_MOCK_AUTH=1`。
 
-```
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...
-```
-
-环境变量模板见 `.env.example`。
+Worker 侧还需 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`（secret / `.dev.vars`），仅模式 B / 部署时配置。
 
 ## 部署与学习
 
 **推荐先读** **[docs/DEPLOY-GUIDE.md](docs/DEPLOY-GUIDE.md)** — 架构、部署、各模块分工。
 
-**产品需求**见 **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** — 可手写或与 AI 协作填写；后续据此对比现状并规划迭代。
+**产品需求**见 **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)**。
 
-
-| 部署目标               | 命令 / 触发                                        | 产物                            |
-| ------------------ | ---------------------------------------------- | ----------------------------- |
-| **应用** `/webbook/` | 推送到 `main` → `deploy.yml`                      | 笔记本、博客、PWA、APK 资源             |
-| **入口站** 域名根        | `npm run deploy:user-pages` 或改 `user-pages/`** | `index.html` + 根路径 assetlinks |
-| **API**            | `cd workers/api && npx wrangler deploy`        | 同步、鉴权、AI、图片上传                 |
-
+| 部署目标 | 命令 / 触发 | 产物 |
+|----------|-------------|------|
+| **应用** `/webbook/` | 推送到 `main` → `deploy.yml` | 笔记本、博客、PWA、APK 资源 |
+| **入口站** 域名根 | `npm run deploy:user-pages` | `index.html` + 根路径 assetlinks |
+| **API** | `cd workers/api && npx wrangler deploy` | 同步、鉴权、AI、图片上传 |
 
 - **前端 → GitHub Pages**：推送到 `main` 触发 `.github/workflows/deploy.yml`
   - 在仓库 Settings → Pages 选择 GitHub Actions
-  - 构建变量见 `deploy.yml`（含 `VITE_ADMIN_EMAIL`）
+  - 构建变量见 `deploy.yml`（含 `VITE_API_BASE_URL`、`VITE_ADMIN_EMAIL`）
 - **Android APK（侧载）**：`npm run android:init` → `npm run android:apk`（见 `apps/android-twa/README.md`）
-- **冒烟检查**：`VITE_API_BASE_URL=... npm run smoke`（API 自动检查 + 手动 E2E 清单）
+- **冒烟检查**：`VITE_API_BASE_URL=... npm run smoke`
 
 ## 私密性升级路径
 
@@ -140,10 +178,10 @@ VITE_SUPABASE_ANON_KEY=...
 
 ## 路线图
 
-对应 `openspec/changes/webbook/tasks.md`：
+对应 `openspec/changes/webbook/tasks.md`（摘要）：
 
-- Phase 1 ✅ 脚手架 + 树 + 块编辑 + 游客/登录 + 同步骨架
-- P1 基础体验 ✅ 键盘导航、图片上传、预览、搜索、toast
-- P2 博客 🚧 公开 `/blog` 列表与文章页（场景⑤ 基础）
-- Phase 3+ 🤖 提醒面板、历史版本、富文本进阶、账单、社交
-
+- Phase 1 ✅ 脚手架 + 树 + 块编辑 + 游客/登录 + 同步
+- P1 舞台编辑器 ✅ 大纲、连线、Markdown 预览/源码、图片手势
+- P2 博客 / 圈子 ✅ 公开 feed、线性文章流、圈子协作
+- P5 节点 AI ✅ providers / generate；精品模型可继续接密钥
+- 待办示例：账单模块、流式输出、生视频适配器等

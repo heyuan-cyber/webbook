@@ -3,6 +3,7 @@ import {
   useCallback,
   useState,
   useEffect,
+  useMemo,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import type {
@@ -25,6 +26,7 @@ import {
   reorderBlocksByStagePosition,
 } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
+import { assetUrl } from '@/lib/api';
 import { createBlock, createAbsoluteBlock } from './blockFactory';
 import { InsertMenu } from './InsertMenu';
 import { SlashMenu } from './SlashMenu';
@@ -48,14 +50,17 @@ import {
   AbsoluteImageBlockView,
   type ImageLayerAction,
 } from './AbsoluteImageBlockView';
+import { AbsoluteModel3dBlockView } from './AbsoluteModel3dBlockView';
 import { AbsoluteLinkBlockView } from './AbsoluteLinkBlockView';
 import { AbsoluteCardBlockView, type EdgePanClient } from './AbsoluteCardBlockView';
+import type { NoteAiAsset } from './BlockAiPanel';
 import { StageEdgesLayer, type LiveBlockGeometry } from './StageEdgesLayer';
 import { StageBlockPicker } from './StageBlockPicker';
 import { StageViewport, type WorldRect } from './StageViewport';
 import { findInsertIndexForWorldY, worldPointFromClient, type WorldPoint } from './stageCoords';
 import { renderInlineMarkdown, renderMultilineMarkdown } from '@/lib/markdown';
 import { toast } from '@/store/useToastStore';
+import { stageImagePlacementSizeFromFile } from './imageSize';
 
 /** 舞台插入选择器：双击空白，或拉线到空白松手 */
 type StageComposer = {
@@ -120,7 +125,64 @@ export function BlockEditor({
   const [edgePanClient, setEdgePanClient] = useState<EdgePanClient | null>(null);
   const edgePanClientRef = useRef(edgePanClient);
   edgePanClientRef.current = edgePanClient;
+
+  useEffect(() => {
+    if (!edgePanClient) return;
+    const clear = () => setEdgePanClient(null);
+    window.addEventListener('pointerup', clear);
+    window.addEventListener('pointercancel', clear);
+    window.addEventListener('blur', clear);
+    return () => {
+      window.removeEventListener('pointerup', clear);
+      window.removeEventListener('pointercancel', clear);
+      window.removeEventListener('blur', clear);
+    };
+  }, [edgePanClient]);
+  const lastPointerWorld = useRef<WorldPoint | null>(null);
   const hasFlowBlocks = blocks.some((b) => !isAbsoluteBlock(b));
+
+  const noteAssets = useMemo((): NoteAiAsset[] => {
+    const out: NoteAiAsset[] = [];
+    for (const b of blocks) {
+      if (b.type === 'image' && b.src && !b.src.startsWith('blob:')) {
+        out.push({
+          id: b.id,
+          label: (b.alt || `img_${b.id.slice(-4)}`).replace(/\s+/g, '_'),
+          url: b.src,
+          kind: 'image',
+          blockId: b.id,
+        });
+      }
+      if (b.type === 'video' && b.src && !b.src.startsWith('blob:')) {
+        out.push({
+          id: b.id,
+          label: `vid_${b.id.slice(-4)}`,
+          url: b.src,
+          kind: 'video',
+          blockId: b.id,
+        });
+      }
+    }
+    return out;
+  }, [blocks]);
+
+  const resolvePasteAnchor = useCallback((): WorldPoint => {
+    const primaryId = [...selectedIdsRef.current][0];
+    if (primaryId) {
+      const b = blocksRef.current.find((x) => x.id === primaryId);
+      const pl = b?.placement;
+      if (pl?.mode === 'absolute') {
+        const w = pl.width ?? defaultCardSize(b!.type).width;
+        return { x: (pl.x ?? 0) + w + 24, y: pl.y ?? 0 };
+      }
+    }
+    return (
+      lastPointerWorld.current ?? {
+        x: stage.viewCenterX - 140,
+        y: stage.viewCenterY - 80,
+      }
+    );
+  }, [stage.viewCenterX, stage.viewCenterY]);
 
   const selectBlock = useCallback((id: string, additive?: boolean) => {
     setSelectedEdgeId(null);
@@ -292,8 +354,9 @@ export function BlockEditor({
   }
 
   function patch(id: string, patchBlock: Partial<Block>) {
-    const prev = blocks.find((b) => b.id === id);
-    const next = blocks.map((b) => (b.id === id ? ({ ...b, ...patchBlock } as Block) : b));
+    const latest = blocksRef.current;
+    const prev = latest.find((b) => b.id === id);
+    const next = latest.map((b) => (b.id === id ? ({ ...b, ...patchBlock } as Block) : b));
     const pl = patchBlock.placement;
     const movedXY =
       Boolean(pl) &&
@@ -640,17 +703,6 @@ export function BlockEditor({
     [],
   );
 
-  const onPaste = useCallback(
-    async (e: React.ClipboardEvent) => {
-      if (readOnly) return;
-      const file = e.clipboardData.files?.[0];
-      if (!file || !file.type.startsWith('image/')) return;
-      e.preventDefault();
-      insertImageOptimistic(file, undefined, '粘贴图片失败');
-    },
-    [insertImageOptimistic, readOnly],
-  );
-
   const dropImageFile = useCallback(
     (file: File, blockIndex: number) => {
       insertImageOptimistic(file, blockIndex + 1, '拖入图片失败');
@@ -682,6 +734,109 @@ export function BlockEditor({
       return block;
     },
     [blocks, onChange],
+  );
+
+  const onPaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      if (readOnly) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.('.block-ai-panel, input, textarea, select, [contenteditable="true"]')) {
+        return;
+      }
+
+      // Windows 截图/网页复制图常在 items，不一定在 files
+      let file: File | undefined = e.clipboardData.files?.[0];
+      if (!file) {
+        const items = e.clipboardData.items;
+        if (items) {
+          for (let i = 0; i < items.length; i++) {
+            const it = items[i]!;
+            if (it.kind === 'file' && (it.type.startsWith('image/') || it.type.startsWith('video/'))) {
+              file = it.getAsFile() ?? undefined;
+              if (file) break;
+            }
+          }
+        }
+      }
+      const text = e.clipboardData.getData('text/plain')?.trim();
+      const anchor = resolvePasteAnchor();
+
+      if (file?.type.startsWith('image/')) {
+        e.preventDefault();
+        try {
+          const size = await stageImagePlacementSizeFromFile(file);
+          const { previewSrc, finalize } = beginOptimisticImageUpload(file, session, isGuest);
+          const block = createAbsoluteBlock('image', anchor.x, anchor.y) as ImageBlock;
+          block.src = previewSrc;
+          block.placement = {
+            ...block.placement!,
+            mode: 'absolute',
+            width: size.width,
+            height: size.height,
+            scale: 1,
+          };
+          insertAbsoluteAt(anchor, block);
+          setSelectedIds(new Set([block.id]));
+          toast('info', '已粘贴图片');
+          void finalize()
+            .then((src) => {
+              commitImageSrc(block.id, src, previewSrc);
+              if (isGuest) toast('info', '游客模式：图片仅存本地');
+            })
+            .catch(() => {
+              toast('error', '粘贴图片失败');
+              removeImageBlock(block.id, previewSrc);
+            });
+        } catch {
+          toast('error', '粘贴图片失败');
+        }
+        return;
+      }
+
+      if (file?.type.startsWith('video/')) {
+        e.preventDefault();
+        if (file.size > 80 * 1024 * 1024) {
+          toast('error', '本地视频暂限 80MB');
+          return;
+        }
+        const url = URL.createObjectURL(file);
+        const block = createAbsoluteBlock('video', anchor.x, anchor.y);
+        (block as { src: string }).src = url;
+        insertAbsoluteAt(anchor, block);
+        setSelectedIds(new Set([block.id]));
+        toast('info', '已粘贴视频（仅本机预览）');
+        return;
+      }
+
+      if (text && !file) {
+        e.preventDefault();
+        // 纯 URL → 链接卡；否则段落
+        const looksUrl = /^https?:\/\/\S+$/i.test(text);
+        if (looksUrl) {
+          const block = createAbsoluteBlock('link-preview', anchor.x, anchor.y);
+          (block as { url: string }).url = text;
+          insertAbsoluteAt(anchor, block);
+          setSelectedIds(new Set([block.id]));
+          toast('info', '已粘贴链接');
+        } else {
+          const block = createAbsoluteBlock('paragraph', anchor.x, anchor.y);
+          (block as { text: string }).text = text;
+          insertAbsoluteAt(anchor, block);
+          setSelectedIds(new Set([block.id]));
+          setFocusBlockId(block.id);
+          toast('info', '已粘贴文本');
+        }
+      }
+    },
+    [
+      readOnly,
+      resolvePasteAnchor,
+      session,
+      isGuest,
+      insertAbsoluteAt,
+      commitImageSrc,
+      removeImageBlock,
+    ],
   );
 
   const dismissComposer = useCallback(() => {
@@ -724,7 +879,7 @@ export function BlockEditor({
       };
 
       // 画板物件：absolute — 图片/视频先建空块，再导入或 AI，不强制文件选择器
-      if (type === 'image' || type === 'video') {
+      if (type === 'image' || type === 'video' || type === 'model3d' || type === 'audio') {
         const size = defaultCardSize(type);
         const x = wireIntent ? point.x - size.width / 2 : point.x;
         const y = wireIntent ? point.y - size.height / 2 : point.y;
@@ -757,6 +912,9 @@ export function BlockEditor({
       readOnly={readOnly}
       onBlankDoubleClick={onBlankDoubleClick}
       onPaste={readOnly ? undefined : onPaste}
+      onPointerSample={(p) => {
+        lastPointerWorld.current = p;
+      }}
       edgePanClient={edgePanClient}
       onBackgroundInteract={() => {
         clearSelection();
@@ -917,6 +1075,7 @@ export function BlockEditor({
                   selected={selected}
                   showPorts={Boolean(wire)}
                   stage={stage}
+                  noteAssets={noteAssets}
                   onSelect={(additive) => selectBlock(block.id, additive)}
                   onPatch={(p) => patch(block.id, p)}
                   onLayer={(action) => layerAbsolute(block.id, action)}
@@ -925,6 +1084,24 @@ export function BlockEditor({
                   onPortPointerDown={portHandler}
                   onLiveGeometry={liveHandler}
                   onEdgePanPointer={setEdgePanClient}
+                  liveOverride={liveOverride}
+                />
+              );
+            }
+            if (block.type === 'model3d') {
+              return (
+                <AbsoluteModel3dBlockView
+                  key={block.id}
+                  block={block}
+                  readOnly={readOnly}
+                  selected={selected}
+                  showPorts={Boolean(wire)}
+                  stage={stage}
+                  noteAssets={noteAssets}
+                  onSelect={(additive) => selectBlock(block.id, additive)}
+                  onPatch={(p) => patch(block.id, p)}
+                  onPortPointerDown={portHandler}
+                  onLiveGeometry={liveHandler}
                   liveOverride={liveOverride}
                 />
               );
@@ -960,12 +1137,24 @@ export function BlockEditor({
                 showPorts={Boolean(wire)}
                 autoFocus={focusBlockId === block.id}
                 stage={stage}
+                noteAssets={noteAssets}
                 onSelect={(additive) => selectBlock(block.id, additive)}
                 onPatch={(p) => patch(block.id, p)}
                 onPortPointerDown={portHandler}
                 onLiveGeometry={liveHandler}
                 onEdgePanPointer={setEdgePanClient}
                 liveOverride={liveOverride}
+                showHeadingCollapse={
+                  block.type === 'heading' &&
+                  Boolean(onToggleHeadingCollapse) &&
+                  headingHasSectionBody(blocks, i)
+                }
+                headingCollapsed={collapsed.has(block.id)}
+                onToggleHeadingCollapse={
+                  block.type === 'heading' && onToggleHeadingCollapse
+                    ? () => onToggleHeadingCollapse(block.id)
+                    : undefined
+                }
               />
             );
           })}
@@ -1137,7 +1326,7 @@ function BlockView({
       return (
         <div className="block block-video">
           {block.src ? (
-            <video src={block.src} controls />
+            <video src={assetUrl(block.src)} controls playsInline />
           ) : (
             !ro && (
               <input

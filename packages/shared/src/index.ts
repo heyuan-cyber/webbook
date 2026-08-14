@@ -5,6 +5,8 @@ export * from './tree.js';
 export * from './ai.js';
 export * from './aiGenerate.js';
 export * from './markdownBlocks.js';
+export * from './feishuZip.js';
+export * from './blocksToMarkdown.js';
 export * from './aiChatParse.js';
 export * from './comment.js';
 export * from './circle.js';

@@ -9,6 +9,8 @@ export type BlockType =
   | 'checkbox'
   | 'image'
   | 'video'
+  | 'model3d'
+  | 'audio'
   | 'link-preview'
   | 'divider'
   | 'callout'
@@ -106,6 +108,24 @@ export interface VideoBlock extends BaseBlock {
   ai?: BlockAiState;
 }
 
+export interface Model3dBlock extends BaseBlock {
+  type: 'model3d';
+  /** GLB / 模型文件 */
+  src: string;
+  /** 舞台上的静态预览图 */
+  poster?: string;
+  caption?: string;
+  ai?: BlockAiState;
+}
+
+export interface AudioBlock extends BaseBlock {
+  type: 'audio';
+  src: string;
+  title?: string;
+  caption?: string;
+  ai?: BlockAiState;
+}
+
 export interface LinkPreviewBlock extends BaseBlock {
   type: 'link-preview';
   url: string;
@@ -172,6 +192,8 @@ export type Block =
   | CheckboxBlock
   | ImageBlock
   | VideoBlock
+  | Model3dBlock
+  | AudioBlock
   | LinkPreviewBlock
   | DividerBlock
   | CalloutBlock
@@ -249,6 +271,10 @@ export function defaultCardSize(type: BlockType): { width: number; height: numbe
       return { width: 260, height: 120 };
     case 'video':
       return { width: 320, height: 200 };
+    case 'model3d':
+      return { width: 280, height: 240 };
+    case 'audio':
+      return { width: 320, height: 100 };
     case 'divider':
       return { width: 240, height: 40 };
     default:

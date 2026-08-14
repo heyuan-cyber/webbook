@@ -88,6 +88,30 @@ function BlogBlock({ block }: { block: Block }) {
           ) : null}
         </figure>
       );
+    case 'audio':
+      if (!block.src) return null;
+      return (
+        <figure className="blog-a-figure">
+          <audio src={assetUrl(block.src)} controls />
+          {block.title || block.caption ? (
+            <figcaption>{block.title || block.caption}</figcaption>
+          ) : null}
+        </figure>
+      );
+    case 'model3d':
+      if (!block.poster && !block.src) return null;
+      return (
+        <figure className="blog-a-figure">
+          {block.poster ? (
+            <img src={assetUrl(block.poster)} alt={block.caption ?? '3D'} loading="lazy" />
+          ) : (
+            <p className="muted">3D 模型（请在编辑器中预览）</p>
+          )}
+          {block.caption ? (
+            <figcaption>{renderInlineMarkdown(block.caption)}</figcaption>
+          ) : null}
+        </figure>
+      );
     case 'link-preview':
       if (!block.url) return null;
       return (

@@ -22,6 +22,10 @@ export const COMMENT_PATH = (ownerId: string, noteId: string) =>
 export const USER_REMINDERS_PATH = (userId: string) =>
   `data/users/${userId}/reminders.json`;
 
+/** 飞书 User OAuth（refresh 等），仅 Worker 读写 */
+export const USER_FEISHU_OAUTH_PATH = (userId: string) =>
+  `data/users/${userId}/feishu-oauth.json`;
+
 export const PUBLIC_CIRCLES_INDEX_PATH = 'data/meta/public-circles-index.json';
 export const AI_STRATEGIES_PATH = 'data/meta/ai-strategies.json';
 export const SYSTEM_SETTINGS_PATH = 'data/meta/settings.json';

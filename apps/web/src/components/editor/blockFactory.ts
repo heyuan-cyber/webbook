@@ -24,6 +24,10 @@ export function createBlock(type: BlockType): Block {
       return { id, type, src: '', alt: '' };
     case 'video':
       return { id, type, src: '' };
+    case 'model3d':
+      return { id, type, src: '' };
+    case 'audio':
+      return { id, type, src: '' };
     case 'link-preview':
       return { id, type, url: '' };
     case 'divider':
@@ -66,6 +70,8 @@ export const BLOCK_MENU: { type: BlockType; label: string; icon: string; slash?:
   { type: 'heading', label: '标题', icon: 'H', slash: ['标题', 'heading', 'h1', 'h2', 'h3'] },
   { type: 'image', label: '图片', icon: '🖼', slash: ['图片', 'image', 'img', '图'] },
   { type: 'video', label: '视频', icon: '▶', slash: ['视频', 'video'] },
+  { type: 'model3d', label: '3D 模型', icon: '立方', slash: ['3d', '模型', 'model'] },
+  { type: 'audio', label: '音频', icon: '♪', slash: ['音频', '音乐', 'audio', 'music'] },
   { type: 'link-preview', label: '链接预览', icon: '🔗', slash: ['链接', 'link', 'url'] },
   { type: 'sticky', label: '便签', icon: '📌', slash: ['便签', 'sticky', '贴纸'] },
   { type: 'divider', label: '分割线', icon: '―', slash: ['分割', 'divider', 'hr'] },

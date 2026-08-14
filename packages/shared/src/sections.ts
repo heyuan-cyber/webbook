@@ -47,6 +47,10 @@ function blockLabel(block: Block): string {
       return block.caption?.trim() || block.alt?.trim() || '图片';
     case 'video':
       return block.caption?.trim() || '视频';
+    case 'model3d':
+      return block.caption?.trim() || '3D 模型';
+    case 'audio':
+      return block.title?.trim() || block.caption?.trim() || '音频';
     case 'link-preview':
       return block.title?.trim() || block.url || '链接';
     case 'canvas':

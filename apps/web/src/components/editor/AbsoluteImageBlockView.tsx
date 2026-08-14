@@ -11,7 +11,7 @@ import {
 import { stageImagePlacementSizeFromFile } from './imageSize';
 import { ImageLightbox } from './ImageLightbox';
 import type { EdgePanClient } from './AbsoluteCardBlockView';
-import { BlockAiPanel } from './BlockAiPanel';
+import { BlockAiPanel, type NoteAiAsset } from './BlockAiPanel';
 import { StageBlockPorts } from './StageBlockPorts';
 import type { LiveBlockGeometry } from './StageEdgesLayer';
 import { worldPointFromClient } from './stageCoords';
@@ -34,6 +34,7 @@ interface Props {
   onLiveGeometry?: (geo: LiveBlockGeometry | null) => void;
   onEdgePanPointer?: (pointer: EdgePanClient | null) => void;
   liveOverride?: LiveBlockGeometry | null;
+  noteAssets?: NoteAiAsset[];
 }
 
 const DBLCLICK_MS = 400;
@@ -70,6 +71,7 @@ export function AbsoluteImageBlockView({
   onLiveGeometry,
   onEdgePanPointer,
   liveOverride,
+  noteAssets,
 }: Props) {
   const { session, isGuest } = useAuth();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -461,6 +463,7 @@ export function AbsoluteImageBlockView({
           zIndex: z + 20,
         }}
         onAiChange={(next) => onPatch({ ai: next })}
+        noteAssets={noteAssets}
         onImageResult={(url) =>
           onPatch({
             src: url,

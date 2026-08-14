@@ -12,6 +12,8 @@ import { OutlinePanel } from './editor/OutlinePanel';
 import { centerStageOn } from './editor/StageViewport';
 import { AiChatPanel } from './AiChatPanel';
 import { NoteHistoryPanel } from './NoteHistoryPanel';
+import { FeishuZipActions } from './FeishuZipActions';
+import { FeishuExportButton } from './FeishuExportButton';
 import { toast } from '@/store/useToastStore';
 import { outlineCollapseState, layoutUiState } from '@/lib/storage';
 
@@ -99,7 +101,7 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
           <p className="muted">
             {isMobile
               ? '点左上角 ☰ 打开目录，选择或新建一篇笔记。'
-              : '从左侧选择或新建一篇笔记开始记录。'}
+              : '从左侧选择或新建一篇笔记。舞台：Ctrl+滚轮或按住左键+滚轮缩放画板，滚轮平移。'}
           </p>
         </div>
       </main>
@@ -207,6 +209,12 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
               updateActiveEdges(note.edges ?? []);
             }}
           />
+        )}
+        {!readOnly && (
+          <>
+            <FeishuZipActions compact />
+            <FeishuExportButton />
+          </>
         )}
       </div>
       {activeNote.summary && (
