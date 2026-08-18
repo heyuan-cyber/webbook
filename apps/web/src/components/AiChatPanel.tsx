@@ -21,7 +21,8 @@ interface Props {
 
 export function AiChatPanel({ note, disabled, onApplyBlocks }: Props) {
   const { session, isGuest } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  /** 默认收起，避免新建/打开笔记时占满下方编辑区 */
+  const [collapsed, setCollapsed] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);

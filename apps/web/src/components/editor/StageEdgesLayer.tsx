@@ -118,8 +118,8 @@ export function StageEdgesLayer({
         const from = byId.get(edge.from);
         const to = byId.get(edge.to);
         if (!from || !to) return null;
-        const a = sideAnchor(placementOf(from, livePlacements), edge.fromSide);
-        const b = sideAnchor(placementOf(to, livePlacements), edge.toSide);
+        const a = sideAnchor(placementOf(from, livePlacements), edge.fromSide, edge.fromT);
+        const b = sideAnchor(placementOf(to, livePlacements), edge.toSide, edge.toT);
         const d = curvePath(a.x, a.y, b.x, b.y, edge.fromSide, edge.toSide);
         const selected = selectedEdgeId === edge.id;
 

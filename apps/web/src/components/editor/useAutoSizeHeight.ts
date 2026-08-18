@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
-import { AUTO_SIZE_MAX_HEIGHT, AUTO_SIZE_MAX_WIDTH } from '@webbook/shared';
+import { AUTO_SIZE_MAX_WIDTH } from '@webbook/shared';
 
 interface Options {
   enabled: boolean;
@@ -121,10 +121,8 @@ export function useAutoSizeHeight({
       el.style.height = prevH;
       el.style.maxHeight = prevMaxH;
 
-      const nextH = Math.min(
-        AUTO_SIZE_MAX_HEIGHT,
-        Math.max(minHRef.current, naturalH || minHRef.current),
-      );
+      // 高度不封顶；minH 已含当前 placement，避免空大卡被缩回
+      const nextH = Math.max(minHRef.current, naturalH || minHRef.current);
 
       const last = lastApplied.current;
       if (Math.abs(nextW - last.w) > 1 || Math.abs(nextH - last.h) > 1) {

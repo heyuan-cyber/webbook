@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StickyBlock, BlockEdgeSide, BlockPlacement, NoteStage } from '@webbook/shared';
 import {
-  AUTO_SIZE_MAX_HEIGHT,
   AUTO_SIZE_MAX_WIDTH,
   defaultCardSize,
   isPlacementAutoSize,
@@ -87,8 +86,8 @@ export function StickyBlockView({
 
   const autoSize = isPlacementAutoSize(pl) && !readOnly;
   const defaults = defaultCardSize('sticky');
-  const minW = defaults.width;
-  const minH = defaults.height;
+  const minW = Math.max(defaults.width, w);
+  const minH = Math.max(defaults.height, h);
 
   const commitPlacement = useCallback(
     (patch: Partial<BlockPlacement>) => {
@@ -270,7 +269,7 @@ export function StickyBlockView({
       data-stage-block
       className={`stage-absolute-block sticky-block ${selected ? 'is-selected' : ''} ${
         autoSize ? 'is-autosize' : ''
-      } ${autoSize && displayH >= AUTO_SIZE_MAX_HEIGHT - 1 ? 'is-autosize-capped' : ''} ${
+      } ${
         autoSize && displayW >= AUTO_SIZE_MAX_WIDTH - 1 ? 'is-autosize-wide-capped' : ''
       }`}
       style={{

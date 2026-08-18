@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Block, BlockEdgeSide, BlockPlacement, NoteStage, VideoBlock } from '@webbook/shared';
 import {
-  AUTO_SIZE_MAX_HEIGHT,
   AUTO_SIZE_MAX_WIDTH,
   defaultCardSize,
   isPlacementAutoSize,
@@ -146,8 +145,9 @@ export function AbsoluteCardBlockView({
 
   const autoSize =
     supportsTextAutoSize(block) && isPlacementAutoSize(pl) && !readOnly;
-  const minW = defaults.width;
-  const minH = defaults.height;
+  const minW = Math.max(defaults.width, w);
+  /** 不低于当前高度，避免新建大半屏空卡被测高缩回 */
+  const minH = Math.max(defaults.height, h);
 
   const commitPlacement = useCallback(
     (patch: Partial<BlockPlacement>) => {
@@ -411,7 +411,7 @@ export function AbsoluteCardBlockView({
         data-stage-block
         className={`stage-absolute-block stage-absolute-card ${selected ? 'is-selected' : ''} ${
           autoSize ? 'is-autosize' : ''
-        } ${autoSize && displayH >= AUTO_SIZE_MAX_HEIGHT - 1 ? 'is-autosize-capped' : ''} ${
+        } ${
           autoSize && displayW >= AUTO_SIZE_MAX_WIDTH - 1 ? 'is-autosize-wide-capped' : ''
         }`}
         style={{

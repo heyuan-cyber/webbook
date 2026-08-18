@@ -27,6 +27,8 @@ interface Props {
   composer?: ReactNode;
   composerAt?: WorldPoint | null;
   onBlankDoubleClick?: (point: WorldPoint) => void;
+  /** 空白右键：打开块列表（与双击相同落点） */
+  onBlankContextMenu?: (point: WorldPoint) => void;
   /** 左键单击空白（未拖出框）时清空选中 */
   onBackgroundInteract?: () => void;
   /** 框选过程中（世界坐标矩形） */
@@ -63,6 +65,7 @@ export function StageViewport({
   composer,
   composerAt,
   onBlankDoubleClick,
+  onBlankContextMenu,
   onBackgroundInteract,
   onMarquee,
   onMarqueeEnd,
@@ -93,7 +96,13 @@ export function StageViewport({
     cx: number;
     cy: number;
     moved: boolean;
+    /** 0=左 1=中 2=右 */
+    button: number;
   } | null>(null);
+  /** 右键拖是否已超过阈值（供 contextmenu 判断是否还开块列表） */
+  const rightPanMovedRef = useRef(false);
+  /** 空白上按下右键（capture 已拦默认）；直到 contextmenu/抬起后清除 */
+  const blankRightGestureRef = useRef(false);
   const marqueeDrag = useRef<{
     sx: number;
     sy: number;
@@ -197,32 +206,74 @@ export function StageViewport({
 
     function onAuxClick(e: MouseEvent) {
       if (e.button === 1) e.preventDefault();
+      if (e.button === 2 && !shouldSkipStagePan(e.target)) e.preventDefault();
     }
 
     function clearPrimaryHeld() {
       primaryHeldRef.current = false;
     }
 
+    /** 尽早挡住 Chrome/Edge 右键横滑前进后退；块上不拦 */
+    function suppressBlankRightBrowserGesture(e: MouseEvent | PointerEvent) {
+      if (readOnly) return;
+      if (e.button !== 2) return;
+      if (shouldSkipStagePan(e.target)) return;
+      e.preventDefault();
+      blankRightGestureRef.current = true;
+    }
+
     function onPointerDownCapture(e: PointerEvent) {
       if (e.button === 0) primaryHeldRef.current = true;
+      suppressBlankRightBrowserGesture(e);
+    }
+
+    function onMouseDownCapture(e: MouseEvent) {
+      suppressBlankRightBrowserGesture(e);
     }
 
     function onPointerUpCapture(e: PointerEvent) {
       if (e.button === 0) clearPrimaryHeld();
     }
 
+    function onDocMouseMove(e: MouseEvent) {
+      if (!blankRightGestureRef.current) return;
+      if (e.buttons & 2) e.preventDefault();
+    }
+
+    function onDocMouseUp(e: MouseEvent) {
+      if (e.button !== 2) return;
+      // contextmenu 在 mouseup 之后；延后清除以免菜单手势复活
+      requestAnimationFrame(() => {
+        blankRightGestureRef.current = false;
+      });
+    }
+
+    function onDocContextMenu(e: MouseEvent) {
+      if (!blankRightGestureRef.current && !rightPanMovedRef.current) return;
+      // 手势期间一律禁止浏览器菜单 / 导航残留
+      e.preventDefault();
+    }
+
     el.addEventListener('wheel', onWheel, { passive: false });
     el.addEventListener('auxclick', onAuxClick);
     el.addEventListener('pointerdown', onPointerDownCapture, true);
+    el.addEventListener('mousedown', onMouseDownCapture, true);
     el.addEventListener('pointerup', onPointerUpCapture, true);
     el.addEventListener('pointercancel', clearPrimaryHeld, true);
+    document.addEventListener('mousemove', onDocMouseMove, true);
+    document.addEventListener('mouseup', onDocMouseUp, true);
+    document.addEventListener('contextmenu', onDocContextMenu, true);
     window.addEventListener('blur', clearPrimaryHeld);
     return () => {
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('auxclick', onAuxClick);
       el.removeEventListener('pointerdown', onPointerDownCapture, true);
+      el.removeEventListener('mousedown', onMouseDownCapture, true);
       el.removeEventListener('pointerup', onPointerUpCapture, true);
       el.removeEventListener('pointercancel', clearPrimaryHeld, true);
+      document.removeEventListener('mousemove', onDocMouseMove, true);
+      document.removeEventListener('mouseup', onDocMouseUp, true);
+      document.removeEventListener('contextmenu', onDocContextMenu, true);
       window.removeEventListener('blur', clearPrimaryHeld);
     };
   }, [onStageChange, readOnly]);
@@ -264,11 +315,19 @@ export function StageViewport({
       viewportRef.current?.focus({ preventScroll: true });
     }
 
-    // 中键：平移
-    if (e.button === 1) {
-      e.preventDefault();
-      if (shouldSkipStagePan(e.target) && (e.target as HTMLElement).closest('input, textarea')) {
+    // 中键 / 空白右键：平移
+    if (e.button === 1 || e.button === 2) {
+      // 右键仅空白可拖；先判断再 prevent，避免误伤块上菜单
+      if (e.button === 2 && shouldSkipStagePan(e.target)) {
         return;
+      }
+      if (e.button === 1 && shouldSkipStagePan(e.target) && (e.target as HTMLElement).closest('input, textarea')) {
+        return;
+      }
+      e.preventDefault();
+      if (e.button === 2) {
+        rightPanMovedRef.current = false;
+        blankRightGestureRef.current = true;
       }
       panDrag.current = {
         sx: e.clientX,
@@ -276,6 +335,7 @@ export function StageViewport({
         cx: stage.viewCenterX,
         cy: stage.viewCenterY,
         moved: false,
+        button: e.button,
       };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       return;
@@ -305,8 +365,10 @@ export function StageViewport({
       if (!pan.moved) {
         if (Math.abs(dx) < PAN_THRESHOLD && Math.abs(dy) < PAN_THRESHOLD) return;
         pan.moved = true;
+        if (pan.button === 2) rightPanMovedRef.current = true;
         setPanning(true);
       }
+      if (pan.button === 2) e.preventDefault();
       const s = stageScale(stageRef.current);
       onStageChange({
         ...stageRef.current,
@@ -382,6 +444,20 @@ export function StageViewport({
     }
   }
 
+  function onContextMenu(e: React.MouseEvent) {
+    // 空白上始终挡住浏览器菜单；拖过则不开块列表
+    if (shouldSkipStagePan(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (readOnly || !onBlankContextMenu) return;
+    if (rightPanMovedRef.current) {
+      rightPanMovedRef.current = false;
+      return;
+    }
+    const pt = worldPointFromClient(viewportRef.current, stageRef.current, e.clientX, e.clientY);
+    if (pt) onBlankContextMenu(pt);
+  }
+
   function touchDist(a: React.Touch, b: React.Touch) {
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   }
@@ -434,6 +510,7 @@ export function StageViewport({
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
       onPaste={onPaste}
+      onContextMenu={onContextMenu}
     >
       <div
         className="stage-world"
@@ -470,8 +547,8 @@ export function StageViewport({
       )}
       {!readOnly && (
         <p className="stage-hint muted">
-          中键拖平移 · 左键框选 · 滚轮平移 · Ctrl+滚轮缩放画板 ·
-          按住左键+滚轮亦可缩放 · Ctrl+V 粘贴 · 双击空白插入
+          中键或空白右键拖平移 · 左键框选 · 滚轮平移 · Ctrl+滚轮缩放画板 ·
+          按住左键+滚轮亦可缩放 · Ctrl+C/X/V 复制剪切粘贴块 · 双击/右键单击空白插入 · 左键空白关菜单
         </p>
       )}
     </div>

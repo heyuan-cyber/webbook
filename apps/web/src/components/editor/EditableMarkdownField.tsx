@@ -6,7 +6,22 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { MD_COLOR_LIST, MD_COLOR_NAMES, renderInlineMarkdown, renderMarkdownDocument } from '@/lib/markdown';
+
+const MD_HELP_ROWS: { syntax: string; tip: string }[] = [
+  { syntax: '**粗体**', tip: '粗体' },
+  { syntax: '*斜体*', tip: '斜体' },
+  { syntax: '~~删除线~~', tip: '删除线' },
+  { syntax: '++下划线++', tip: '下划线' },
+  { syntax: '`行内代码`', tip: '行内代码' },
+  { syntax: '``` 代码块 ```', tip: '多行代码块（三反引号包裹）' },
+  { syntax: '- 列表项', tip: '无序列表' },
+  { syntax: '1. 列表项', tip: '有序列表' },
+  { syntax: '- [ ] 待办', tip: '任务列表' },
+  { syntax: '> 引用', tip: '引用块' },
+  { syntax: '{red}彩色{/}', tip: '彩色文字（色点同工具栏）' },
+];
 
 interface Props {
   blockId: string;
@@ -68,6 +83,7 @@ export function EditableMarkdownField({
   defaultEditing = false,
 }: Props) {
   const [editing, setEditing] = useState(defaultEditing && !readOnly);
+  const [helpOpen, setHelpOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -95,8 +111,21 @@ export function EditableMarkdownField({
   }
 
   function stopEditing() {
+    setHelpOpen(false);
     setEditing(false);
   }
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    function onKey(e: globalThis.KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setHelpOpen(false);
+    }
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [helpOpen]);
 
   function renderPreview() {
     if (!value.trim()) {
@@ -166,6 +195,60 @@ export function EditableMarkdownField({
     </div>
   );
 
+  const helpButton = editing && !readOnly && (
+    <button
+      type="button"
+      className="md-mode-toggle md-help-btn"
+      data-stage-interactive
+      title="Markdown 常用语法"
+      aria-expanded={helpOpen}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        setHelpOpen((v) => !v);
+      }}
+    >
+      帮助
+    </button>
+  );
+
+  const helpPortal =
+    helpOpen && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="md-help-backdrop"
+            data-stage-interactive
+            role="presentation"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setHelpOpen(false);
+            }}
+          >
+            <div
+              className="md-help-dialog"
+              role="dialog"
+              aria-label="Markdown 常用语法"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="md-help-head">
+                <strong>Markdown 常用语法</strong>
+                <span className="muted">单击外侧关闭</span>
+              </header>
+              <ul className="md-help-list">
+                {MD_HELP_ROWS.map((row) => (
+                  <li key={row.syntax}>
+                    <code className="md-help-syntax">{row.syntax}</code>
+                    <span className="md-help-tip muted">{row.tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   const modeToggle = showModeToggle && !readOnly && (
     <button
       type="button"
@@ -228,6 +311,10 @@ export function EditableMarkdownField({
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
+        if (helpOpen) {
+          setHelpOpen(false);
+          return;
+        }
         stopEditing();
         return;
       }
@@ -235,7 +322,10 @@ export function EditableMarkdownField({
     },
     onBlur: (e: React.FocusEvent) => {
       const next = e.relatedTarget as HTMLElement | null;
-      if (next?.closest('.md-field-toolbar, .md-mode-toggle')) return;
+      if (next?.closest('.md-field-toolbar, .md-mode-toggle, .md-help-btn, .md-help-dialog')) {
+        return;
+      }
+      if (helpOpen) return;
       stopEditing();
     },
     placeholder,
@@ -246,9 +336,11 @@ export function EditableMarkdownField({
     <div className="md-field is-editing" data-stage-interactive>
       <div className="md-field-bar">
         {extra}
+        {helpButton}
         {modeToggle}
       </div>
       {toolbar}
+      {helpPortal}
       {multiline ? (
         <textarea
           ref={inputRef as React.RefObject<HTMLTextAreaElement>}

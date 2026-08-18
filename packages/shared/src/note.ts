@@ -1,7 +1,7 @@
 import type { Block, BlockEdge } from './blocks.js';
 import type { ParagraphBlock } from './blocks.js';
 import type { NoteStage } from './blocks.js';
-import { DEFAULT_NOTE_STAGE, defaultCardSize, edgeKey } from './blocks.js';
+import { DEFAULT_NOTE_STAGE, edgeKey } from './blocks.js';
 import { migrateRetiredContentBlocks } from './migrateBlocks.js';
 
 export const NOTE_SCHEMA_VERSION = 5;
@@ -30,20 +30,21 @@ function newParagraphId(): string {
   return `blk-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
-/** 新建笔记默认带一个空段落卡片，打开即可输入 */
+/** 新建笔记默认带一个空段落卡片，打开即可输入（约半屏高、更宽，可随内容增高） */
 export function createDefaultParagraph(): ParagraphBlock {
-  const size = defaultCardSize('paragraph');
+  const width = 1200;
+  const height = 400;
   return {
     id: newParagraphId(),
     type: 'paragraph',
     text: '',
     placement: {
       mode: 'absolute',
-      x: -Math.round(size.width / 2),
-      y: -Math.round(size.height / 2),
+      x: -Math.round(width / 2),
+      y: -Math.round(height / 2),
       z: 1,
-      width: size.width,
-      height: size.height,
+      width,
+      height,
     },
   };
 }
@@ -69,6 +70,8 @@ function normalizeEdges(raw: BlockEdge[] | undefined, blocks: Block[]): BlockEdg
       to: e.to,
       fromSide: e.fromSide,
       toSide: e.toSide,
+      fromT: e.fromT,
+      toT: e.toT,
     });
   }
   return out;

@@ -39,11 +39,11 @@ export function isPlacementAutoSize(pl?: BlockPlacement | null): boolean {
   return pl?.autoSize !== false;
 }
 
-/** 自动长高上限（超出后盒内滚动） */
-export const AUTO_SIZE_MAX_HEIGHT = 480;
+/** 自动长高：不封顶（盒随内容增高，不用盒内滚动） */
+export const AUTO_SIZE_MAX_HEIGHT = Number.POSITIVE_INFINITY;
 
-/** 自动拉宽上限（超出后折行） */
-export const AUTO_SIZE_MAX_WIDTH = 640;
+/** 自动拉宽上限（超出后折行；须 ≥ 新建默认段落宽） */
+export const AUTO_SIZE_MAX_WIDTH = 1200;
 
 export interface BaseBlock {
   id: string;
@@ -248,6 +248,21 @@ export interface BlockEdge {
   to: string;
   fromSide: BlockEdgeSide;
   toSide: BlockEdgeSide;
+  /** 沿 from 边的位置 0..1，缺省 0.5（中点） */
+  fromT?: number;
+  /** 沿 to 边的位置 0..1，缺省 0.5 */
+  toT?: number;
+}
+
+export function clampEdgeT(t: number | undefined): number {
+  if (t === undefined || !Number.isFinite(t)) return 0.5;
+  return Math.min(1, Math.max(0, t));
+}
+
+/** 量化后用于 edgeKey 去重（同边不同位置可共存） */
+export function quantizeEdgeT(t: number | undefined, step = 0.01): number {
+  const c = clampEdgeT(t);
+  return Math.round(c / step) * step;
 }
 
 export function defaultCardSize(type: BlockType): { width: number; height: number } {
@@ -285,26 +300,94 @@ export function defaultCardSize(type: BlockType): { width: number; height: numbe
 export function sideAnchor(
   pl: Pick<BlockPlacement, 'x' | 'y' | 'width' | 'height' | 'scale'>,
   side: BlockEdgeSide,
+  t: number = 0.5,
 ): { x: number; y: number } {
   const x = pl.x ?? 0;
   const y = pl.y ?? 0;
   const scale = pl.scale ?? 1;
   const w = (pl.width ?? 200) * scale;
   const h = (pl.height ?? 80) * scale;
+  const tt = clampEdgeT(t);
   switch (side) {
     case 'n':
-      return { x: x + w / 2, y };
+      return { x: x + w * tt, y };
     case 's':
-      return { x: x + w / 2, y: y + h };
+      return { x: x + w * tt, y: y + h };
     case 'e':
-      return { x: x + w, y: y + h / 2 };
+      return { x: x + w, y: y + h * tt };
     case 'w':
-      return { x, y: y + h / 2 };
+      return { x, y: y + h * tt };
   }
 }
 
-export function edgeKey(e: Pick<BlockEdge, 'from' | 'to' | 'fromSide' | 'toSide'>): string {
-  return `${e.from}:${e.fromSide}->${e.to}:${e.toSide}`;
+export type EdgeAttachment = {
+  side: BlockEdgeSide;
+  t: number;
+  x: number;
+  y: number;
+  dist: number;
+};
+
+/** 世界坐标投影到轴对齐矩形最近边上 */
+export function projectPointToBlockEdge(
+  px: number,
+  py: number,
+  pl: Pick<BlockPlacement, 'x' | 'y' | 'width' | 'height' | 'scale'>,
+): EdgeAttachment {
+  const x0 = pl.x ?? 0;
+  const y0 = pl.y ?? 0;
+  const scale = pl.scale ?? 1;
+  const w = Math.max(1, (pl.width ?? 200) * scale);
+  const h = Math.max(1, (pl.height ?? 80) * scale);
+  const x1 = x0 + w;
+  const y1 = y0 + h;
+
+  const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+
+  const candidates: EdgeAttachment[] = [
+    {
+      side: 'n',
+      t: (clamp(px, x0, x1) - x0) / w,
+      x: clamp(px, x0, x1),
+      y: y0,
+      dist: Math.hypot(px - clamp(px, x0, x1), py - y0),
+    },
+    {
+      side: 's',
+      t: (clamp(px, x0, x1) - x0) / w,
+      x: clamp(px, x0, x1),
+      y: y1,
+      dist: Math.hypot(px - clamp(px, x0, x1), py - y1),
+    },
+    {
+      side: 'e',
+      t: (clamp(py, y0, y1) - y0) / h,
+      x: x1,
+      y: clamp(py, y0, y1),
+      dist: Math.hypot(px - x1, py - clamp(py, y0, y1)),
+    },
+    {
+      side: 'w',
+      t: (clamp(py, y0, y1) - y0) / h,
+      x: x0,
+      y: clamp(py, y0, y1),
+      dist: Math.hypot(px - x0, py - clamp(py, y0, y1)),
+    },
+  ];
+
+  let best = candidates[0]!;
+  for (const c of candidates) {
+    if (c.dist < best.dist) best = c;
+  }
+  return { ...best, t: clampEdgeT(best.t) };
+}
+
+export function edgeKey(
+  e: Pick<BlockEdge, 'from' | 'to' | 'fromSide' | 'toSide' | 'fromT' | 'toT'>,
+): string {
+  const ft = quantizeEdgeT(e.fromT);
+  const tt = quantizeEdgeT(e.toT);
+  return `${e.from}:${e.fromSide}@${ft}->${e.to}:${e.toSide}@${tt}`;
 }
 
 export function oppositeSide(side: BlockEdgeSide): BlockEdgeSide {

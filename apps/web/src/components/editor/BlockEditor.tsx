@@ -23,6 +23,7 @@ import {
   isAbsoluteBlock,
   isBlockHiddenByCollapse,
   oppositeSide,
+  projectPointToBlockEdge,
   reorderBlocksByStagePosition,
 } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
@@ -61,6 +62,12 @@ import { findInsertIndexForWorldY, worldPointFromClient, type WorldPoint } from 
 import { renderInlineMarkdown, renderMultilineMarkdown } from '@/lib/markdown';
 import { toast } from '@/store/useToastStore';
 import { stageImagePlacementSizeFromFile } from './imageSize';
+import {
+  buildBlockClipboard,
+  cloneClipboardAtAnchor,
+  readBlockClipboardFromEvent,
+  writeBlockClipboard,
+} from '@/lib/stageBlockClipboard';
 
 /** 舞台插入选择器：双击空白，或拉线到空白松手 */
 type StageComposer = {
@@ -432,6 +439,72 @@ export function BlockEditor({
     setSelectedIds(new Set());
   }
 
+  const isEditingFieldTarget = useCallback((t: EventTarget | null) => {
+    if (!(t instanceof HTMLElement)) return false;
+    return Boolean(
+      t.isContentEditable ||
+        t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.closest?.('.block-ai-panel, input, textarea, select, [contenteditable="true"]'),
+    );
+  }, []);
+
+  const copySelectedBlocks = useCallback(async (opts?: { silent?: boolean }) => {
+    const payload = buildBlockClipboard(
+      blocksRef.current,
+      edgesRef.current,
+      selectedIdsRef.current,
+    );
+    if (!payload) return false;
+    await writeBlockClipboard(payload);
+    if (!opts?.silent) toast('info', `已复制 ${payload.blocks.length} 个块`);
+    return true;
+  }, []);
+
+  const cutSelectedBlocks = useCallback(async () => {
+    const ok = await copySelectedBlocks({ silent: true });
+    if (!ok) return false;
+    removeSelected();
+    toast('info', '已剪切');
+    return true;
+  }, [copySelectedBlocks]);
+
+  const pasteBlocksAtPointer = useCallback(
+    (payload: NonNullable<ReturnType<typeof readBlockClipboardFromEvent>>) => {
+      const anchor =
+        lastPointerWorld.current ?? {
+          x: stage.viewCenterX - 140,
+          y: stage.viewCenterY - 80,
+        };
+      const { blocks: cloned, edges: newEdges, newIds } = cloneClipboardAtAnchor(payload, anchor);
+      const flowClones = cloned.filter((b) => !isAbsoluteBlock(b));
+      const absClones = cloned.filter((b) => isAbsoluteBlock(b));
+
+      const prev = blocksRef.current;
+      let flowInsert = 0;
+      for (let i = 0; i < prev.length; i++) {
+        if (!isAbsoluteBlock(prev[i]!)) flowInsert = i + 1;
+      }
+      const next = [...prev];
+      if (flowClones.length) next.splice(flowInsert, 0, ...flowClones);
+      next.push(...absClones);
+
+      const nextIds = new Set(next.map((b) => b.id));
+      const keptEdges = edgesRef.current.filter(
+        (e) => nextIds.has(e.from) && nextIds.has(e.to),
+      );
+      onChange(next);
+      if (onEdgesChange) {
+        onEdgesChange([...keptEdges, ...newEdges]);
+      }
+      setSelectedIds(new Set(newIds));
+      setSelectedEdgeId(null);
+      toast('info', `已粘贴 ${cloned.length} 个块`);
+    },
+    [onChange, onEdgesChange, stage.viewCenterX, stage.viewCenterY],
+  );
+
   function duplicateStageImage(blockId: string) {
     if (readOnly) return;
     const srcBlock = blocks.find((b) => b.id === blockId && b.type === 'image');
@@ -456,14 +529,21 @@ export function BlockEditor({
   }
 
   const addEdge = useCallback(
-    (from: string, to: string, fromSide: BlockEdgeSide, toSide: BlockEdgeSide) => {
+    (
+      from: string,
+      to: string,
+      fromSide: BlockEdgeSide,
+      toSide: BlockEdgeSide,
+      fromT = 0.5,
+      toT = 0.5,
+    ) => {
       if (!onEdgesChange || from === to) return;
-      const draft = { from, to, fromSide, toSide };
+      const draft = { from, to, fromSide, toSide, fromT, toT };
       const k = edgeKey(draft);
       if (edgesRef.current.some((e) => edgeKey(e) === k)) return;
       onEdgesChange([
         ...edgesRef.current,
-        { id: uid('edge'), from, to, fromSide, toSide },
+        { id: uid('edge'), from, to, fromSide, toSide, fromT, toT },
       ]);
     },
     [onEdgesChange],
@@ -471,6 +551,52 @@ export function BlockEditor({
 
   const stageRefForWire = useRef(stage);
   stageRefForWire.current = stage;
+  const livePlacementsRef = useRef(livePlacements);
+  livePlacementsRef.current = livePlacements;
+
+  const placementForWire = useCallback((block: Block) => {
+    const live = livePlacementsRef.current.get(block.id);
+    if (live) {
+      return {
+        x: live.x,
+        y: live.y,
+        width: live.width,
+        height: live.height,
+        scale: live.scale ?? 1,
+      };
+    }
+    return (
+      block.placement ?? {
+        mode: 'absolute' as const,
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 80,
+      }
+    );
+  }, []);
+
+  const resolveWireDrop = useCallback(
+    (world: WorldPoint, excludeId: string) => {
+      const WIRE_ATTACH_MAX_DIST = 56;
+      const abs = blocksRef.current.filter((b) => isAbsoluteBlock(b) && b.id !== excludeId);
+      let best: {
+        blockId: string;
+        side: BlockEdgeSide;
+        t: number;
+        dist: number;
+      } | null = null;
+      for (const b of abs) {
+        const hit = projectPointToBlockEdge(world.x, world.y, placementForWire(b));
+        if (hit.dist > WIRE_ATTACH_MAX_DIST) continue;
+        if (!best || hit.dist < best.dist) {
+          best = { blockId: b.id, side: hit.side, t: hit.t, dist: hit.dist };
+        }
+      }
+      return best;
+    },
+    [placementForWire],
+  );
 
   const onPortPointerDown = useCallback(
     (blockId: string, side: BlockEdgeSide, e: React.PointerEvent) => {
@@ -505,18 +631,27 @@ export function BlockEditor({
           const toId = port.getAttribute('data-port-block');
           const toSide = port.getAttribute('data-port-side') as BlockEdgeSide | null;
           if (!toId || !toSide) return;
-          addEdge(cur.fromId, toId, cur.fromSide, toSide);
+          addEdge(cur.fromId, toId, cur.fromSide, toSide, 0.5, 0.5);
           return;
         }
 
-        const dragged =
-          Math.hypot(ev.clientX - startClient.x, ev.clientY - startClient.y) >= WIRE_PICKER_DRAG_PX;
         const release = worldPointFromClient(
           viewport,
           stageRefForWire.current,
           ev.clientX,
           ev.clientY,
         );
+        if (release) {
+          const drop = resolveWireDrop(release, cur.fromId);
+          if (drop) {
+            setWire(null);
+            addEdge(cur.fromId, drop.blockId, cur.fromSide, drop.side, 0.5, drop.t);
+            return;
+          }
+        }
+
+        const dragged =
+          Math.hypot(ev.clientX - startClient.x, ev.clientY - startClient.y) >= WIRE_PICKER_DRAG_PX;
         if (!dragged || !release) {
           setWire(null);
           return;
@@ -532,7 +667,7 @@ export function BlockEditor({
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     },
-    [readOnly, onEdgesChange, addEdge],
+    [readOnly, onEdgesChange, addEdge, resolveWireDrop],
   );
 
   useEffect(() => {
@@ -553,6 +688,25 @@ export function BlockEditor({
   useEffect(() => {
     if (readOnly) return;
     function onKey(e: KeyboardEvent) {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && (e.key === 'c' || e.key === 'C')) {
+        if (isEditingFieldTarget(e.target)) return;
+        if (selectedIdsRef.current.size === 0) return;
+        e.preventDefault();
+        void copySelectedBlocks();
+        return;
+      }
+      if (mod && (e.key === 'x' || e.key === 'X')) {
+        if (isEditingFieldTarget(e.target)) return;
+        if (selectedIdsRef.current.size === 0) return;
+        e.preventDefault();
+        void cutSelectedBlocks();
+        return;
+      }
+      if (mod && (e.key === 'v' || e.key === 'V')) {
+        // 块粘贴走 clipboard paste 事件（可带 OS 内容）；此处不抢
+        return;
+      }
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
       const t = e.target;
       if (
@@ -577,7 +731,16 @@ export function BlockEditor({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, selectedEdgeId, onEdgesChange, blocks, onChange]);
+  }, [
+    readOnly,
+    selectedEdgeId,
+    onEdgesChange,
+    blocks,
+    onChange,
+    isEditingFieldTarget,
+    copySelectedBlocks,
+    cutSelectedBlocks,
+  ]);
 
   function applySlash(index: number, blockId: string, type: BlockType) {
     const block = blocks[index];
@@ -744,6 +907,13 @@ export function BlockEditor({
         return;
       }
 
+      const blockPayload = readBlockClipboardFromEvent(e);
+      if (blockPayload) {
+        e.preventDefault();
+        pasteBlocksAtPointer(blockPayload);
+        return;
+      }
+
       // Windows 截图/网页复制图常在 items，不一定在 files
       let file: File | undefined = e.clipboardData.files?.[0];
       if (!file) {
@@ -836,6 +1006,7 @@ export function BlockEditor({
       insertAbsoluteAt,
       commitImageSrc,
       removeImageBlock,
+      pasteBlocksAtPointer,
     ],
   );
 
@@ -853,9 +1024,18 @@ export function BlockEditor({
     [readOnly],
   );
 
+  const onBlankContextMenu = useCallback(
+    (point: WorldPoint) => {
+      if (readOnly) return;
+      setWire(null);
+      setComposer({ point });
+    },
+    [readOnly],
+  );
+
   const connectWireToBlock = useCallback(
     (wireIntent: NonNullable<StageComposer['wire']>, blockId: string) => {
-      addEdge(wireIntent.fromId, blockId, wireIntent.fromSide, oppositeSide(wireIntent.fromSide));
+      addEdge(wireIntent.fromId, blockId, wireIntent.fromSide, oppositeSide(wireIntent.fromSide), 0.5, 0.5);
       setWire(null);
     },
     [addEdge],
@@ -911,6 +1091,7 @@ export function BlockEditor({
       onStageChange={onStageChange ?? (() => {})}
       readOnly={readOnly}
       onBlankDoubleClick={onBlankDoubleClick}
+      onBlankContextMenu={onBlankContextMenu}
       onPaste={readOnly ? undefined : onPaste}
       onPointerSample={(p) => {
         lastPointerWorld.current = p;
@@ -918,7 +1099,7 @@ export function BlockEditor({
       edgePanClient={edgePanClient}
       onBackgroundInteract={() => {
         clearSelection();
-        if (composer?.wire) dismissComposer();
+        if (composer) dismissComposer();
       }}
       onMarqueeEnd={readOnly ? undefined : applyMarqueeSelection}
       composerAt={composer?.point ?? null}
