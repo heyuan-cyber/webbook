@@ -68,6 +68,8 @@ import {
   readBlockClipboardFromEvent,
   writeBlockClipboard,
 } from '@/lib/stageBlockClipboard';
+import { AnimatePresence, motion, MOTION, useMotionSafe } from '@/lib/motion';
+import { EmptyState } from '@/components/EmptyState';
 
 /** 舞台插入选择器：双击空白，或拉线到空白松手 */
 type StageComposer = {
@@ -101,6 +103,7 @@ export function BlockEditor({
   onToggleHeadingCollapse,
 }: Props) {
   const stage = stageProp ?? DEFAULT_NOTE_STAGE;
+  const reduced = useMotionSafe();
   const edges = edgesProp ?? [];
   const collapsed = collapsedHeadingIds ?? new Set<string>();
   const { session, isGuest } = useAuth();
@@ -1125,12 +1128,17 @@ export function BlockEditor({
             }
           }}
         >
+          <AnimatePresence initial={false}>
           {blocks.map((block, i) => {
             if (isAbsoluteBlock(block)) return null;
             if (isBlockHiddenByCollapse(blocks, collapsed, i)) return null;
             return (
-              <div
+              <motion.div
                 key={block.id}
+                initial={reduced ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduced ? undefined : { opacity: 0 }}
+                transition={reduced ? { duration: 0 } : MOTION.fast}
                 className={`block-row ${dragBlockIndex === i ? 'block-row-dragging' : ''}`}
                 data-block-index={i}
                 data-block-id={block.id}
@@ -1197,10 +1205,13 @@ export function BlockEditor({
                   onToggleHeadingCollapse={onToggleHeadingCollapse}
                 />
                 {!readOnly && <InsertRow onInsert={(t) => insertAt(i + 1, t)} />}
-              </div>
+              </motion.div>
             );
           })}
-          {blocks.length === 0 && readOnly && <p className="muted">（空笔记）</p>}
+          </AnimatePresence>
+          {blocks.length === 0 && readOnly && (
+            <EmptyState icon="📝" title="空笔记" body="这篇笔记还没有内容。" />
+          )}
         </div>
         ) : null
       }

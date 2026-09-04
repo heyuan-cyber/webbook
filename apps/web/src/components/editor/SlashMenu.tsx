@@ -1,5 +1,6 @@
 import type { BlockType } from '@webbook/shared';
 import { filterBlockMenu } from './blockFactory';
+import { motion, MOTION, useMotionSafe } from '@/lib/motion';
 
 interface Props {
   filter: string;
@@ -8,17 +9,35 @@ interface Props {
 }
 
 export function SlashMenu({ filter, onPick, onClose }: Props) {
+  const reduced = useMotionSafe();
+  const anim = reduced
+    ? { duration: 0 }
+    : MOTION.fast;
+  const enter = reduced ? false : { opacity: 0, y: -4, scale: 0.98 };
   const items = filterBlockMenu(filter);
+
   if (items.length === 0) {
     return (
-      <div className="slash-menu" role="listbox">
+      <motion.div
+        className="slash-menu"
+        role="listbox"
+        initial={enter}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={anim}
+      >
         <p className="slash-empty muted">无匹配块类型</p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="slash-menu" role="listbox">
+    <motion.div
+      className="slash-menu"
+      role="listbox"
+      initial={enter}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={anim}
+    >
       {items.map((m) => (
         <button
           key={m.type}
@@ -39,6 +58,6 @@ export function SlashMenu({ filter, onPick, onClose }: Props) {
       }}>
         Esc 取消
       </button>
-    </div>
+    </motion.div>
   );
 }

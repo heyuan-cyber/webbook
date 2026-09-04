@@ -23,7 +23,11 @@ function BlogBlock({ block }: { block: Block }) {
   switch (block.type) {
     case 'heading': {
       const Tag = (`h${block.level}` as 'h1' | 'h2' | 'h3');
-      return <Tag className={`blog-a-h blog-a-h${block.level}`}>{renderInlineMarkdown(block.text)}</Tag>;
+      return (
+        <Tag id={`block-${block.id}`} className={`blog-a-h blog-a-h${block.level}`}>
+          {renderInlineMarkdown(block.text)}
+        </Tag>
+      );
     }
     case 'paragraph':
       if (!block.text.trim()) return null;

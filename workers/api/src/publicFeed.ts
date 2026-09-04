@@ -11,6 +11,7 @@ function walkPublicNodes(
   ownerId: string,
   ownerEmail: string,
   out: PublicFeedItem[],
+  category = '',
 ) {
   for (const node of nodes) {
     if (node.kind === 'note' && node.visibility === 'public') {
@@ -20,9 +21,18 @@ function walkPublicNodes(
         noteId: node.noteId ?? node.id,
         title: node.title,
         visibility: 'public',
+        ...(category ? { category } : {}),
       });
     }
-    if (node.children?.length) walkPublicNodes(node.children, ownerId, ownerEmail, out);
+    if (node.children?.length) {
+      const childCategory =
+        node.kind === 'folder'
+          ? category
+            ? `${category} / ${node.title}`
+            : node.title
+          : category;
+      walkPublicNodes(node.children, ownerId, ownerEmail, out, childCategory);
+    }
   }
 }
 
@@ -31,6 +41,7 @@ function walkCircleBlogNodes(
   ownerId: string,
   ownerEmail: string,
   out: PublicFeedItem[],
+  category = '',
 ) {
   for (const node of nodes) {
     if (
@@ -43,10 +54,27 @@ function walkCircleBlogNodes(
         noteId: node.noteId ?? node.id,
         title: node.title,
         visibility: node.visibility === 'circle' ? 'circle' : 'public',
+        ...(category ? { category } : {}),
       });
     }
-    if (node.children?.length) walkCircleBlogNodes(node.children, ownerId, ownerEmail, out);
+    if (node.children?.length) {
+      const childCategory =
+        node.kind === 'folder'
+          ? category
+            ? `${category} / ${node.title}`
+            : node.title
+          : category;
+      walkCircleBlogNodes(node.children, ownerId, ownerEmail, out, childCategory);
+    }
   }
+}
+
+function coverFromNote(note: { blocks?: readonly unknown[] }): string | undefined {
+  for (const b of note.blocks ?? []) {
+    const src = (b as { src?: unknown }).src;
+    if (typeof src === 'string' && src) return src;
+  }
+  return undefined;
 }
 
 async function enrichFeedItem(env: Env, item: PublicFeedItem): Promise<PublicFeedItem> {
@@ -54,7 +82,13 @@ async function enrichFeedItem(env: Env, item: PublicFeedItem): Promise<PublicFee
   if (!note) return item;
   if (item.visibility === 'circle' && note.visibility !== 'circle') return item;
   if (item.visibility !== 'circle' && note.visibility !== 'public') return item;
-  return { ...item, updatedAt: note.updatedAt, summary: note.summary };
+  const cover = coverFromNote(note);
+  return {
+    ...item,
+    updatedAt: note.updatedAt,
+    summary: note.summary,
+    ...(cover ? { cover } : {}),
+  };
 }
 
 function dedupeFeed(items: PublicFeedItem[]): PublicFeedItem[] {

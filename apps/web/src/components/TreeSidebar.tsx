@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { TreeNode } from '@webbook/shared';
 import { useNotesStore } from '@/store/useNotesStore';
 import type { SearchHit } from '@/store/useNotesStore';
+import { EmptyState } from '@/components/EmptyState';
 
 export function TreeSidebar({
   editable = true,
@@ -108,7 +109,11 @@ export function TreeSidebar({
           />
         ))}
         {tree.roots.length === 0 && (
-          <p className="muted tree-empty">还没有内容，点击「+ 笔记」开始。</p>
+          <EmptyState
+            icon="🗂️"
+            title="还没有内容"
+            body="点击「+ 笔记」创建你的第一篇笔记。"
+          />
         )}
       </div>
     </aside>

@@ -6,6 +6,12 @@ const BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
   DEFAULT_API_BASE_URL;
 
+export interface SiteConfig {
+  workNoteIds?: string[];
+  blogNoteIds?: string[];
+  blogCategoryOrder?: string[];
+}
+
 export function assetUrl(src: string): string {
   if (!src) return src;
   if (src.startsWith('data:') || src.startsWith('http')) return src;
@@ -55,9 +61,27 @@ export const apiClient = {
   loadSquareFeed: () => http<{ posts: PublicFeedItem[] }>('/api/public/square'),
   loadBloggers: () => http<{ bloggers: BloggerSummary[] }>('/api/public/bloggers'),
   loadUserPublicFeed: (userId: string) =>
-    http<{ ownerId: string; ownerEmail: string; posts: PublicFeedItem[] }>(
-      `/api/public/users/${userId}/feed`,
-    ),
+    http<{
+      ownerId: string;
+      ownerEmail: string;
+      posts: PublicFeedItem[];
+      featuredNoteId?: string;
+      site?: SiteConfig | null;
+    }>(`/api/public/users/${userId}/feed`),
+  loadSiteConfig: (userId: string) =>
+    http<{ ownerId: string; site?: SiteConfig | null }>(`/api/public/users/${userId}/site`),
+  saveSiteConfig: (site: SiteConfig, token: string) =>
+    http<{ ok: true; site?: SiteConfig }>('/api/profile/site', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({ site }),
+    }),
+  setFeaturedNote: (noteId: string | null, token: string) =>
+    http<{ ok: true; featuredNoteId?: string }>('/api/profile/featured', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({ noteId }),
+    }),
   loadPublicNote: async (ownerId: string, noteId: string) => {
     const raw = await http<Note>(`/api/public/notes/${ownerId}/${noteId}`);
     return normalizeNote(raw);

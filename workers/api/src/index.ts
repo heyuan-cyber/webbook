@@ -12,6 +12,7 @@ import { listAiProviders, runAiGenerate } from './ai/generateProviders';
 import { refreshAiJob } from './ai/jobs';
 import type { AiGenerateRequest } from '@webbook/shared';
 import { extractBearer, verifyUserToken } from './auth';
+import { loadUserProfile, saveUserProfile } from './userProfile';
 import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
 import type { Note, NoteTree, NoteVisibility } from '@webbook/shared';
@@ -136,7 +137,50 @@ export default {
         const ownerId = userFeedMatch[1]!;
         const posts = await buildUserPublicFeed(env, ownerId);
         const email = posts[0]?.ownerEmail ?? ownerId;
-        return json({ ownerId, ownerEmail: email, posts });
+        const profile = await loadUserProfile(env, ownerId);
+        return json({
+          ownerId,
+          ownerEmail: email,
+          posts,
+          featuredNoteId: profile.featuredNoteId,
+          site: profile.site ?? null,
+        });
+      }
+
+      // ── Public site config (readable by any visitor) ──
+      const publicSiteMatch = pathname.match(/^\/api\/public\/users\/([^/]+)\/site$/);
+      if (publicSiteMatch && req.method === 'GET') {
+        const ownerId = publicSiteMatch[1]!;
+        const profile = await loadUserProfile(env, ownerId);
+        return json({ ownerId, site: profile.site ?? null });
+      }
+
+      if (pathname === '/api/profile/featured' && req.method === 'PUT') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => ({}))) as { noteId?: string | null };
+        const profile = await loadUserProfile(env, user.id);
+        if (body.noteId) {
+          profile.featuredNoteId = body.noteId;
+        } else {
+          delete profile.featuredNoteId;
+        }
+        await saveUserProfile(env, user.id, profile);
+        return json({ ok: true, featuredNoteId: profile.featuredNoteId });
+      }
+
+      if (pathname === '/api/profile/site' && req.method === 'PUT') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => ({}))) as {
+          site?: {
+            workNoteIds?: string[];
+            blogNoteIds?: string[];
+            blogCategoryOrder?: string[];
+          };
+        };
+        const profile = await loadUserProfile(env, user.id);
+        profile.site = body.site ?? {};
+        await saveUserProfile(env, user.id, profile);
+        return json({ ok: true, site: profile.site });
       }
 
       // ── Public feed (/blog 全网，保留兼容) ──

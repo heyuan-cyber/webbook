@@ -67,11 +67,19 @@ WebBook 把一个块编辑器笔记应用直接搬上 GitHub Pages + Cloudflare 
 | 路由分发、CORS | `index.ts` |
 | 用户 JWT 校验 + 管理员邮箱判定 | `auth.ts` |
 | 读写 GitHub 私有仓的 JSON 文件 | `github.ts` |
+| 用户笔记 / 树 读写 | `userData.ts` |
+| 注册用户索引 | `usersRegistry.ts` |
 | 公开/私密笔记过滤 | `tree-filter.ts` |
 | 公共 feed 聚合、去重、广场 | `publicFeed.ts` |
-| 圈子创建、邀请、成员鉴权 | `circles.ts` |
+| 圈子创建、邀请、成员鉴权、协作 | `circles.ts` + `circleData.ts` |
+| 文章评论（公开 + 登录） | `comments.ts` |
+| 待办提醒 | `reminders.ts` |
+| 资产上传 / 分卷存储（多仓、40MB 上限） | `assets.ts` + `volumes.ts` |
+| AI 策略（保存后总结等） | `aiStrategies.ts` |
+| 飞书 OAuth + 导出 / zip 导入 | `feishu.ts` |
 | 管理员后台接口（用户/设置/AI/公开内容） | `admin.ts` + `adminContent.ts` |
 | AI 对话、联网搜索、总结 | `ai/` |
+| 节点 AI 生成（provider 目录 / 异步任务 / 文图视频3D） | `ai/`（generateProviders / jobs / adapters） |
 | 旧版数据迁移 | `migrateLegacy.ts` |
 
 > **类比**：持钥匙的仓库管理员——顾客带通行证（JWT）来，管理员去保险柜（GitHub 私有仓）取放文件。
@@ -379,6 +387,16 @@ WebBook 是从单用户版本迁移过来的。旧数据路径 `data/tree.json` 
 | `DELETE /api/admin/notes/{ownerId}/{noteId}` | 删除公开笔记 |
 | `PATCH /api/admin/users/{id}` | 停用用户 |
 
+### 5.5 补充（近期新增，未归入上文）
+
+| 路径 | 作用 |
+|------|------|
+| `GET /api/storage/volumes` · `POST /api/storage/volumes/ensure` | 资产分卷清单 / 确保当前分卷 |
+| `GET /api/assets/vol-xx/name` | 分卷资产读取（兼容旧 `/api/assets/name`） |
+| `GET /api/feishu/status` · `GET /api/feishu/oauth/start` · `GET /api/feishu/oauth/callback` · `DELETE /api/feishu/oauth` | 飞书状态 / OAuth 授权 / 取消 |
+| `GET /api/feishu/folders` · `POST /api/feishu/export` | 飞书目录 / 导出（Markdown zip） |
+| `GET /api/ai/jobs/:id` | 异步生成任务轮询（文图视频3D） |
+
 ---
 
 ## 六、一次完整的「让所有人访问到」链路
@@ -591,36 +609,44 @@ npm run dev:api    # API   http://localhost:8787（.dev.vars + [ai] binding）
 
 ```
 WebBook/
-├── apps/web/                      # 前端：React 单页应用
-│   ├── src/auth/                  #   认证（Supabase + Mock）
-│   ├── src/components/            #   编辑器、树形目录、圈子
-│   ├── src/pages/                 #   路由页面
-│   └── src/lib/api.ts            #   API 客户端（统一 http 函数）
-├── workers/api/src/              # 后端：Cloudflare Worker
-│   ├── index.ts                  #   路由入口（~750 行）
-│   ├── auth.ts                   #   JWT 校验 + 管理员判定
-│   ├── github.ts                 #   GitHub Contents API 读写
-│   ├── publicFeed.ts             #   公共 feed 聚合
-│   ├── tree-filter.ts            #   可见性过滤
-│   ├── admin.ts                  #   管理员接口
-│   ├── adminContent.ts           #   公开内容审核
-│   ├── circles.ts                #   圈子逻辑
-│   ├── userData.ts               #   用户笔记/树读写
-│   ├── usersRegistry.ts          #   用户注册索引
-│   ├── migrateLegacy.ts          #   旧版数据迁移
-│   ├── ai.ts                     #   AI 代理（简单版 chat / run）
-│   ├── ai/                       #   对话工具 + 联网 + 节点 generateProviders
-│   │   ├── generateProviders.ts  #   providers 目录与 generate 分发
-│   │   └── adapters/             #   DeepSeek 文、CF Workers AI 图等
-│   └── env.ts                    #   环境变量类型
-├── packages/shared/              # 共享类型
-│   └── src/
-│       ├── note.ts               #   Note / NoteVisibility
-│       ├── tree.ts               #   TreeNode / NoteTree
-│       ├── circle.ts            #   Circle / CircleMember
-│       └── paths.ts             #   数据仓路径常量
-├── apps/android-twa/            # TWA APK 工程
-└── .github/workflows/            # GitHub Actions 部署
+├── apps/web/                          # 前端：React + Vite PWA（GitHub Pages）
+│   ├── src/auth/                      #   Supabase + Mock 认证（AuthContext / provider）
+│   ├── src/components/                #   AppShell、树形目录、编辑器、圈子、评论、AI 面板、历史、飞书
+│   │   └── editor/                    #   统一舞台编辑器（绝对定位块+连线+画布、BlockEditor、SlashMenu…）
+│   ├── src/pages/                     #   /app、/blog*、/admin、/login、/circles*
+│   ├── src/lib/                       #   api.ts（统一 http 客户端）、blog、feishuZipIo、markdown、storage、publicDefaults
+│   ├── src/store/                     #   useNotesStore / repository / useToastStore
+│   └── src/styles/                    #   global.css / layout.css
+├── workers/api/src/                   # 后端：Cloudflare Worker（全部业务逻辑 + JWT 鉴权）
+│   ├── index.ts                       #   路由入口 + CORS
+│   ├── auth.ts                        #   JWT 校验（Supabase）+ 管理员判定
+│   ├── github.ts                      #   GitHub Contents API 读写（JSON / 二进制·分卷）
+│   ├── userData.ts                    #   用户笔记 / 树 读写
+│   ├── usersRegistry.ts               #   注册用户索引
+│   ├── publicFeed.ts                  #   公开 feed / 广场 / 博主
+│   ├── tree-filter.ts                 #   可见性过滤
+│   ├── circles.ts                     #   圈子逻辑（创建/加入/审批/协作/feed/成员）
+│   ├── circleData.ts                  #   圈子 树 / 协作笔记 读写
+│   ├── comments.ts                    #   文章评论（公开 + 登录）
+│   ├── reminders.ts                   #   待办提醒
+│   ├── assets.ts / volumes.ts         #   资产上传 / 分卷存储（40MB 上限、registry）
+│   ├── aiStrategies.ts                #   AI 策略（保存后总结等）
+│   ├── migrateLegacy.ts               #   旧版单用户 → 多用户 迁移
+│   ├── feishu.ts                      #   飞书 OAuth + 导出 / zip 导入
+│   ├── admin.ts / adminContent.ts     #   管理员接口 / 公开内容审核
+│   ├── ai.ts                          #   chat / run
+│   ├── ai/                            #   对话工具 + 联网 + 节点生成
+│   │   ├── chatWithTools.ts / jobs.ts #   工具化对话 / 异步生成任务
+│   │   ├── generateProviders.ts       #   providers 目录与 generate 分发
+│   │   ├── adapters/                  #   DeepSeek 文、CF/OpenAI/Gemini/Seedream 图、Seedance 视频、Tripo 3D
+│   │   └── tools/                     #   webSearch / rss / research / mergeNews
+│   └── env.ts                         #   环境变量类型
+├── packages/shared/                   # 共享数据模型 + 数据仓路径
+│   └── src/                           #   note / tree / circle / blocks / comment / paths / migrateBlocks
+├── apps/android-twa/                  # TWA APK 工程
+├── user-pages/                        # 入口站 + 域名根 assetlinks
+├── scripts/                           # 初始化 / 迁移 / APK / 部署 / 冒烟
+└── .github/workflows/                 # deploy.yml（前端 Pages）+ deploy-user-pages.yml
 ```
 
 建议学习顺序：`packages/shared` 看数据模型 → `workers/api/src/index.ts` 看路由 → `workers/api/src/github.ts` 看数据如何落地 → `apps/web/src/lib/api.ts` 看前端如何调 API。

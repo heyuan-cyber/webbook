@@ -159,7 +159,7 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
         <span className={`save-state muted ${saveError ? 'save-err' : ''}`}>
           {saving ? '保存中…' : saveError ? '本地已存' : '已保存'}
         </span>
-        {!readOnly && (
+        {!readOnly && !isGuest && activeNote && (
           <button
             type="button"
             className={`btn btn-ghost ${preview ? 'active' : ''}`}

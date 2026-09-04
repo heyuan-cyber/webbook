@@ -77,6 +77,10 @@ export interface PublicFeedItem {
   summary?: string;
   /** 圈子博客流中区分公开与圈内文 */
   visibility?: 'public' | 'circle';
+  /** 笔记所在树文件夹标题（分类）；根级笔记无 */
+  category?: string;
+  /** 笔记第一张图 src（封面）；无图则无 */
+  cover?: string;
 }
 
 export interface BloggerSummary {

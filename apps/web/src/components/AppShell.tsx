@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -6,6 +6,7 @@ import { layoutUiState } from '@/lib/storage';
 import { TreeSidebar } from './TreeSidebar';
 import { InstallPrompt } from './InstallPrompt';
 import { RemindersPanel } from './RemindersPanel';
+import { CommandPalette } from './CommandPalette';
 
 export function AppShell({
   children,
@@ -37,6 +38,19 @@ export function AppShell({
       return next;
     });
   }
+
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const desktopCollapsed = !isMobile && sidebarCollapsed;
   const sidebarClass = [
@@ -80,10 +94,13 @@ export function AppShell({
           </div>
           <div className="topbar-right">
             <Link className="btn btn-ghost" to="/blog">
-              博客
+              社区
             </Link>
             {!isGuest && (
               <>
+                <Link className="btn btn-ghost" to={`/blog/u/${session?.userId}`}>
+                  个人主页
+                </Link>
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -112,6 +129,7 @@ export function AppShell({
         </header>
         <InstallPrompt />
         <RemindersPanel open={remindersOpen} onClose={() => setRemindersOpen(false)} />
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
         <div className="content">{children}</div>
       </div>
     </div>
