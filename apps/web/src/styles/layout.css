@@ -3683,6 +3683,10 @@
 }
 .stage-absolute-block {
   position: absolute;
+  /* 触摸拖拽面板：不让浏览器把手势当滚动/选择抢走（touch-action 不继承） */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .stage-edges-layer {
   position: absolute;

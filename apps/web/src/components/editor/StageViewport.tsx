@@ -344,6 +344,20 @@ export function StageViewport({
     if (e.button !== 0) return;
     if (shouldSkipStagePan(e.target)) return;
 
+    // 触摸/笔触及不到中键/右键：单指拖空白处 = 平移画布
+    if (e.pointerType !== 'mouse') {
+      panDrag.current = {
+        sx: e.clientX,
+        sy: e.clientY,
+        cx: stage.viewCenterX,
+        cy: stage.viewCenterY,
+        moved: false,
+        button: 0,
+      };
+      return;
+    }
+
+    // 仅鼠标左键：框选
     const start = worldPointFromClient(viewportRef.current, stage, e.clientX, e.clientY);
     if (!start) return;
     marqueeDrag.current = {
@@ -366,6 +380,12 @@ export function StageViewport({
         if (Math.abs(dx) < PAN_THRESHOLD && Math.abs(dy) < PAN_THRESHOLD) return;
         pan.moved = true;
         if (pan.button === 2) rightPanMovedRef.current = true;
+        // 触摸平移：过阈值后捕获指针，手指移出视口也继续跟手
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
         setPanning(true);
       }
       if (pan.button === 2) e.preventDefault();
