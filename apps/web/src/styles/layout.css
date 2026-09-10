@@ -190,6 +190,13 @@
   flex: 1;
   min-width: 0;
 }
+/* Long unbreakable strings in editor blocks (file paths, code) must wrap
+   inside their box instead of widening the page. */
+.editor-body,
+.editor-body .block-editor,
+.editor-body .block-editor * {
+  overflow-wrap: anywhere;
+}
 .editor-with-ai {
   padding-bottom: 24px;
 }
@@ -2513,6 +2520,13 @@
   margin: 0 auto;
   padding: 8px 4px 48px;
 }
+/* Long unbreakable strings (file paths, URLs, code) must wrap, never widen
+   the page. Verified at 375px: page scrollWidth 1292px -> 366px. */
+.blog-article-view,
+.blog-article-view * {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .editor-blog-preview {
   flex: 1;
   min-width: 0;
@@ -3199,20 +3213,29 @@
   .editor {
     padding: 16px 14px 80px;
   }
+  /* Compact wrapping toolbar: title on its own line, controls flow in rows
+     (previously a stretched full-width vertical stack with scrambled order). */
   .editor-head {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
   }
-  .note-title-input,
-  .note-title {
-    font-size: 22px;
+  .editor-head .note-title-input,
+  .editor-head .note-title {
+    flex: 1 1 100%;
+    min-width: 0;
+    font-size: 20px;
   }
+  .editor-head .btn,
+  .editor-head .visibility-toggle,
   .editor-head .save-state {
-    order: 3;
+    flex: 0 0 auto;
   }
+  .editor-head .save-state,
   .visibility-toggle {
-    order: 2;
+    order: 0;
   }
   .insert-trigger {
     left: 0;
@@ -4688,7 +4711,8 @@
   .io-site-tab,
   .io-site-notebook { flex: 0 0 auto; }
   /* Article TOC collapses to a toggle. */
-  .blog-article-layout { grid-template-columns: 1fr; }
+  .blog-article-layout { grid-template-columns: minmax(0, 1fr); }
+  .blog-article-view { max-width: 100%; }
   .blog-toc {
     position: static;
     max-height: none;
@@ -5130,4 +5154,11 @@
   .swiss-work-card { min-height: 230px; }
   .swiss-blog { gap: 40px; }
   .swiss-footer { padding: 44px 20px; }
+}
+
+/* Very narrow screens: give the tab strip room by trimming the brand text. */
+@media (max-width: 400px) {
+  .io-site-brand-name { display: none; }
+  .io-site-nav-wrap { gap: 6px; }
+  .io-site-hero-bar { padding: 8px 10px; }
 }
