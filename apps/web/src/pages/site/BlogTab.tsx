@@ -3,8 +3,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { NoteCard, type BlogGroup } from './shared';
 
 /**
- * 博客页：按类别分组的文章卡片（封面/标题/简介/时间）。
- * 分组默认按笔记 category，设置里可调整类别顺序。
+ * 博客页 —— Swiss 分类卡片分区：按笔记 category 分组，每类一段标题 + 卡片网格。
  */
 export function BlogTab({
   groups,
@@ -33,15 +32,21 @@ export function BlogTab({
   }
 
   return (
-    <div className="io-blog">
+    <div className="swiss-blog">
+      <div className="swiss-section-head">
+        <div>
+          <span className="swiss-kicker">WRITING</span>
+          <h2 className="swiss-h2">博客</h2>
+        </div>
+        <p className="swiss-lede">按类别整理的笔记，随手写下的实践与思考。</p>
+      </div>
       {groups.map((g) => (
-        <section key={g.category} className="io-blog-cat">
-          <header className="io-blog-cat-head">
-            <span className="io-blog-cat-dot" aria-hidden="true" />
-            <h2 className="io-blog-cat-title">{g.category}</h2>
-            <span className="io-blog-cat-count muted">{g.posts.length} 篇</span>
+        <section key={g.category} className="swiss-blog-cat">
+          <header className="swiss-blog-cat-head">
+            <h3 className="swiss-blog-cat-title">{g.category}</h3>
+            <span className="swiss-blog-cat-count">{g.posts.length} 篇</span>
           </header>
-          <div className="io-blog-grid">
+          <div className="swiss-blog-grid">
             {g.posts.map((post) => (
               <Reveal key={post.noteId}>
                 <NoteCard post={post} />

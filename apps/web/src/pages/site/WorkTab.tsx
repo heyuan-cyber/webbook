@@ -4,11 +4,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { assetUrl } from '@/lib/api';
 import { blogPostPath } from '@/lib/blog';
 import { Link } from 'react-router-dom';
-import { useMotionSafe } from '@/lib/motion';
 
 /**
- * 项目示例：参考 "Proof before pitch. Work that speaks first."
- * 大标题 + 错落 bento 大卡（封面/标题/简介/View Project/标签/spine + 指标）。
+ * 项目示例 —— Swiss 卡片网格：一个 section 内的 selected work 卡（封面/标题/分类/简介 + 查看）。
  */
 export function WorkTab({
   posts,
@@ -19,7 +17,6 @@ export function WorkTab({
   isOwner: boolean;
   onConfigure: () => void;
 }) {
-  const reduced = useMotionSafe();
   if (posts.length === 0) {
     return (
       <EmptyState
@@ -38,54 +35,43 @@ export function WorkTab({
   }
 
   return (
-    <section className="io-work">
-      <div className="io-work-head">
+    <div className="swiss-work">
+      <div className="swiss-section-head">
         <div>
-          <span className="io-work-kicker">SELECTED WORK</span>
-          <h2 className="io-work-title">
-            Proof before pitch.
-            <br />
-            <em className="io-work-title-em">Work that speaks first.</em>
-          </h2>
+          <span className="swiss-kicker">SELECTED WORK</span>
+          <h2 className="swiss-h2">项目示例</h2>
         </div>
-        <p className="io-work-lede muted">
+        <p className="swiss-lede">
           每一个项目都从笔记里长出来 —— 一个作品、一套系统、一次动手实践。
         </p>
       </div>
-      <div className="io-work-grid">
+      <div className="swiss-work-grid">
         {posts.map((post, i) => {
           const cover = post.cover ? assetUrl(post.cover) : undefined;
           return (
-            <Reveal key={post.noteId} className={`io-work-cell ${i % 3 === 1 ? 'io-work-cell-wide' : ''}`}>
-              <Link to={blogPostPath(post)} className="io-work-card">
+            <Reveal key={post.noteId}>
+              <Link to={blogPostPath(post)} className="swiss-work-card">
                 {cover ? (
-                  <img className="io-work-cover" src={cover} alt={post.title} loading="lazy" />
+                  <img className="swiss-work-cover" src={cover} alt={post.title} loading="lazy" />
                 ) : (
-                  <div className="io-work-cover io-work-cover-empty" aria-hidden="true" />
+                  <div className="swiss-work-cover swiss-work-cover-empty" aria-hidden="true" />
                 )}
-                <span className="io-work-spine">
-                  {post.category ? <span className="io-work-tag">{post.category}</span> : null}
-                  <span className="io-work-tag io-work-tag-muted">
-                    {reduced ? '案例' : `${String(i + 1).padStart(2, '0')}`}
-                  </span>
+                <span className="swiss-work-spine">
+                  {post.category ? <span className="swiss-tag">{post.category}</span> : null}
+                  <span className="swiss-tag">{String(i + 1).padStart(2, '0')}</span>
                 </span>
-                <span className="io-work-metric muted">{readingMetric(post)}</span>
-                <span className="io-work-body">
-                  <span className="io-work-name">{post.title}</span>
-                  {post.summary ? <span className="io-work-summary muted">{post.summary}</span> : null}
-                  <span className="io-work-cta">View Project →</span>
+                <span className="swiss-work-body">
+                  <span className="swiss-work-name">{post.title}</span>
+                  {post.summary ? (
+                    <span className="swiss-work-summary">{post.summary}</span>
+                  ) : null}
+                  <span className="swiss-work-cta">View Project →</span>
                 </span>
               </Link>
             </Reveal>
           );
         })}
       </div>
-    </section>
+    </div>
   );
-}
-
-function readingMetric(post: PublicFeedItem): string {
-  const chars = (post.summary ?? post.title ?? '').length;
-  const mins = Math.max(1, Math.round(chars / 500));
-  return `${mins} min read`;
 }

@@ -4194,6 +4194,7 @@
   position: relative;
   z-index: 1;
   height: 100%;
+  height: 100dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -4245,6 +4246,8 @@
   border-color: var(--accent-line);
 }
 .io-site-content { width: 100%; max-width: none; padding: 0; }
+.io-site-scroll { width: 100%; display: block; }
+.io-site-section { display: block; width: 100%; scroll-margin-top: 76px; }
 .io-site-embedded .io-site-nav { padding: 8px 0; flex-wrap: wrap; }
 
 /* Home: immersive cinematic hero (scroll-snap) */
@@ -4662,13 +4665,29 @@
 }
 /* Mobile */
 @media (max-width: 720px) {
-  .io-site-hero-bar { flex-wrap: wrap; padding: 12px 16px; }
-  .io-site-nav { flex-wrap: wrap; }
-  .io-home-actions { flex-direction: column; align-items: center; }
-  .io-work-grid { grid-template-columns: 1fr; }
-  .io-work-head { flex-direction: column; align-items: flex-start; }
-  .io-work-lede { margin-top: 8px; }
-  .io-blog-grid { grid-template-columns: 1fr; }
+  /* Compact sticky header: brand + a horizontally scrollable tab strip. */
+  .io-site-hero-bar { flex-wrap: nowrap; padding: 10px 14px; gap: 10px; }
+  .io-site-brand { flex: 0 0 auto; }
+  .io-site-brand-name {
+    max-width: 30vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .io-site-nav-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .io-site-nav-wrap::-webkit-scrollbar { display: none; }
+  .io-site-nav { flex-wrap: nowrap; }
+  .io-site-tab,
+  .io-site-notebook { flex: 0 0 auto; }
+  /* Article TOC collapses to a toggle. */
   .blog-article-layout { grid-template-columns: 1fr; }
   .blog-toc {
     position: static;
@@ -4691,4 +4710,424 @@
   }
   .blog-toc .blog-toc-nav { display: none; }
   .blog-toc.is-open .blog-toc-nav { display: flex; }
+}
+
+/* ── Pitch-Black-Swiss homepage ───────────────────────── */
+/* Pure-black editorial tone for the personal site: #000 bg, white text, one blue
+   accent (#3b82f6), thin white/10 outlines, rounded 2xl/3xl cards, serif display
+   headings, Inter-style body. Scoped under .swiss-home so it never leaks to the
+   rest of the app (blog hub, editor, admin, circles). */
+.swiss-home {
+  --s-bg: #000;
+  --s-text: #fff;
+  --s-dim: rgba(255, 255, 255, 0.6);
+  --s-faint: rgba(255, 255, 255, 0.4);
+  --s-line: rgba(255, 255, 255, 0.1);
+  --s-line-strong: rgba(255, 255, 255, 0.2);
+  --s-accent: #3b82f6;
+  --s-accent-soft: rgba(59, 130, 246, 0.16);
+  --s-accent-line: rgba(59, 130, 246, 0.5);
+  --s-radius: 20px;
+  background: var(--s-bg);
+  color: var(--s-text);
+}
+.swiss-home.blog-shell,
+.swiss-home.io-site {
+  background: var(--s-bg);
+}
+/* Overflow guards: long unbroken text (names, category paths) must wrap, never
+   widen the viewport on phones. */
+.swiss-home { overflow-x: hidden; }
+.swiss-hero-wordmark,
+.swiss-hero-sub,
+.swiss-h2,
+.swiss-work-name,
+.swiss-work-summary,
+.swiss-blog-cat-title,
+.swiss-tag,
+.swiss-home .io-card-title,
+.swiss-home .io-card-summary {
+  overflow-wrap: anywhere;
+}
+.swiss-tag { max-width: 100%; }
+.swiss-section-head > div,
+.swiss-work,
+.swiss-blog { min-width: 0; }
+.swiss-home .muted,
+.swiss-home .io-card-date,
+.swiss-home .io-card-summary,
+.swiss-home .io-work-summary {
+  color: var(--s-dim);
+}
+
+/* Top bar: kill the glassy gold chrome, go black + thin rule. */
+.swiss-home .io-site-hero-bar {
+  background: rgba(0, 0, 0, 0.72);
+  border-bottom: 1px solid var(--s-line);
+  backdrop-filter: blur(12px);
+  box-shadow: none;
+}
+.swiss-home .io-site-hero-bar::before { display: none; }
+.swiss-home .io-site-brand-avatar {
+  background: none;
+  border: 1px solid var(--s-line-strong);
+  color: var(--s-text);
+  box-shadow: none;
+}
+.swiss-home .io-site-brand-name {
+  font-family: var(--font-serif);
+  letter-spacing: 0.02em;
+}
+
+/* Nav tabs — Swiss anchors. */
+.swiss-home .io-site-tab {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--s-faint);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 16px;
+  background: transparent;
+}
+.swiss-home .io-site-tab:hover { color: var(--s-text); }
+.swiss-home .io-site-tab.active {
+  color: var(--s-text);
+  border-color: var(--s-line-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+.swiss-home .swiss-cta {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: #000;
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 999px;
+  padding: 7px 18px;
+}
+.swiss-home .swiss-cta:hover { background: var(--s-accent); border-color: var(--s-accent); color: #fff; }
+
+/* Hero — full-viewport, oversized serif wordmark over a faint grid. */
+.swiss-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 72px 24px 0;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 48% at 78% 18%, rgba(59, 130, 246, 0.1) 0%, transparent 60%),
+    linear-gradient(180deg, #000 0%, #050505 100%);
+}
+.swiss-hero-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(72% 64% at 50% 42%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(72% 64% at 50% 42%, #000 0%, transparent 78%);
+}
+.swiss-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.swiss-hero-overline {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--s-dim);
+  margin-bottom: 26px;
+}
+.swiss-hero-wordmark {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(3rem, 15vw, 12rem);
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.swiss-hero-sub {
+  margin: 26px auto 0;
+  max-width: 54ch;
+  color: var(--s-dim);
+}
+.swiss-hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.swiss-hero-scroll {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--s-faint);
+  animation: s-bob 2.4s ease-in-out infinite;
+}
+@keyframes s-bob {
+  0%, 100% { transform: translate(-50%, 0); opacity: 0.7; }
+  50% { transform: translate(-50%, 6px); opacity: 0.35; }
+}
+
+/* Marquee band. */
+.swiss-marquee {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow: hidden;
+  margin-top: 44px;
+  border-top: 1px solid var(--s-line);
+  border-bottom: 1px solid var(--s-line);
+  padding: 16px 0;
+  white-space: nowrap;
+}
+.swiss-marquee-track {
+  display: inline-flex;
+  gap: 48px;
+  will-change: transform;
+  animation: s-marquee 32s linear infinite;
+}
+.swiss-marquee-item {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--s-faint);
+}
+.swiss-marquee-item::after { content: ' —'; color: var(--s-accent); }
+@keyframes s-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Sections. */
+.swiss-section { padding: 96px 24px; }
+.swiss-section-head {
+  max-width: 1120px;
+  margin: 0 auto 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.swiss-kicker {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--s-faint);
+}
+.swiss-h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.swiss-lede { margin: 0; max-width: 46ch; color: var(--s-dim); }
+
+/* Work — selected works card grid. */
+.swiss-work { max-width: 1120px; margin: 0 auto; }
+.swiss-work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+.swiss-work-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 300px;
+  border-radius: var(--s-radius);
+  overflow: hidden;
+  border: 1px solid var(--s-line);
+  background: #0a0a0a;
+  color: #fff;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.swiss-work-card:hover { transform: translateY(-3px); border-color: var(--s-accent-line); }
+.swiss-work-cover,
+.swiss-work-cover-empty {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.swiss-work-cover-empty { background: linear-gradient(135deg, #121212, #060606); }
+.swiss-work-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.82) 100%);
+}
+.swiss-work-spine {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.swiss-tag {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--s-line-strong);
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--s-text);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.swiss-work-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px;
+}
+.swiss-work-name { font-family: var(--font-serif); font-size: 1.4rem; font-weight: 700; }
+.swiss-work-summary { max-width: 52ch; color: var(--s-dim); }
+.swiss-work-cta { color: var(--s-accent); }
+
+/* Blog — category cards (reuses NoteCard markup, scoped override below). */
+.swiss-blog { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+.swiss-blog-cat { display: flex; flex-direction: column; gap: 18px; }
+.swiss-blog-cat-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 1px solid var(--s-line);
+  padding-bottom: 14px;
+}
+.swiss-blog-cat-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.swiss-blog-cat-count { font-size: 13px; color: var(--s-faint); }
+.swiss-blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.swiss-home .io-card {
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius);
+  background: #0a0a0a;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.swiss-home .io-card:hover { transform: translateY(-3px); border-color: var(--s-accent-line); }
+.swiss-home .io-card-meta { padding: 14px 18px 0; }
+.swiss-home .io-card-title { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; }
+.swiss-home .io-card-cover,
+.swiss-home .io-card-cover-empty { height: 180px; }
+.swiss-home .io-card-cover-empty { background: linear-gradient(135deg, #121212, #060606); }
+.swiss-home .io-card-cta { color: var(--s-accent); }
+.swiss-home .blog-crumb { color: var(--s-faint); }
+
+/* Footer. */
+.swiss-footer {
+  border-top: 1px solid var(--s-line);
+  padding: 56px 24px;
+  text-align: center;
+}
+.swiss-footer .swiss-kicker { margin-bottom: 12px; }
+.swiss-footer h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1;
+}
+.swiss-footer p { color: var(--s-dim); max-width: 44ch; margin: 0 auto; }
+
+/* Buttons. */
+.swiss-btn-primary {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  color: #fff;
+  background: var(--s-accent);
+  border: 1px solid var(--s-accent);
+  border-radius: 999px;
+  padding: 12px 26px;
+}
+.swiss-btn-primary:hover { background: #5b96f7; }
+.swiss-btn-ghost {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  color: #fff;
+  background: transparent;
+  border: 1px solid var(--s-line-strong);
+  border-radius: 999px;
+  padding: 12px 26px;
+  text-decoration: none;
+}
+.swiss-btn-ghost:hover { border-color: var(--s-accent-line); color: var(--s-accent); }
+
+.swiss-home .btn-glow { box-shadow: none; }
+.swiss-home .btn-primary { background: var(--s-accent); border-color: var(--s-accent); }
+.swiss-home .btn-ghost { color: #fff; border-color: var(--s-line-strong); }
+
+/* Motion + mobile guards. */
+@media (prefers-reduced-motion: reduce) {
+  .swiss-hero-scroll { animation: none; }
+  .swiss-marquee-track { animation: none; }
+  .swiss-work-card, .swiss-home .io-card { transition: none; }
+}
+@media (max-width: 720px) {
+  .swiss-section { padding: 56px 18px; }
+  /* Hero: let it size to content on phones (never clip), shrink the wordmark,
+     and drop the absolute scroll cue that would overlap the marquee band. */
+  .swiss-hero {
+    min-height: auto;
+    overflow: visible;
+    padding: 56px 18px 30px;
+    justify-content: flex-start;
+  }
+  .swiss-hero-wordmark { font-size: clamp(2.1rem, 12.5vw, 4.6rem); line-height: 1; }
+  .swiss-hero-overline { letter-spacing: 0.22em; margin-bottom: 18px; text-align: center; }
+  .swiss-hero-sub { margin-top: 18px; }
+  .swiss-hero-actions { margin-top: 22px; }
+  .swiss-hero-scroll { display: none; }
+  .swiss-marquee { margin-top: 28px; }
+  .swiss-marquee-track { gap: 28px; }
+  .swiss-h2 { font-size: clamp(1.9rem, 8.5vw, 3rem); }
+  .swiss-section-head { margin-bottom: 32px; }
+  .swiss-work-grid, .swiss-blog-grid { grid-template-columns: 1fr; }
+  .swiss-work-card { min-height: 230px; }
+  .swiss-blog { gap: 40px; }
+  .swiss-footer { padding: 44px 20px; }
 }
