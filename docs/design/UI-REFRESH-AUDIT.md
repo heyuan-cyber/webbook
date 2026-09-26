@@ -355,6 +355,79 @@ blog-home-v2（45 行）、io-site 多标签（525 行）、Swiss 纯黑（515 �
 > 两个后端完全一致，`.tree-sync-notice` 已不再渲染（`bannerCount: 0`）。
 > 本地 Worker 通过 `.dev.vars` 读同一个 GitHub 数据仓，因此本地调试能拿到真实目录树。
 >
+> #### 标题上移的回归修复 · 版本历史整行 + 菜单点击被拦截 · 验收记录
+>
+> **起因**：标题上移顶栏后暴露三处问题（前两处是本轮改动引入的回归，第三处是长期潜伏的层叠缺陷）。
+> 用 Playwright 无头 + 探针账号复现定性，避免了靠肉眼猜。
+>
+> **① 版本历史按钮占掉一整行**
+>
+> 根因：`NoteHistoryPanel` 在**受控模式**（`compact` + `open`）下仍渲染自己的触发按钮，
+> 而开关其实在顶栏。编辑器是 `display:flex; flex-direction:column`，
+> `.btn-icon` 没有宽度约束 → 被 `align-items: stretch` 拉成整行。
+>
+> | 实测 | 修复前 | 修复后 |
+> |---|---|---|
+> | `.editor` 首个子元素 | `BUTTON.btn-icon` `1288×37` | `DIV.history-anchor` **`0×0`** |
+> | 正文顶部 | 113px | **76px** |
+> | 舞台高度 @1600×900 | 725px | **763px**（+37） |
+>
+> 修复：受控时不再渲染触发器（开关归顶栏）。
+>
+> **② 版本历史面板飘到屏幕外**
+>
+> 根因：`.history-panel` 是 `position: absolute; top: 100%`，原先靠 `.editor-head`
+> 的 `position: relative` 定位；头行删除后定位父级退化成 `.shell`（`position: relative; z-index: 1`），
+> `top: 100%` 按整页高度解析。
+>
+> | 实测 | 修复前 | 修复后 |
+> |---|---|---|
+> | `.history-panel` 位置 | `t=908, b=1030`（视口高 900） | **`t=72, b=194`** |
+> | `offsetParent` | `shell` | `history-anchor` |
+> | 面板内「关闭」 | 点不到（超时） | **可点** |
+>
+> 修复：新增零尺寸定位锚点 `.history-anchor`；面板下压 `top: calc(var(--topbar-h) + 8px)`
+> 并取 `z-index: var(--z-modal)`；`.editor:has(.history-panel) { overflow: visible }`
+> 放开 `.editor-workbench` 的裁剪（`:has()` 让规则跟开关走，不需要额外 class 或 JS）。
+>
+> **③ 「更多」菜单点击被正文拦截（长期缺陷）**
+>
+> Playwright 点击 `.more-menu-item` 直接超时报出关键证据：
+> `<div class="stage-viewport"> from <div class="content"> subtree intercepts pointer events`。
+>
+> 根因：`.topbar` 是 `position: relative` 但**从未设 z-index**，而 `.shell-main` 的绘制顺序中
+> `.topbar` 在 DOM 里位于 `.content` 之前；`.content` 内的 `.stage-viewport` 同样是
+> `position: relative` + `z-index: auto`。同处根层叠上下文又都是 `auto` 时按 DOM 顺序绘制，
+> 于是 `.content` 整体压在顶栏之上 —— 菜单自身 `z-index: 60` 被困在顶栏的层叠上下文里，
+> 抬高也没用。
+>
+> 修复：`.topbar` 加 `z-index: var(--z-panel)`（40），让整棵顶栏子树浮在正文之上。
+>
+> | 实测 | 修复前 | 修复后 |
+> |---|---|---|
+> | 点「版本历史」菜单项 | `intercepts pointer events` 超时 | **点击成功** |
+> | 「更多」菜单 | 点不动 | 可点，下拉画在正文之上 |
+>
+> **回归验证**（Playwright，真实 token）
+>
+> | 视口 | 顶栏高 | 正文顶 | 舞台高 | 横向溢出 | 菜单可点 | 面板顶 |
+> |---|---|---|---|---|---|---|
+> | 1600×900 | 56 | 76 | 763 | 否 | ✓ | 72 |
+> | 1280×800 | 56 | 76 | 663 | 否 | ✓ | 72 |
+> | 1024×768 | 56 | 76 | 631 | 否 | ✓ | 72 |
+>
+> 三档视口 `pageerror` 均为 0；`editor` 子元素恒为
+> `history-anchor(0×0) / editor-body / ai-chat-panel`；
+> 面板开关闭环（菜单项打开 → 面板内关闭 → 再打开）全部通过。
+> ≤720px 不渲染 `.more-menu` 属既有移动端布局（顶栏元信息条在移动端收起），非本轮回归。
+>
+> **方法教训**：`elementsFromPoint` 在重叠区的返回顺序与视觉层级**不一致**，
+> 不能据此判断"谁盖住谁"。这次靠 Playwright 的
+> `intercepts pointer events` 报错才定位到真实层叠问题；
+> 判定遮挡应以「能否点到」为准，而不是元素栈顺序。
+>
+> 截图：`_topbar-qa/history-panel-fixed.png`、`_topbar-qa/more-menu-above-content.png`。
+>
 >> #### 顶栏收敛（第 1 项）· 验收记录
 >
 > **改动**：`AppShell.tsx` 重写顶栏；新增 `components/AccountMenu.tsx`；

@@ -45,6 +45,14 @@
 }
 .topbar {
   position: relative;
+  /* 必须显式抬层：`.shell-main` 的绘制顺序里 `.topbar` 在 DOM 中位于
+     `.content` 之前，而 `.content` 内的 `.stage-viewport` 也是
+     `position: relative` + `z-index: auto`。同处根层叠上下文又都是 auto
+     时按 DOM 顺序绘制 —— `.content` 整体后绘制，会压住顶栏。
+     后果是顶栏里的「更多」菜单虽然 z-index:60，却被困在顶栏的层叠上下文里，
+     点不动（Playwright 实测：`.stage-viewport` intercepts pointer events）。
+     抬高顶栏让它的整个子树（含下拉）浮在正文之上。 */
+  z-index: var(--z-panel);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -958,6 +966,30 @@
   box-shadow: var(--shadow-lg);
   backdrop-filter: var(--glass-blur);
   padding: var(--sp-6);
+}
+/* 零尺寸定位锚点：面板的开关在顶栏，浮层却跟正文一起渲染。
+   原先它靠 `.editor-head`（position: relative）定位，标题上移顶栏后
+   `.editor-head` 被删掉，`top: 100%` 就解析到 `.shell`（整页高度），
+   面板被推到 908px、整块落在视口外。这里给它一个贴编辑器顶部的锚点。 */
+.history-anchor {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  width: 0;
+  height: 0;
+}
+/* `.editor-workbench` 带 `overflow: hidden`，打开时放开，否则浮层被裁掉。
+   `:has()` 让这条规则跟面板开关走，不依赖额外 class 或 JS。 */
+.editor.editor-workbench:has(.history-panel) {
+  overflow: visible;
+}
+/* 面板必须落在顶栏**下方**：顶栏 z-index 已抬到 40，锚点又贴编辑器顶边，
+   面板的 `top: 100%` 会从 y=0 开始画，上半截被顶栏盖住（关闭按钮正在那一段）。
+   用顶栏高度 token 下压，z-index 取 modal 级压过顶栏。 */
+.history-panel {
+  top: calc(var(--topbar-h, 56px) + 8px);
+  z-index: var(--z-modal);
+  max-height: calc(100vh - var(--topbar-h, 56px) - 32px);
 }
 .history-head {
   display: flex;

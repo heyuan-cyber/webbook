@@ -18,6 +18,11 @@ interface Commit {
  * `compact`：图标按钮形态，供顶栏元信息条使用（空间紧张）；
  * 默认是带文字的「历史」按钮。`open`/`onOpenChange` 可选，
  * 传入即由外部控制展开状态（顶栏按钮与面板分处两棵子树时用）。
+ *
+ * 受控时**不再渲染自己的触发按钮** —— 开关在顶栏（NoteMetaBar 的时钟图标），
+ * 这里只负责面板本身。历史上受控模式仍会渲染按钮，而编辑器是
+ * `display:flex; flex-direction:column`，`.btn-icon` 没有宽度约束就被
+ * `align-items:stretch` 拉成整行（实测 1288×37），白白占掉正文一行。
  */
 export function NoteHistoryPanel({
   noteId,
@@ -89,22 +94,23 @@ export function NoteHistoryPanel({
 
   return (
     <>
-      {compact ? (
-        <button
-          type="button"
-          className="btn btn-ghost btn-icon"
-          aria-label="版本历史"
-          title="版本历史"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-        >
-          <Icon name="clock" size={14} />
-        </button>
-      ) : (
-        <button type="button" className="btn btn-ghost" onClick={() => setOpen(!open)}>
-          历史
-        </button>
-      )}
+      {!controlled &&
+        (compact ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            aria-label="版本历史"
+            title="版本历史"
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            <Icon name="clock" size={14} />
+          </button>
+        ) : (
+          <button type="button" className="btn btn-ghost" onClick={() => setOpen(!open)}>
+            历史
+          </button>
+        ))}
       {open && (
         <div className="history-panel">
           <div className="history-head">

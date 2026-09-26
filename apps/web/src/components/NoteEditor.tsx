@@ -146,19 +146,22 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
     >
       {/* 标题与元信息都已在顶栏（NoteTitleTop / NoteMetaBar）——
           正文从这里直接开始，竖向空间不再被笔记头吃掉。
-          版本历史面板仍渲染在这里（顶栏按钮只负责开关）。 */}
+          `.history-anchor` 是零尺寸定位锚点：面板的开关在顶栏，
+          但浮层本身跟正文一起渲染，需要一个定位父级才不会飘到屏幕外。 */}
       {!readOnly && (
-        <NoteHistoryPanel
-          noteId={activeNote.id}
-          compact
-          open={historyOpen}
-          onOpenChange={setHistoryOpen}
-          onRestore={(note) => {
-            setActiveTitle(note.title);
-            updateActiveBlocks(note.blocks);
-            updateActiveEdges(note.edges ?? []);
-          }}
-        />
+        <div className="history-anchor">
+          <NoteHistoryPanel
+            noteId={activeNote.id}
+            compact
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            onRestore={(note) => {
+              setActiveTitle(note.title);
+              updateActiveBlocks(note.blocks);
+              updateActiveEdges(note.edges ?? []);
+            }}
+          />
+        </div>
       )}
       {activeNote.summary && (
         <div className="ai-summary">
