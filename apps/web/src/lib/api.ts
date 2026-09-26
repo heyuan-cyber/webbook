@@ -1,5 +1,6 @@
-import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, Reminder, RemindersIndex, BloggerSummary, AIStrategiesConfig, SystemSettings, AiProvidersResponse, AiGenerateRequest, AiGenerateResult, AiJobRecord } from '@webbook/shared';
-import { normalizeNote } from '@webbook/shared';
+import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, BloggerSummary, AIStrategiesConfig, SystemSettings, AiProvidersResponse, AiGenerateRequest, AiGenerateResult, AiJobRecord } from '@webbook/shared';
+import { normalizeNote, normalizePlan } from '@webbook/shared';
+import type { PlanDoc } from '@webbook/shared';
 import { DEFAULT_API_BASE_URL } from '@/lib/publicDefaults';
 
 const BASE =
@@ -23,6 +24,58 @@ interface RequestOpts {
   token?: string;
 }
 
+/** 带状态码与响应体的 API 错误：乐观锁冲突要靠它区分"该重拉重放"还是"该直接报错" */
+export class ApiError extends Error {
+  readonly path: string;
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(path: string, status: number, body: unknown) {
+    super(`API ${path} failed: ${status}`);
+    this.name = 'ApiError';
+    this.path = path;
+    this.status = status;
+    this.body = body;
+  }
+}
+
+/** 规划写入冲突：服务端 revision 已变。`baseSha` 是服务端当前值，用于重放。 */
+export class PlanConflictError extends ApiError {
+  readonly baseSha: string | null;
+
+  constructor(path: string, status: number, body: unknown) {
+    super(path, status, body);
+    this.name = 'PlanConflictError';
+    const sha = (body as { baseSha?: unknown } | null)?.baseSha;
+    this.baseSha = typeof sha === 'string' ? sha : null;
+  }
+}
+
+/**
+ * 目录树写入冲突：服务端 revision 已变（别的设备改过目录）。
+ * `rev` 是服务端当前 revision，交给用户决定保留哪一份——**不自动重放**：
+ * 重放一棵过期的树正是要修的那个故障。
+ */
+export class TreeConflictError extends ApiError {
+  readonly rev: string | null;
+
+  constructor(path: string, status: number, body: unknown) {
+    super(path, status, body);
+    this.name = 'TreeConflictError';
+    const rev = (body as { _rev?: unknown } | null)?._rev;
+    this.rev = typeof rev === 'string' ? rev : null;
+  }
+}
+
+/** 目录树读取结果 */
+export interface LoadedTree {
+  tree: NoteTree;
+  /** 服务端当前 revision；`null` 表示云端还没有这棵树 */
+  rev: string | null;
+  /** 服务端是否报告了 revision。旧版 Worker 不返回 `_rev` → false，此时不得发起远端写 */
+  revReported: boolean;
+}
+
 async function http<T>(
   path: string,
   init: RequestInit & RequestOpts = {},
@@ -37,22 +90,52 @@ async function http<T>(
     },
   });
   if (!res.ok) {
-    throw new Error(`API ${path} failed: ${res.status}`);
+    const body = await res.json().catch(() => null);
+    throw new ApiError(path, res.status, body);
   }
   return res.json() as Promise<T>;
 }
 
 /** 远端：Workers API → GitHub */
 export const apiClient = {
-  loadTree: (token?: string) =>
-    http<NoteTree>('/api/tree', token ? { token } : {}),
+  loadTree: async (token?: string): Promise<LoadedTree> => {
+    const res = await http<NoteTree & { _rev?: string | null }>(
+      '/api/tree',
+      token ? { token } : {},
+    );
+    const { _rev, ...tree } = res;
+    return {
+      tree: tree as NoteTree,
+      rev: typeof _rev === 'string' ? _rev : null,
+      revReported: _rev !== undefined,
+    };
+  },
   loadPublicTree: () => http<NoteTree>('/api/public/tree'),
-  saveTree: (tree: NoteTree, token: string) =>
-    http<{ ok: true }>('/api/tree', {
-      method: 'PUT',
-      token,
-      body: JSON.stringify(tree),
-    }),
+  /**
+   * 条件写入目录树：必须带上"我读到的那个 revision"。
+   * 服务端 revision 已变时抛 {@link TreeConflictError}，由界面交给用户决定。
+   */
+  saveTree: async (tree: NoteTree, baseRev: string | null, token: string) => {
+    try {
+      return await http<{ ok: true; _rev: string }>('/api/tree', {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ tree, baseRev }),
+      });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        throw new TreeConflictError('/api/tree', e.status, e.body);
+      }
+      throw e;
+    }
+  },
+  treeHistory: (token: string) =>
+    http<{ versions: { sha: string; date: string; message: string }[] }>(
+      '/api/tree/history',
+      { token },
+    ),
+  treeVersion: (sha: string, token: string) =>
+    http<NoteTree>(`/api/tree/versions/${encodeURIComponent(sha)}`, { token }),
   loadNote: async (id: string, token?: string) => {
     const raw = await http<Note>(`/api/notes/${id}`, token ? { token } : {});
     return normalizeNote(raw);
@@ -176,6 +259,59 @@ export const apiClient = {
       token,
       body: JSON.stringify({ note, messages }),
     }),
+  /**
+   * 流式笔记对话：逐段回调增量文本，返回累计全文。
+   * 服务端帧格式 `data: {"delta"}` / `data: [DONE]` / `data: {"error"}`。
+   */
+  aiChatStream: async (
+    note: Note,
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    token: string,
+    handlers: { onDelta: (delta: string) => void; signal?: AbortSignal },
+  ): Promise<{ text: string }> => {
+    const res = await fetch(`${BASE}/api/ai/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ note, messages }),
+      ...(handlers.signal ? { signal: handlers.signal } : {}),
+    });
+    if (!res.ok || !res.body) {
+      throw new Error(`API /api/ai/chat/stream failed: ${res.status}`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let full = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl = buf.indexOf('\n');
+      while (nl >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        nl = buf.indexOf('\n');
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        let parsed: { delta?: string; error?: string };
+        try {
+          parsed = JSON.parse(payload) as { delta?: string; error?: string };
+        } catch {
+          continue;
+        }
+        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.delta) {
+          full += parsed.delta;
+          handlers.onDelta(parsed.delta);
+        }
+      }
+    }
+    return { text: full };
+  },
 
   listCircles: (token: string) =>
     http<{ circles: CircleSummary[] }>('/api/circles', { token }),
@@ -298,20 +434,25 @@ export const apiClient = {
       token,
     }),
 
-  loadReminders: (token: string) =>
-    http<RemindersIndex>('/api/reminders', { token }),
-  addQuickReminder: (token: string, text: string) =>
-    http<Reminder>('/api/reminders', {
-      method: 'POST',
-      token,
-      body: JSON.stringify({ text }),
-    }),
-  patchReminder: (token: string, id: string, patch: { done?: boolean }) =>
-    http<Reminder>(`/api/reminders/${id}`, {
-      method: 'PATCH',
-      token,
-      body: JSON.stringify(patch),
-    }),
+  loadPlan: async (token: string) => {
+    const res = await http<{ plan: unknown; baseSha: string | null }>('/api/plan', { token });
+    return { plan: normalizePlan(res.plan), baseSha: res.baseSha };
+  },
+  savePlan: async (token: string, plan: PlanDoc, baseSha: string | null) => {
+    try {
+      return await http<{ ok: true; baseSha: string }>('/api/plan', {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ plan, baseSha }),
+      });
+    } catch (e) {
+      // 冲突单独成类：调用方要拿服务端 baseSha 重拉重放，其它错误直接上报
+      if (e instanceof ApiError && e.status === 409) {
+        throw new PlanConflictError('/api/plan', e.status, e.body);
+      }
+      throw e;
+    }
+  },
 
   adminUsers: (token: string) =>
     http<{ users: { id: string; email: string; updatedAt: string; disabled?: boolean }[] }>(

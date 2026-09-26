@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { MD_COLOR_LIST, MD_COLOR_NAMES, renderInlineMarkdown, renderMarkdownDocument } from '@/lib/markdown';
+import { MD_COLOR_LABELS, MD_COLOR_LIST, MD_COLOR_NAMES, renderInlineMarkdown, renderMarkdownDocument } from '@/lib/markdown';
 
 const MD_HELP_ROWS: { syntax: string; tip: string }[] = [
   { syntax: '**粗体**', tip: '粗体' },
@@ -155,24 +155,27 @@ export function EditableMarkdownField({
 
   const toolbar = editing && !readOnly && (
     <div className="md-field-toolbar" data-stage-interactive onPointerDown={(e) => e.stopPropagation()}>
-      <button type="button" title="粗体" onClick={() => inputRef.current && wrapSelection(inputRef.current, '**', '**', onChange)}>
+      {/* 这些按钮的字面内容只有 B / I / S / U / </> / { } —— 屏幕阅读器会念成单个字母，
+          加上 aria-label 才表达得出真实动作（title 只作鼠标 tooltip）。 */}
+      <button type="button" title="粗体" aria-label="粗体" onClick={() => inputRef.current && wrapSelection(inputRef.current, '**', '**', onChange)}>
         B
       </button>
-      <button type="button" title="斜体" onClick={() => inputRef.current && wrapSelection(inputRef.current, '*', '*', onChange)}>
+      <button type="button" title="斜体" aria-label="斜体" onClick={() => inputRef.current && wrapSelection(inputRef.current, '*', '*', onChange)}>
         I
       </button>
-      <button type="button" title="删除线" onClick={() => inputRef.current && wrapSelection(inputRef.current, '~~', '~~', onChange)}>
+      <button type="button" title="删除线" aria-label="删除线" onClick={() => inputRef.current && wrapSelection(inputRef.current, '~~', '~~', onChange)}>
         S
       </button>
-      <button type="button" title="下划线" onClick={() => inputRef.current && wrapSelection(inputRef.current, '++', '++', onChange)}>
+      <button type="button" title="下划线" aria-label="下划线" onClick={() => inputRef.current && wrapSelection(inputRef.current, '++', '++', onChange)}>
         U
       </button>
-      <button type="button" title="行内代码" onClick={() => inputRef.current && wrapSelection(inputRef.current, '`', '`', onChange)}>
+      <button type="button" title="行内代码" aria-label="行内代码" onClick={() => inputRef.current && wrapSelection(inputRef.current, '`', '`', onChange)}>
         {'</>'}
       </button>
       <button
         type="button"
         title="代码块"
+        aria-label="代码块"
         onClick={() =>
           inputRef.current && wrapSelection(inputRef.current, '```\n', '\n```', onChange)
         }
@@ -185,7 +188,8 @@ export function EditableMarkdownField({
           key={name}
           type="button"
           className="md-color-dot"
-          title={name}
+          title={MD_COLOR_LABELS[name] ?? name}
+          aria-label={`${MD_COLOR_LABELS[name] ?? name}文字`}
           style={{ background: MD_COLOR_NAMES[name] }}
           onClick={() =>
             inputRef.current && wrapSelection(inputRef.current, `{${name}}`, '{/}', onChange)

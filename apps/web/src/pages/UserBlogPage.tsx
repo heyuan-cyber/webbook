@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { PublicFeedItem } from '@webbook/shared';
 import { apiClient, type SiteConfig } from '@/lib/api';
@@ -185,7 +185,7 @@ export function UserBlogPage({
     ) : error ? (
       <p className="auth-error">{error}</p>
     ) : posts.length === 0 ? (
-      <EmptyState icon="📄" title="还没有文章" body="这位作者还没有公开文章。" />
+      <EmptyState icon="file" title="还没有文章" body="这位作者还没有公开文章。" />
     ) : showSettings && ownerCanSettings ? (
       <SettingsTab posts={posts} site={site} onSaved={(next) => setSite(next)} />
     ) : (

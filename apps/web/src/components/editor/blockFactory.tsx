@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import type { Block, BlockPlacement, BlockType } from '@webbook/shared';
 import { defaultCardSize, defaultStickyPlacement } from '@webbook/shared';
 import { uid } from '@/lib/id';
+import { Icon } from '@/components/Icon';
 
 /** 已废除类型：落到带 Markdown 种子的段落 */
 const RETIRED_SEED: Partial<Record<BlockType, string>> = {
@@ -64,17 +66,29 @@ export function createAbsoluteBlock(type: BlockType, x: number, y: number): Bloc
   return { ...block, placement };
 }
 
-/** 可插入块菜单（列表/待办/标注已废除，用段落 Markdown） */
-export const BLOCK_MENU: { type: BlockType; label: string; icon: string; slash?: string[] }[] = [
-  { type: 'paragraph', label: '文本', icon: '¶', slash: ['文本', '段落', 'text', 'p', '列表', 'list', '待办', 'todo', '标注', 'callout'] },
-  { type: 'heading', label: '标题', icon: 'H', slash: ['标题', 'heading', 'h1', 'h2', 'h3'] },
-  { type: 'image', label: '图片', icon: '🖼', slash: ['图片', 'image', 'img', '图'] },
-  { type: 'video', label: '视频', icon: '▶', slash: ['视频', 'video'] },
-  { type: 'model3d', label: '3D 模型', icon: '立方', slash: ['3d', '模型', 'model'] },
-  { type: 'audio', label: '音频', icon: '♪', slash: ['音频', '音乐', 'audio', 'music'] },
-  { type: 'link-preview', label: '链接预览', icon: '🔗', slash: ['链接', 'link', 'url'] },
-  { type: 'sticky', label: '便签', icon: '📌', slash: ['便签', 'sticky', '贴纸'] },
-  { type: 'divider', label: '分割线', icon: '―', slash: ['分割', 'divider', 'hr'] },
+/**
+ * 可插入块菜单（列表/待办/标注已废除，用段落 Markdown）
+ *
+ * `icon` 由 emoji / 字符（¶ H 🖼 ▶ 立方 ♪ 🔗 📌 ―）改为真正的图标组件：
+ * emoji 会随 font-size 被动缩放、无法跟随主题色，且三端字形不一致。
+ */
+export interface BlockMenuItem {
+  type: BlockType;
+  label: string;
+  icon: ReactNode;
+  slash?: string[];
+}
+
+export const BLOCK_MENU: BlockMenuItem[] = [
+  { type: 'paragraph', label: '文本', icon: <Icon name="type" size={16} />, slash: ['文本', '段落', 'text', 'p', '列表', 'list', '待办', 'todo', '标注', 'callout'] },
+  { type: 'heading', label: '标题', icon: <Icon name="hash" size={16} />, slash: ['标题', 'heading', 'h1', 'h2', 'h3'] },
+  { type: 'image', label: '图片', icon: <Icon name="image" size={16} />, slash: ['图片', 'image', 'img', '图'] },
+  { type: 'video', label: '视频', icon: <Icon name="play" size={16} />, slash: ['视频', 'video'] },
+  { type: 'model3d', label: '3D 模型', icon: <Icon name="box" size={16} />, slash: ['3d', '模型', 'model'] },
+  { type: 'audio', label: '音频', icon: <Icon name="volume" size={16} />, slash: ['音频', '音乐', 'audio', 'music'] },
+  { type: 'link-preview', label: '链接预览', icon: <Icon name="link" size={16} />, slash: ['链接', 'link', 'url'] },
+  { type: 'sticky', label: '便签', icon: <Icon name="pin" size={16} />, slash: ['便签', 'sticky', '贴纸'] },
+  { type: 'divider', label: '分割线', icon: <Icon name="minus" size={16} />, slash: ['分割', 'divider', 'hr'] },
 ];
 
 export function filterBlockMenu(query: string) {

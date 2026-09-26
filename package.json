@@ -14,8 +14,10 @@
     "build": "npm run build --workspace packages/shared && npm run build --workspace apps/web",
     "lint": "eslint .",
     "dev:api": "npm run dev --workspace workers/api",
+    "deploy:api": "npm run deploy --workspace workers/api",
     "init:github": "node scripts/init-github-data.mjs",
     "migrate:legacy": "npm run build --workspace packages/shared && node scripts/migrate-legacy-data.mjs",
+    "audit:tree": "node scripts/audit-tree.mjs",
     "android:init": "node scripts/android-init.mjs",
     "android:apk": "node scripts/android-apk.mjs",
     "android:fingerprint": "node scripts/android-fingerprint.mjs",
@@ -27,6 +29,8 @@
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
     "eslint": "^9.12.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^14.0.0",
     "typescript": "^5.6.2"
   }
 }

@@ -9,11 +9,14 @@ import type {
   NoteVisibility,
 } from '@webbook/shared';
 import { createEmptyNote, createEmptyTree, findNode, normalizeNote } from '@webbook/shared';
+import { collectSubtreeNodeIds } from '@webbook/shared';
 import { uid } from '@/lib/id';
 import { foldState } from '@/lib/storage';
 import { makeRepository, type Repository } from './repository';
+import { usePlanStore } from './usePlanStore';
 import type { Session } from '@/auth/types';
 import { localStore } from '@/lib/storage';
+import { TreeConflictError } from '@/lib/api';
 import { toast } from '@/store/useToastStore';
 
 /** 乐观插图的本地预览，不可写入本地/远端笔记 */
@@ -34,11 +37,23 @@ interface NotesState {
   noteLoading: boolean;
   saving: boolean;
   saveError: boolean;
+  /** 云端目录的 revision；写入时作为 baseRev 提交 */
+  treeRev: string | null;
+  /** 云端目录不可安全写入（只读本地模式） */
+  treeLocalOnly: boolean;
+  /** 未决的目录树冲突；本地树原样保留，等用户决定保留哪一份 */
+  treeConflict: { localTree: NoteTree; serverRev: string | null } | null;
 
   init: (session: Session | null) => Promise<void>;
   selectNote: (id: string) => Promise<void>;
   toggleFold: (nodeId: string) => void;
   searchNotes: (query: string) => Promise<SearchHit[]>;
+  /** 冲突解决：以云端为准（丢弃本地目录改动） */
+  resolveTreeConflictKeepServer: () => Promise<void>;
+  /** 冲突解决：以本地为准（覆盖云端） */
+  resolveTreeConflictKeepLocal: () => Promise<void>;
+  /** 恢复目录历史版本（条件写；若期间云端又变则转入冲突流程，不静默覆盖） */
+  restoreTreeVersion: (tree: NoteTree) => Promise<void>;
 
   addFolder: (parentId: string | null, title: string) => Promise<void>;
   addNote: (parentId: string | null, title: string) => Promise<string>;
@@ -126,17 +141,73 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
   noteLoading: false,
   saving: false,
   saveError: false,
+  treeRev: null,
+  treeLocalOnly: false,
+  treeConflict: null,
 
   async init(session) {
     const repo = makeRepository(session);
     treeDirty = false;
-    setState({ repo, treeReady: false, treeLoading: true, saveError: false });
+    setState({ repo, treeReady: false, treeLoading: true, saveError: false, treeConflict: null });
+    // loadTree 自身不再抛错：失败时进入"只读本地"，由下面的状态与提示告知用户
+    const tree = await repo.loadTree();
+    const treeLocalOnly = repo.isLocalOnly();
+    setState({
+      tree,
+      treeReady: true,
+      treeLoading: false,
+      treeRev: repo.getTreeRev(),
+      treeLocalOnly,
+    });
+    if (treeLocalOnly) {
+      toast('error', '云端目录不可用，已进入本地模式（目录暂不同步）');
+    }
+  },
+
+  async resolveTreeConflictKeepServer() {
+    const { repo } = getState();
+    const tree = await repo.reloadTree();
+    setState({
+      tree,
+      treeRev: repo.getTreeRev(),
+      treeLocalOnly: repo.isLocalOnly(),
+      treeConflict: null,
+    });
+    toast('success', '已改用云端目录');
+  },
+
+  async resolveTreeConflictKeepLocal() {
+    const { repo, treeConflict } = getState();
+    if (!treeConflict) return;
     try {
-      const tree = await repo.loadTree();
-      setState({ tree, treeReady: true, treeLoading: false });
-    } catch {
-      setState({ treeReady: true, treeLoading: false });
-      toast('error', '加载目录失败，使用本地数据');
+      const rev = await repo.overwriteTree(treeConflict.localTree, treeConflict.serverRev);
+      setState({ treeRev: rev, treeLocalOnly: false, treeConflict: null });
+      toast('success', '已用本地目录覆盖云端');
+    } catch (e) {
+      if (e instanceof TreeConflictError) {
+        // 期间云端又被改：更新服务端 revision，继续等用户决定
+        setState({ treeConflict: { ...treeConflict, serverRev: e.rev } });
+        toast('error', '云端目录又被修改，请重新确认');
+        return;
+      }
+      toast('error', '写入失败，本地目录仍保留');
+    }
+  },
+
+  async restoreTreeVersion(next) {
+    const { repo, treeRev } = getState();
+    try {
+      const rev = await repo.overwriteTree(next, treeRev);
+      setState({ tree: next, treeRev: rev, treeLocalOnly: false, treeConflict: null });
+      toast('success', '已恢复该版本目录');
+    } catch (e) {
+      if (e instanceof TreeConflictError) {
+        // 不静默覆盖：转入统一的冲突流程，由用户决定
+        setState({ treeConflict: { localTree: next, serverRev: e.rev } });
+        toast('error', '云端目录已被其他设备修改，请选择保留哪一份');
+        return;
+      }
+      throw e;
     }
   },
 
@@ -217,11 +288,11 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
   },
 
   async addFolder(parentId, title) {
-    const { tree, repo } = getState();
+    const { tree } = getState();
     const node: TreeNode = { id: uid('fld'), kind: 'folder', title, children: [] };
     const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
     setState({ tree: next });
-    await repo.saveTree(next);
+    await persistTree(next);
   },
 
   async addNote(parentId, title) {
@@ -231,7 +302,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
     const note = createEmptyNote(id, title);
     setState({ tree: next, activeNoteId: id, activeNote: note, noteLoading: false });
-    void repo.saveTree(next);
+    void persistTree(next);
     void repo.saveNote(note);
     return id;
   },
@@ -247,7 +318,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
       updatedAt: new Date().toISOString(),
     };
     setState({ tree: next, activeNoteId: id, activeNote: note, noteLoading: false });
-    await repo.saveTree(next);
+    await persistTree(next);
     const result = await repo.saveNote(note);
     if (!result.noteOk && repo.authed) {
       toast('error', '云端保存失败，内容已存本地');
@@ -256,23 +327,35 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
   },
 
   async renameNode(id, title) {
-    const { tree, repo } = getState();
+    const { tree } = getState();
     const next = { ...tree, roots: patchNode(tree.roots, id, { title }) };
     setState({ tree: next });
-    await repo.saveTree(next);
+    await persistTree(next);
   },
 
   async deleteNode(id) {
     const { tree, repo, activeNoteId } = getState();
+    // 删除栏目/笔记会连带丢弃锚在它及其后代上的任务（不可恢复），
+    // 所以先把数量算出来告诉用户——这是本模块唯一的数据丢失路径
+    const subtreeIds = new Set(collectSubtreeNodeIds(tree, id));
+    const anchored = usePlanStore.getState().countAnchored(subtreeIds);
+    if (anchored > 0) {
+      const label = findNode(tree.roots, id)?.title ?? '该项';
+      const ok = window.confirm(
+        `删除「${label}」会同时丢弃其下 ${anchored} 条任务规划，且无法恢复。确定删除吗？`,
+      );
+      if (!ok) return;
+    }
     const [roots] = removeNode(tree.roots, id);
     const next = { ...tree, roots };
     setState({ tree: next, ...(activeNoteId === id ? { activeNoteId: null, activeNote: null } : {}) });
-    await repo.saveTree(next);
+    await persistTree(next);
     await repo.deleteNote(id);
+    if (anchored > 0) usePlanStore.getState().removeAnchored(subtreeIds);
   },
 
   async moveNode(id, newParentId, index) {
-    const { tree, repo } = getState();
+    const { tree } = getState();
     const [without, moved] = removeNode(tree.roots, id);
     if (!moved) return;
     let roots: TreeNode[];
@@ -292,7 +375,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     }
     const next = { ...tree, roots };
     setState({ tree: next });
-    await repo.saveTree(next);
+    await persistTree(next);
   },
 
   updateActiveBlocks(blocks) {
@@ -371,7 +454,7 @@ function scheduleSave(getState: () => NotesState) {
     useNotesStore.setState({ saving: true, saveError: false });
     const result = await repo.saveNote(activeNote);
     if (treeDirty) {
-      await repo.saveTree(tree);
+      await persistTree(tree);
       treeDirty = false;
     }
     useNotesStore.setState({ saving: false, saveError: !result.noteOk });
@@ -379,6 +462,32 @@ function scheduleSave(getState: () => NotesState) {
       toast('error', '云端保存失败，内容已存本地');
     }
   }, 800);
+}
+
+/**
+ * 目录树写入的唯一出口。
+ *
+ * 冲突**不抛出**，而是进入待决状态并暂停后续树写入：界面据此询问用户保留哪一份，
+ * 期间本地树与 IndexedDB 都保持不动，用户继续编辑不会丢内容。
+ */
+async function persistTree(tree: NoteTree): Promise<void> {
+  const state = useNotesStore.getState();
+  // 冲突未决：暂停远端树写入（本地树已由 setState 更新并写入 IndexedDB）
+  if (state.treeConflict) return;
+  try {
+    await state.repo.saveTree(tree);
+    useNotesStore.setState({
+      treeRev: state.repo.getTreeRev(),
+      treeLocalOnly: state.repo.isLocalOnly(),
+    });
+  } catch (e) {
+    if (e instanceof TreeConflictError) {
+      useNotesStore.setState({ treeConflict: { localTree: tree, serverRev: e.rev } });
+      toast('error', '云端目录已被其他设备修改，请选择保留哪一份');
+      return;
+    }
+    throw e;
+  }
 }
 
 function blocksToText(blocks: Block[]): string {

@@ -1,0 +1,1136 @@
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="d2">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>方向二 · 纸墨 Ink &amp; Paper — WebBook 设计稿</title>
+<link rel="stylesheet" href="design-system.css" />
+</head>
+<body>
+
+<header class="doc-head">
+  <div class="doc-head-in">
+    <div class="doc-title">方向二 · 纸墨 Ink &amp; Paper<span>D2 · 差异最大</span></div>
+    <nav class="doc-nav">
+      <a href="INDEX.html">总览</a>
+      <a href="direction-1-warm.html">方向一 · 墨金</a>
+      <a href="direction-2-paper.html" aria-current="page">方向二 · 纸墨</a>
+      <a href="direction-3-blueprint.html">方向三 · 蓝图</a>
+      <a href="../UI-REFRESH-AUDIT.md">审计全文</a>
+    </nav>
+  </div>
+</header>
+
+<div class="note" style="margin-top:var(--sp-9)">
+  <h4>这一版改了什么（与方向一共用同一套结构与组件，只换语言）</h4>
+  <ul>
+    <li><b>纸白底 + 墨黑字</b>：<code>--bg #f4f1ea</code> / <code>--text #1b1a17</code>，正文对比度约 15:1（暗色版约 10:1），白天长时间读写更省力。</li>
+    <li><b>朱砂只做点色</b>：<code>--accent #a8442a</code> 只用于选中、链接、强调标记 —— 像印章，不像霓虹。大面积交给墨色与留白。</li>
+    <li><b>层级靠线与留白，不靠阴影</b>：卡片阴影压到 <code>rgba(27,26,23,.06~.12)</code>，主要靠 1px 细边与间距分块（暗色版靠 elevation 提亮）。</li>
+    <li><b>圆角收小</b>：<code>--radius-card</code> 从 12px → 8px，接近纸张裁切手感。</li>
+    <li><b>画布改"网格纸 + 墨线"</b>：底 <code>#f7f4ec</code>、网格 <code>rgba(27,26,23,.07)</code>、连线深墨、朱砂表示选中。暗色那套"发光边"在纸上不成立，改为<b>墨线 + 端点</b>表达层级。</li>
+    <li><b>便签与页面同材质</b>：<code>--warn</code> 混出淡黄 + 衬线字 —— 这一版里便签是最自然的一块。</li>
+    <li><b>结构修复照旧</b>：侧栏缩进 10px/级、顶栏收敛为面包屑 + ⌘K、笔记头拆两层、48 处 emoji → 24 个线性图标。</li>
+  </ul>
+</div>
+
+<div class="note" style="border-style:solid;border-color:var(--accent-line)">
+  <h4>选这个方向要接受的代价</h4>
+  <ul>
+    <li>观感从"暗黑高级"变成"纸本清爽"。<b>个人主页若保留纯黑 Swiss 风格，两边会割裂</b> —— 建议一起翻成纸色。</li>
+    <li>图片/视频块在浅底上需要 1px 边框才不"飘"，设计稿已处理。</li>
+    <li>代码块要另出一套浅底语法高亮配色（当前是 <code>--surface-2</code> 白底 + 朱砂行内高亮）。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 1. 笔记本：全屏编辑器（默认工作台）═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">01</div>
+  <h2>笔记本 · 编辑一篇笔记</h2>
+  <p>最常用的界面。侧栏用你的真实目录（最深 7 级），正文 + 底部 AI 面板。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>笔记本</strong>
+    <span class="url">/app/note/battle-editor-arch</span>
+    <span class="tag tag-accent"><svg class="i i-12"><use href="#i-sparkles" /></svg>设计稿</span>
+  </div>
+  <div class="screen-inner">
+    <div class="app">
+
+      <!-- 侧栏 -->
+      <aside class="sb">
+        <div class="sb-head">
+          <span class="brand"><span class="brand-mark">W</span>WebBook</span>
+          <button class="btn-icon" aria-label="收起目录"><svg class="i i-14"><use href="#i-chevron-left" /></svg></button>
+        </div>
+        <div class="sb-search">
+          <div class="search-wrap">
+            <svg class="i i-14"><use href="#i-search" /></svg>
+            <input class="field" placeholder="搜索笔记…" aria-label="搜索笔记" />
+            <kbd>⌘K</kbd>
+          </div>
+        </div>
+        <div class="sb-actions">
+          <button class="btn"><svg class="i i-14"><use href="#i-folder" /></svg>栏目</button>
+          <button class="btn btn-primary"><svg class="i i-14"><use href="#i-plus" /></svg>笔记</button>
+        </div>
+        <div class="sb-scroll">
+          <div class="tree">
+            <div class="tree-group-label"><svg class="i i-12"><use href="#i-list-tree" /></svg>目录 · 37 项</div>
+
+            <div class="row is-dir" style="padding-left:10px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span>
+              <span class="label">基础游戏开发</span>
+              <span class="count">12</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+                <button class="btn-icon" aria-label="重命名"><svg class="i"><use href="#i-pencil" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-dir" style="padding-left:20px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span>
+              <span class="label">渲染开发</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+                <button class="btn-icon" aria-label="重命名"><svg class="i"><use href="#i-pencil" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-dir" style="padding-left:30px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span>
+              <span class="label">基础</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+                <button class="btn-icon" aria-label="重命名"><svg class="i"><use href="#i-pencil" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-dir" style="padding-left:40px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span>
+              <span class="label">战斗演出</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-dir" style="padding-left:50px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span>
+              <span class="label">通用编辑器</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-active" style="padding-left:60px">
+              <span class="tw"><svg class="i i-12"><use href="#i-chevron-right" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span>
+              <span class="label">战斗演出编辑器架构设计</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="任务规划"><svg class="i"><use href="#i-check-square" /></svg></button>
+                <button class="btn-icon" aria-label="重命名"><svg class="i"><use href="#i-pencil" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-dir" style="padding-left:20px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-right" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder" /></svg></span>
+              <span class="label">脚本工具</span>
+              <span class="count">9</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+              </span>
+            </div>
+
+            <div class="row is-dir" style="padding-left:20px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-right" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder" /></svg></span>
+              <span class="label">贴花系统</span>
+              <span class="tools">
+                <button class="btn-icon" aria-label="新建子笔记"><svg class="i"><use href="#i-plus" /></svg></button>
+              </span>
+            </div>
+
+            <div class="tree-group-label" style="margin-top:var(--sp-8)"><svg class="i i-12"><use href="#i-layers" /></svg>开发者大类</div>
+            <div class="row is-dir" style="padding-left:10px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-right" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder" /></svg></span>
+              <span class="label">版本管理工具</span><span class="count">4</span>
+            </div>
+            <div class="row is-dir" style="padding-left:10px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-right" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder" /></svg></span>
+              <span class="label">算法</span>
+            </div>
+            <div class="row is-dir" style="padding-left:10px">
+              <span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span>
+              <span class="label">AI 工具</span><span class="count">7</span>
+            </div>
+            <div class="row" style="padding-left:20px">
+              <span class="tw"><span class="dot" style="background:var(--text-muted);width:4px;height:4px"></span></span>
+              <span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span>
+              <span class="label">工具汇总</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 主区 -->
+      <div class="main">
+        <header class="tb">
+          <button class="btn-icon" aria-label="打开目录"><svg class="i i-18"><use href="#i-list-tree" /></svg></button>
+          <nav class="crumb" aria-label="面包屑">
+            <span>基础游戏开发</span><span class="sep">/</span>
+            <span>渲染开发</span><span class="sep">/</span>
+            <span>基础</span><span class="sep">/</span>
+            <span>战斗演出</span><span class="sep">/</span>
+            <span class="here">战斗演出编辑器架构设计</span>
+          </nav>
+          <div class="tb-right">
+            <div class="cmdbar"><svg class="i i-14"><use href="#i-search" /></svg><span>搜索或跳转…</span><span class="k"><kbd>⌘</kbd><kbd>K</kbd></span></div>
+            <button class="btn-icon" aria-label="任务中心"><svg class="i i-18"><use href="#i-check-square" /></svg></button>
+            <button class="btn-icon" aria-label="通知"><svg class="i i-18"><use href="#i-info" /></svg></button>
+            <span class="avatar">CY</span>
+          </div>
+        </header>
+
+        <div class="body is-pad">
+          <div class="note-head">
+            <h1>战斗演出编辑器架构设计</h1>
+            <div class="note-meta">
+              <span class="tag tag-ok"><svg class="i i-12"><use href="#i-check" /></svg>已保存</span>
+              <span><svg class="i i-12"><use href="#i-clock" /></svg> 12 分钟前</span>
+              <span class="mono">2 480 字</span>
+              <span class="mono">9 个块</span>
+              <span class="sp"></span>
+              <span class="tag tag-accent"><svg class="i i-12"><use href="#i-globe" /></svg>完全公开</span>
+              <button class="btn btn-sm"><svg class="i i-12"><use href="#i-clock" /></svg>历史</button>
+              <button class="btn btn-sm"><svg class="i i-12"><use href="#i-external" /></svg>预览</button>
+              <button class="btn-icon" aria-label="更多操作"><svg class="i i-14"><use href="#i-grip" /></svg></button>
+            </div>
+          </div>
+
+          <article class="prose">
+            <div class="blk">
+              <span class="blk-grip" aria-hidden="true"><svg class="i i-14"><use href="#i-grip" /></svg></span>
+              <p>战斗演出编辑器把「时间轴编辑」「资源装配」「运行时预览」三件事收在一个舞台里。本文记录分层方式与数据流，以及和 <code>GS</code> 侧脚本工具的边界。</p>
+            </div>
+
+            <div class="blk">
+              <span class="blk-grip" aria-hidden="true"><svg class="i i-14"><use href="#i-grip" /></svg></span>
+              <h2>三层结构</h2>
+            </div>
+
+            <div class="blk">
+              <span class="blk-grip" aria-hidden="true"><svg class="i i-14"><use href="#i-grip" /></svg></span>
+              <div class="callout">
+                <svg class="i i-14"><use href="#i-info" /></svg>
+                <div>舞台上的块<b>不是</b>文档流：拖动位置会写进 <code>Block.pos</code>，但博客渲染时按 <code>blocks[]</code> 顺序线性输出 —— 同一篇笔记在编辑器和博客里观感不同，这是设计取舍而非 bug。</div>
+              </div>
+            </div>
+
+            <div class="blk">
+              <span class="blk-grip" aria-hidden="true"><svg class="i i-14"><use href="#i-grip" /></svg></span>
+              <pre><code>// 分层：数据 / 表现 / 工具
+EditorShell
+├─ TimelineLayer     // 关键帧轨道
+├─ StageLayer        // 绝对定位块 + 连线
+│   ├─ AbsoluteCardBlockView
+│   └─ StageEdgesLayer
+└─ AssetPanel        // 资源装配</code></pre>
+            </div>
+
+            <div class="blk">
+              <span class="blk-grip" aria-hidden="true"><svg class="i i-14"><use href="#i-grip" /></svg></span>
+              <h3>与 ScriptTool 的边界</h3>
+              <p>编辑器只负责<strong>声明</strong>演出数据，不执行脚本；运行时由 GS 侧读取同一份 JSON。</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- AI 面板 -->
+        <section class="ai">
+          <div class="ai-head">
+            <span class="t"><svg class="i i-14"><use href="#i-sparkles" /></svg>AI 助手</span>
+            <span class="tag">DeepSeek V3</span>
+            <span class="sp" style="flex:1"></span>
+            <span class="muted" style="font-size:var(--fs-xs)">⌘J 收起</span>
+            <button class="btn-icon" aria-label="收起 AI 面板"><svg class="i i-14"><use href="#i-chevron-down" /></svg></button>
+          </div>
+          <div class="ai-body">
+            <div class="bub me-b">把「三层结构」那段扩写成给同事看的版本，带上职责边界。</div>
+            <div class="bub ai-b">已生成 3 段草稿，包含 <b>数据层 / 表现层 / 工具层</b> 的职责表与两条边界说明。<span class="tag tag-accent" style="margin-left:var(--sp-4)">草稿待确认</span></div>
+          </div>
+          <div class="ai-chip">
+            <button class="btn btn-sm">扩写</button>
+            <button class="btn btn-sm">润色</button>
+            <button class="btn btn-sm">列大纲</button>
+            <button class="btn btn-sm">整理今日新闻</button>
+          </div>
+          <div class="ai-input">
+            <input class="field" placeholder="问点什么，或让它改写选中的块…（Enter 发送）" aria-label="AI 输入" />
+            <button class="btn btn-primary" aria-label="发送"><svg class="i i-14"><use href="#i-send" /></svg></button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>对照组关键差异</h4>
+  <ul class="fixlist">
+    <li><b>一致性</b>：侧栏选中项的左侧 2px 竖条用 <code>--accent</code>，而连线、按钮、tag 也全用 <code>--accent</code> —— 现在侧栏选中用了和 primary 按钮同强度的 glow，等于到处都是"主行动"。</li>
+    <li><b>密度</b>：元信息行用 <code>--fs-xs(12px)</code> 一档统一，原来同一行里混了 12px、13px、16px、<code>0.85rem</code> 四种。</li>
+    <li><b>可达性</b>：所有图标按钮都有 <code>aria-label</code>，工具条常驻可见（不再 hover-only）。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 2. 舞台 / 连线图 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">02</div>
+  <h2>舞台 · 连线成图</h2>
+  <p>WebBook 的招牌功能。这一屏是"两个 App"问题最明显的地方：原版画布是冷蓝、外壳是暖金。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>舞台视图</strong>
+    <span class="url">/app/note/battle-editor-arch · 缩放 80%</span>
+  </div>
+  <div class="screen-inner">
+    <div class="app" style="height:640px">
+      <aside class="sb" style="width:240px">
+        <div class="sb-head"><span class="brand"><span class="brand-mark">W</span>WebBook</span></div>
+        <div class="sb-scroll" style="padding-top:var(--sp-5)">
+          <div class="tree">
+            <div class="row is-dir" style="padding-left:10px"><span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span><span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span><span class="label">战斗演出</span></div>
+            <div class="row is-active" style="padding-left:20px"><span class="tw"><svg class="i i-12"><use href="#i-chevron-right" /></svg></span><span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span><span class="label">编辑器架构设计</span></div>
+            <div class="row" style="padding-left:20px"><span class="tw"></span><span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span><span class="label">时间轴规范</span></div>
+            <div class="row" style="padding-left:20px"><span class="tw"></span><span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span><span class="label">GS 通信协议</span></div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="tb">
+          <nav class="crumb"><span>战斗演出</span><span class="sep">/</span><span class="here">编辑器架构设计</span></nav>
+          <div class="tb-right">
+            <button class="btn btn-sm"><svg class="i i-12"><use href="#i-zoom-out" /></svg></button>
+            <span class="mono muted" style="font-size:var(--fs-xs)">80%</span>
+            <button class="btn btn-sm"><svg class="i i-12"><use href="#i-zoom-in" /></svg></button>
+            <span class="tag"><svg class="i i-12"><use href="#i-link" /></svg>3 条连线</span>
+          </div>
+        </header>
+
+        <div class="body" style="overflow:hidden">
+          <div class="stage">
+            <!-- 连线：与外壳同源的暖金 -->
+            <svg style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+              <defs>
+                <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M0 0 L10 5 L0 10 z" fill="var(--edge)" />
+                </marker>
+              </defs>
+              <path d="M300 190 C 360 190, 380 285, 440 285" fill="none" stroke="var(--edge)" stroke-width="1.6" marker-end="url(#ah)" opacity="0.9" />
+              <path d="M300 190 C 360 190, 380 430, 440 430" fill="none" stroke="var(--edge)" stroke-width="1.6" marker-end="url(#ah)" opacity="0.55" stroke-dasharray="5 5" />
+              <path d="M700 285 C 760 285, 780 420, 840 420" fill="none" stroke="var(--edge)" stroke-width="1.6" marker-end="url(#ah)" opacity="0.9" />
+            </svg>
+
+            <!-- 块 -->
+            <div class="card-abs" style="left:60px;top:140px;width:236px">
+              <h4>时间轴数据</h4>
+              <div class="muted mono" style="font-size:var(--fs-2xs)">timeline.json · 1.2 KB</div>
+              <div class="ports"><span class="port"></span><span class="port"></span></div>
+            </div>
+
+            <div class="card-abs is-sel" style="left:440px;top:230px;width:262px">
+              <h4>演出编排</h4>
+              <div class="muted" style="font-size:var(--fs-xs);line-height:1.7">关键帧 → 事件序列，输出给运行时消费。</div>
+              <div style="margin-top:var(--sp-5)" class="tag tag-accent">已选中</div>
+              <div class="ports"><span class="port"></span></div>
+            </div>
+
+            <div class="card-abs" style="left:440px;top:392px;width:262px">
+              <h4>资源装配</h4>
+              <div class="muted" style="font-size:var(--fs-xs)">按层加载 · 引用美术资产 ID</div>
+              <div class="pdot"><span class="port" style="position:static;display:block"></span></div>
+            </div>
+
+            <div class="sticky" style="left:812px;top:386px">
+              运行时只读 JSON，<br />不要在编辑器里执行脚本。
+            </div>
+
+            <div class="stage-hint">
+              <svg class="i i-12"><use href="#i-info" /></svg>
+              空格拖拽平移 · ⌘滚轮缩放 · 双击空白插入
+              <button class="btn-icon" aria-label="关闭提示" style="width:18px;height:18px"><svg class="i i-12"><use href="#i-x" /></svg></button>
+            </div>
+
+            <div class="stage-hud">
+              <button class="btn-icon" aria-label="缩小"><svg class="i i-12"><use href="#i-zoom-out" /></svg></button>
+              <span>80%</span>
+              <button class="btn-icon" aria-label="放大"><svg class="i i-12"><use href="#i-zoom-in" /></svg></button>
+              <span style="opacity:.4">|</span>
+              <button class="btn-icon" aria-label="适应窗口"><svg class="i i-12"><use href="#i-layers" /></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>连线用金色</b>（<code>--edge: var(--accent)</code>）：原来 <code>stroke:#38bdf8</code> 是冷蓝，和金色选中态互相打架。</li>
+    <li><b>画布底色 <code>--canvas: #101317</code></b>：与外壳 <code>--bg #14161a</code> 同色温，只是略深以便区分层次（原来是 <code>#0b1220</code>，明显偏蓝）。</li>
+    <li><b>网格替代噪声</b>：28px 细网格 + 微点，去掉原来叠在整页上的 0.05 噪声纹理。</li>
+    <li><b>提示条可关闭</b>，且从 6 种操作压到 3 条；原版是一行 11px 文字绝对定位压在画布上、永久占位。</li>
+    <li><b>加了缩放读数与 HUD</b>：原版缩放只能靠滚轮，界面上看不到当前比例。</li>
+    <li><b>便签保留手写感</b>（衬线 + amber 底色），但底色由 <code>--warn</code> 混合而来，不再写死 hex。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 3. 任务规划面板 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">03</div>
+  <h2>任务规划面板</h2>
+  <p>顶栏任务中心打开的全局面板。父栏目自动汇聚子级任务。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>任务中心</strong>
+    <span class="url">/app · 任务面板</span>
+  </div>
+  <div class="screen-inner">
+    <div class="app" style="height:700px">
+      <aside class="sb" style="width:240px">
+        <div class="sb-head"><span class="brand"><span class="brand-mark">W</span>WebBook</span></div>
+        <div class="sb-scroll" style="padding-top:var(--sp-5);opacity:.5">
+          <div class="tree">
+            <div class="row is-dir" style="padding-left:10px"><span class="tw"><svg class="i"><use href="#i-chevron-down" /></svg></span><span class="ric"><svg class="i i-14"><use href="#i-folder-open" /></svg></span><span class="label">基础游戏开发</span></div>
+            <div class="row" style="padding-left:20px"><span class="tw"></span><span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span><span class="label">渲染管线</span></div>
+            <div class="row" style="padding-left:20px"><span class="tw"></span><span class="ric"><svg class="i i-14"><use href="#i-file" /></svg></span><span class="label">战斗演出编辑器</span></div>
+          </div>
+        </div>
+      </aside>
+      <div class="main" style="position:relative">
+        <header class="tb">
+          <nav class="crumb"><span class="here">任务中心</span></nav>
+          <div class="tb-right"><span class="avatar">CY</span></div>
+        </header>
+        <div class="body" style="filter:saturate(.9)">
+          <div class="plan-overlay">
+            <div class="plan">
+              <div class="plan-head">
+                <svg class="i i-18" style="color:var(--accent)"><use href="#i-check-square" /></svg>
+                <h2>任务规划</h2>
+                <span class="tag">全部栏目</span>
+                <span class="sp"></span>
+                <span class="muted" style="font-size:var(--fs-xs)">刚刚保存</span>
+                <button class="btn-icon" aria-label="刷新"><svg class="i i-14"><use href="#i-refresh" /></svg></button>
+                <button class="btn-icon" aria-label="关闭"><svg class="i i-14"><use href="#i-x" /></svg></button>
+              </div>
+
+              <div class="plan-stats">
+                <div class="stat">
+                  <span class="v">7</span>
+                  <div class="l">待办</div>
+                  <div class="bar" style="margin-top:var(--sp-5)"><i style="width:58%"></i></div>
+                </div>
+                <div class="stat">
+                  <span class="v">4</span>
+                  <div class="l">已完成</div>
+                  <div class="bar" style="margin-top:var(--sp-5)"><i style="width:36%;background:var(--ok)"></i></div>
+                </div>
+                <div class="stat">
+                  <span class="v">2</span>
+                  <div class="l">本周到期</div>
+                  <div class="bar" style="margin-top:var(--sp-5)"><i style="width:18%;background:var(--warn)"></i></div>
+                </div>
+              </div>
+
+              <div class="plan-list">
+                <div class="task-group"><svg class="i i-12"><use href="#i-folder" /></svg>渲染开发 / 战斗演出</div>
+
+                <div class="task">
+                  <span class="cb"><svg class="i i-12"><use href="#i-check" /></svg></span>
+                  <span class="t">补齐关键帧插值说明</span>
+                  <span class="tag tag-danger">高</span>
+                  <span class="due">09-30</span>
+                  <span class="tools">
+                    <button class="btn-icon" aria-label="上移"><svg class="i"><use href="#i-chevron-down" /></svg></button>
+                    <button class="btn-icon" aria-label="删除"><svg class="i"><use href="#i-trash" /></svg></button>
+                  </span>
+                </div>
+
+                <div class="task is-sub">
+                  <span class="cb"><svg class="i i-12"><use href="#i-check" /></svg></span>
+                  <span class="t">画一张分层数据流图</span>
+                  <span class="tag tag-warn">中</span>
+                  <span class="due">10-04</span>
+                </div>
+
+                <div class="task is-done">
+                  <span class="cb"><svg class="i i-12"><use href="#i-check" /></svg></span>
+                  <span class="t">与 GS 侧对齐 JSON schema</span>
+                  <span class="due">09-22</span>
+                </div>
+
+                <div class="task-group" style="margin-top:var(--sp-6)"><svg class="i i-12"><use href="#i-folder" /></svg>脚本工具 / 常用</div>
+
+                <div class="task">
+                  <span class="cb"></span>
+                  <span class="t">资产异步加载失败重试策略</span>
+                  <span class="tag tag-warn">中</span>
+                  <span class="due">10-08</span>
+                </div>
+
+                <div class="task">
+                  <span class="cb"></span>
+                  <span class="t">UI 框架迁移评估</span>
+                  <span class="due">10-15</span>
+                </div>
+
+                <div class="task-group" style="margin-top:var(--sp-6)"><svg class="i i-12"><use href="#i-info" /></svg>未归类</div>
+                <div class="task">
+                  <span class="cb"></span>
+                  <span class="t">整理本周 AI 工具更新</span>
+                  <span class="due">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>一套 tab 语言</b>：原来 tab（<code>.plan-tab.is-active</code>）和筛选按钮（<code>btn btn-ghost is-active</code>）是两种不同的控件写法，同一行里看着不像一家人。</li>
+    <li><b>日期人类可读</b>：原来直接渲染 <code>{node.dueAt}</code> 的 ISO 字符串（<code>2026-09-30T00:00:00.000Z</code>）。</li>
+    <li><b>优先级用语义 tag</b>：<code>--danger/--warn</code> 走 token，不再写死 <code>#fbbf24</code>。</li>
+    <li><b>面板是真正的 dialog</b>：<code>role="dialog"</code> + <code>aria-modal</code> + 初始焦点 + 焦点陷阱 + Esc 关闭（原版四样都没有，且关闭按钮排在 DOM 最后）。</li>
+    <li><b>删除改为内联确认条 + 5s 撤销</b>，不再用 <code>window.confirm</code>。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 4. 移动端 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">04</div>
+  <h2>移动端</h2>
+  <p>现状 390px 下顶栏只剩「社区」，登录/任务/个人主页全被挤掉，且没有底部导航。</p>
+</div>
+
+<div class="phone-row">
+  <div>
+    <div class="phone">
+      <div class="phone-in">
+        <header class="m-top">
+          <span class="brand" style="font-size:var(--fs-md)"><span class="brand-mark">W</span>WebBook</span>
+          <span style="flex:1"></span>
+          <button class="btn-icon" aria-label="搜索"><svg class="i i-18"><use href="#i-search" /></svg></button>
+          <span class="avatar" style="width:24px;height:24px">CY</span>
+        </header>
+        <div class="m-body">
+          <div class="m-hero">
+            <h1>开始写点什么</h1>
+            <p>从左侧目录选一篇，或直接新建。你的草稿会即时存到本机，登录后同步到云端。</p>
+            <button class="btn btn-primary field-lg" style="width:100%"><svg class="i i-14"><use href="#i-plus" /></svg>新建笔记</button>
+            <div class="m-quick">
+              <div class="m-card">
+                <svg class="i i-18"><use href="#i-clock" /></svg>
+                <b>最近打开</b><span>战斗演出编辑器架构设计</span>
+              </div>
+              <div class="m-card">
+                <svg class="i i-18"><use href="#i-check-square" /></svg>
+                <b>我的任务</b><span>7 项待办 · 2 项本周到期</span>
+              </div>
+              <div class="m-card">
+                <svg class="i i-18"><use href="#i-globe" /></svg>
+                <b>社区</b><span>看看别人公开的笔记</span>
+              </div>
+              <div class="m-card">
+                <svg class="i i-18"><use href="#i-list-tree" /></svg>
+                <b>目录</b><span>37 项 · 9 个栏目</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="m-fab" aria-label="新建笔记"><svg class="i i-24"><use href="#i-plus" /></svg></button>
+        <nav class="m-bottom" aria-label="主导航">
+          <button class="m-tab is-on"><svg class="i i-20"><use href="#i-book" /></svg>笔记</button>
+          <button class="m-tab"><svg class="i i-20"><use href="#i-check-square" /></svg>任务</button>
+          <button class="m-tab"><svg class="i i-20"><use href="#i-globe" /></svg>社区</button>
+          <button class="m-tab"><svg class="i i-20"><use href="#i-user" /></svg>我的</button>
+        </nav>
+      </div>
+    </div>
+    <div class="phone-cap">首屏：有主行动（新建）+ 底部导航 + 悬浮按钮</div>
+  </div>
+
+  <div>
+    <div class="phone">
+      <div class="phone-in">
+        <header class="m-top">
+          <button class="btn-icon" aria-label="返回"><svg class="i i-18"><use href="#i-arrow-left" /></svg></button>
+          <span class="t">战斗演出编辑器架构设计</span>
+          <button class="btn-icon" aria-label="更多"><svg class="i i-18"><use href="#i-grip" /></svg></button>
+        </header>
+        <div class="m-body" style="padding:var(--sp-6) var(--sp-6) 0">
+          <div style="display:flex;gap:var(--sp-4);align-items:center;margin-bottom:var(--sp-7);font-size:var(--fs-xs);color:var(--text-muted)">
+            <span class="tag tag-ok"><svg class="i i-12"><use href="#i-check" /></svg>已保存</span>
+            <span>12 分钟前</span><span class="mono">2 480 字</span>
+          </div>
+          <div class="prose" style="font-size:var(--fs-md)">
+            <h2 style="font-size:var(--fs-xl);margin-top:0">三层结构</h2>
+            <p>战斗演出编辑器把时间轴编辑、资源装配、运行时预览收在一个舞台里。</p>
+            <div class="callout" style="font-size:var(--fs-sm)">
+              <svg class="i i-14"><use href="#i-info" /></svg>
+              <div>舞台块按绝对坐标定位，博客里按顺序线性输出。</div>
+            </div>
+            <p>编辑器只负责<strong>声明</strong>演出数据，运行时由 GS 侧读取同一份 JSON。</p>
+          </div>
+        </div>
+        <nav class="m-bottom" aria-label="主导航">
+          <button class="m-tab is-on"><svg class="i i-20"><use href="#i-book" /></svg>笔记</button>
+          <button class="m-tab"><svg class="i i-20"><use href="#i-check-square" /></svg>任务</button>
+          <button class="m-tab"><svg class="i i-20"><use href="#i-globe" /></svg>社区</button>
+          <button class="m-tab"><svg class="i i-20"><use href="#i-user" /></svg>我的</button>
+        </nav>
+      </div>
+    </div>
+    <div class="phone-cap">阅读/编辑：标题单行省略 + 状态前置，正文单列</div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>底部导航 4 项</b>：笔记 / 任务 / 社区 / 我的。原版没有底栏，顶栏 <code>flex-wrap</code> 把次要入口挤出屏幕。</li>
+    <li><b>悬浮主按钮</b>：手机端"新建笔记"一键可达（需求文档 U-03 是未实现的「手机端快速新建笔记」）。</li>
+    <li><b>空态变首屏</b>：原版两行灰字，现在给主行动 + 4 个入口卡片。</li>
+    <li><b>安全区</b>：底栏用 <code>env(safe-area-inset-bottom)</code>，适配全面屏（原版只在 ≤720px 的 padding 里用了 inset，底栏不存在）。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 5. 博客广场 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">05</div>
+  <h2>博客广场</h2>
+  <p>现状：标题/导航/tab 全挤在 560px 列里，右侧 2/3 空着；卡片高度不齐。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>公开博客</strong>
+    <span class="url">/blog</span>
+  </div>
+  <div class="screen-inner">
+    <div class="site-head">
+      <div class="site-head-in">
+        <div>
+          <div class="kicker">公开广场</div>
+          <h1 style="margin-top:var(--sp-4)">博客</h1>
+          <p class="lede">个人博客 · 公开广场 · 圈子动态</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--sp-5);align-items:flex-end">
+          <nav class="site-nav">
+            <a href="#" aria-current="page">博客广场</a>
+            <a href="#">进入笔记本</a>
+            <a href="#">登录</a>
+          </nav>
+          <div class="tabs">
+            <button class="is-on">广场</button>
+            <button>个人博客</button>
+            <button>圈子</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feed">
+      <div class="feed-head">
+        <h2>博主</h2>
+        <span class="muted" style="font-size:var(--fs-xs)">2 位作者 · 5 篇公开文章</span>
+      </div>
+      <div class="authors">
+        <a class="author" href="#"><span class="avatar" style="width:28px;height:28px">N</span><span>n17852326702</span><span class="meta">2 篇</span></a>
+        <a class="author" href="#"><span class="avatar" style="width:28px;height:28px;background:var(--accent);color:var(--on-accent)">1</span><span>1060707057</span><span class="meta">3 篇</span></a>
+      </div>
+
+      <div class="feed-head">
+        <h2>最新</h2>
+        <span class="sp" style="flex:1"></span>
+        <span class="muted" style="font-size:var(--fs-xs)">按更新时间排序</span>
+      </div>
+      <div class="posts">
+        <a class="post" href="#">
+          <div class="crumbs"><span class="tag">基础游戏开发</span><span class="tag">战斗演出</span></div>
+          <h3>战损贴花使用指南</h3>
+          <p class="excerpt">贴花按层叠加，注意 GPU 开销随层数增长；下文给出三档质量预设与对应的 drawcall 实测数据…</p>
+          <div class="foot">
+            <span class="avatar" style="width:20px;height:20px;font-size:10px">1</span>
+            <span>1060707057</span>
+            <span class="sp"></span>
+            <span>2026-09-10</span>
+            <svg class="i i-12"><use href="#i-arrow-right" /></svg>
+          </div>
+        </a>
+        <a class="post" href="#">
+          <div class="crumbs"><span class="tag">AI 工具</span></div>
+          <h3>工具汇总</h3>
+          <p class="excerpt">生图 / 生视频 / 生模型三类工具的选型记录，附各自适合的分镜阶段…</p>
+          <div class="foot">
+            <span class="avatar" style="width:20px;height:20px;font-size:10px">N</span>
+            <span>n17852326702</span>
+            <span class="sp"></span>
+            <span>2026-09-08</span>
+            <svg class="i i-12"><use href="#i-arrow-right" /></svg>
+          </div>
+        </a>
+        <a class="post" href="#">
+          <div class="crumbs"><span class="tag">脚本工具</span><span class="tag">GS</span></div>
+          <h3>资产异步加载</h3>
+          <p class="excerpt">加载失败的重试策略与超时阈值，以及为什么不要在 onComplete 里同步解析…</p>
+          <div class="foot">
+            <span class="avatar" style="width:20px;height:20px;font-size:10px">N</span>
+            <span>n17852326702</span>
+            <span class="sp"></span>
+            <span>2026-09-05</span>
+            <svg class="i i-12"><use href="#i-arrow-right" /></svg>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>页头铺满 1180px</b>：左边标题、右边导航 + 分段控件，不再全挤在 560px 列里。</li>
+    <li><b>卡片等高网格</b>：<code>auto-fill minmax(300px,1fr)</code> + <code>margin-top:auto</code> 让页脚对齐。原来 grid 行高不齐、卡片高度差 60px 很显眼。</li>
+    <li><b>补摘要</b>：原卡片只有标题 + 作者 + 日期，大量空白；现在两行摘要 + 分类 tag 让卡片有信息量。</li>
+    <li><b>tab 用统一分段控件</b>：原来 tab 是 <code>btn btn-ghost</code> 加 <code>.btn.active</code> 覆盖，与 plan 面板的 tab 写法不同。</li>
+    <li><b>列表语义修正</b>：loading 态在 <code>.blog-list</code> 里放 <code>&lt;li&gt;</code>、加载完变 <code>div</code> —— 现在统一 <code>role="list"</code>。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 6. 长文阅读页 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">06</div>
+  <h2>长文阅读页</h2>
+  <p>公开文章。行宽、字距、目录导航都在这屏定标准。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>文章</strong>
+    <span class="url">/blog/1060707057/war-decal-guide</span>
+  </div>
+  <div class="screen-inner" style="padding-bottom:var(--sp-11)">
+    <div class="site-head">
+      <div class="site-head-in" style="padding-bottom:var(--sp-6)">
+        <nav class="crumb"><a href="#">博客</a><span class="sep">/</span><a href="#">1060707057</a><span class="sep">/</span><span class="here">战损贴花使用指南</span></nav>
+        <div class="site-nav" style="margin-left:auto"><a href="#">← 返回列表</a></div>
+      </div>
+    </div>
+
+    <div class="article-wrap">
+      <article>
+        <header class="article-head">
+          <div class="crumbs"><span class="tag">基础游戏开发</span><span class="tag">贴花系统</span></div>
+          <h1>战损贴花使用指南</h1>
+        </header>
+        <div class="byline">
+          <span class="avatar" style="width:26px;height:26px">1</span>
+          <span>1060707057</span><span>·</span><span>2026-09-10</span><span>·</span><span>约 6 分钟</span>
+          <span class="sp" style="flex:1"></span>
+          <button class="btn btn-sm"><svg class="i i-12"><use href="#i-link" /></svg>复制链接</button>
+        </div>
+        <div class="prose">
+          <p>贴花（decal）是战损表现里最便宜的手段：一张带透明通道的贴图投影到受击面，不需要改模型拓扑。但它有两个容易被低估的成本——<b>层数</b>和<b>排序</b>。</p>
+          <h2>三档质量预设</h2>
+          <p>按目标机型给出三档，每档限制最大同时存在的贴花数：</p>
+          <pre><code>low    : 24 个 · 512²  · 不参与排序
+medium : 64 个 · 1024² · 按距离排序
+high   : 128 个 · 2048² · 按距离 + 法线夹角</code></pre>
+          <blockquote>先测 drawcall，再调贴图尺寸。多数时候瓶颈在提交次数而不是带宽。</blockquote>
+          <h2>常见坑</h2>
+          <ul>
+            <li>贴花法线与受击面夹角大于 60° 时会出现拉伸，需要在 shader 里做投影裁剪。</li>
+            <li>同一帧内叠加超过 8 层会触发 overdraw 警告，建议按材质分组合批。</li>
+          </ul>
+          <div class="callout">
+            <svg class="i i-14"><use href="#i-alert" /></svg>
+            <div>移动端不要开 <code>high</code> 档的按法线夹角排序，实测 GPU 时间增加 40%。</div>
+          </div>
+        </div>
+      </article>
+
+      <aside class="toc">
+        <span class="kicker">本文目录</span>
+        <a href="#" class="is-on">三档质量预设</a>
+        <a href="#">常见坑</a>
+        <a href="#">移动端取舍</a>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>行宽 68ch</b>：替代原版 42rem / 720px / 980px 三套并存的容器宽度。</li>
+    <li><b>标题字号阶统一</b>：文章 H1 46px、H2 26px、正文 16px/1.8 —— 原版文章 H1 在编辑器里 26px、博客里 29.6px、token 里 32px。</li>
+    <li><b>右侧目录常驻</b>，窄屏折到正文上方（原版 <code>.blog-toc</code> 在 ≤720px 才出现折叠开关）。</li>
+    <li><b>去掉"↑ 回到顶部"字符按钮</b>，改为语义化的返回链接 + 复制链接。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 7. 登录 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">07</div>
+  <h2>登录</h2>
+  <p>现状：placeholder 当标签、错误行无 <code>role="alert"</code>、合并游客草稿用 <code>window.confirm</code>。</p>
+</div>
+
+<div class="phone-row">
+  <div class="screen" style="width:520px;margin:0">
+    <div class="screen-bar">
+      <span class="traffic"><i></i><i></i><i></i></span>
+      <strong>登录</strong><span class="url">/login</span>
+    </div>
+    <div class="screen-inner">
+      <div class="auth-wrap" style="height:560px">
+        <form class="auth">
+          <div class="brand"><span class="brand-mark">W</span>WebBook</div>
+          <p class="sub">登录以把你的笔记同步到云端；不登录也可以继续用本机草稿。</p>
+          <label for="em">邮箱</label>
+          <input class="field field-lg" id="em" type="email" placeholder="you@example.com" autocomplete="email" />
+          <label for="pw">密码</label>
+          <input class="field field-lg" id="pw" type="password" placeholder="••••••••" autocomplete="current-password" />
+          <button class="btn btn-primary field-lg" type="submit" style="margin-top:var(--sp-7)">登录</button>
+          <div class="divider">或</div>
+          <div class="alt">
+            <a href="#">注册新账号</a>
+            <a href="#">以游客身份继续 →</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" style="width:520px;margin:0">
+    <div class="screen-bar">
+      <span class="traffic"><i></i><i></i><i></i></span>
+      <strong>合并本机草稿</strong><span class="url">登录后 · 设计系统弹窗</span>
+    </div>
+    <div class="screen-inner">
+      <div class="auth-wrap" style="height:560px;background-image:none;background:var(--scrim)">
+        <div class="plan" style="width:420px">
+          <div class="plan-head">
+            <svg class="i i-18" style="color:var(--accent)"><use href="#i-layers" /></svg>
+            <h2>发现 3 篇本机草稿</h2>
+          </div>
+          <div style="padding:var(--sp-8)">
+            <p style="font-size:var(--fs-sm);color:var(--text-dim);margin-bottom:var(--sp-7)">这些草稿只存在这台设备上。要把它们合并进你的云端笔记本吗？</p>
+            <div style="display:flex;flex-direction:column;gap:var(--sp-4);margin-bottom:var(--sp-8)">
+              <label style="display:flex;gap:var(--sp-5);align-items:center;font-size:var(--fs-sm)"><span class="cb" style="width:16px;height:16px;border-radius:var(--r-xs);border:1.5px solid var(--accent);background:var(--accent);display:grid;place-items:center;color:var(--on-accent)"><svg class="i i-12"><use href="#i-check" /></svg></span>战斗演出编辑器架构设计</label>
+              <label style="display:flex;gap:var(--sp-5);align-items:center;font-size:var(--fs-sm)"><span class="cb" style="width:16px;height:16px;border-radius:var(--r-xs);border:1.5px solid var(--accent);background:var(--accent);display:grid;place-items:center;color:var(--on-accent)"><svg class="i i-12"><use href="#i-check" /></svg></span>资产异步加载</label>
+              <label style="display:flex;gap:var(--sp-5);align-items:center;font-size:var(--fs-sm)"><span class="cb" style="width:16px;height:16px;border-radius:var(--r-xs);border:1.5px solid var(--border-strong);display:grid;place-items:center;color:transparent"><svg class="i i-12"><use href="#i-check" /></svg></span>新笔记</label>
+            </div>
+            <div style="display:flex;gap:var(--sp-4);justify-content:flex-end">
+              <button class="btn">保留本机草稿</button>
+              <button class="btn btn-primary">合并选中的 2 篇</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>真标签</b>：<code>&lt;label for&gt;</code> + <code>autocomplete</code>，placeholder 不再兼任标签。</li>
+    <li><b>错误行 <code>role="alert"</code></b>，并给 <code>aria-invalid</code> / 字段级错误。</li>
+    <li><b><code>window.confirm</code> → 设计系统弹窗</b>：可以逐篇选择、可以取消，"合并"这类不可逆操作值得一个像样的对话框。</li>
+    <li><b>把"以游客身份继续"从 ghost 按钮改成链接</b>：原来三个动作视觉权重几乎一样，看不出哪个是主行动。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 8. 后台 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">08</div>
+  <h2>管理后台</h2>
+  <p>关键词：让「危险操作」看起来危险，让「加载/空/错误」三态齐备。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>后台</strong><span class="url">/admin</span>
+  </div>
+  <div class="screen-inner">
+    <header class="tb" style="border-bottom:1px solid var(--border-subtle)">
+      <span class="brand" style="font-size:var(--fs-md)"><span class="brand-mark">W</span>WebBook · 管理后台</span>
+      <span class="tag tag-accent">管理员</span>
+      <div class="tb-right">
+        <span class="muted" style="font-size:var(--fs-xs)">1060707057@qq.com</span>
+        <button class="btn btn-sm"><svg class="i i-12"><use href="#i-external" /></svg>用户端</button>
+      </div>
+    </header>
+
+    <div class="admin-grid">
+      <nav class="admin-nav">
+        <button class="is-on"><svg class="i i-14"><use href="#i-list-tree" /></svg>目录管理</button>
+        <button><svg class="i i-14"><use href="#i-users" /></svg>用户管理</button>
+        <button><svg class="i i-14"><use href="#i-globe" /></svg>公开内容审核</button>
+        <button><svg class="i i-14"><use href="#i-sparkles" /></svg>AI 策略</button>
+        <button><svg class="i i-14"><use href="#i-settings" /></svg>系统设置</button>
+      </nav>
+
+      <div class="admin-main">
+        <div style="display:flex;align-items:center;gap:var(--sp-6);margin-bottom:var(--sp-8)">
+          <h2 style="font-family:var(--font-sans);font-size:var(--fs-lg)">公开内容审核</h2>
+          <span class="tag tag-warn"><svg class="i i-12"><use href="#i-alert" /></svg>2 篇待审</span>
+          <span class="sp" style="flex:1"></span>
+          <div class="cmdbar" style="min-width:200px"><svg class="i i-14"><use href="#i-search" /></svg><span>搜索标题或作者…</span></div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr><th>标题</th><th>作者</th><th>可见性</th><th>提交时间</th><th style="text-align:right">操作</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>战损贴花使用指南</td>
+              <td class="mono" style="font-size:var(--fs-xs)">1060707057</td>
+              <td><span class="tag tag-ok"><svg class="i i-12"><use href="#i-globe" /></svg>public</span></td>
+              <td class="mono" style="font-size:var(--fs-xs)">09-10 14:22</td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn btn-sm"><svg class="i i-12"><use href="#i-external" /></svg>预览</button>
+                <button class="btn btn-sm btn-primary"><svg class="i i-12"><use href="#i-check" /></svg>通过</button>
+                <button class="btn btn-sm btn-danger"><svg class="i i-12"><use href="#i-trash" /></svg>下架</button>
+              </td>
+            </tr>
+            <tr>
+              <td>AI 工具汇总</td>
+              <td class="mono" style="font-size:var(--fs-xs)">n17852326702</td>
+              <td><span class="tag tag-accent"><svg class="i i-12"><use href="#i-users" /></svg>circle</span></td>
+              <td class="mono" style="font-size:var(--fs-xs)">09-08 09:41</td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn btn-sm"><svg class="i i-12"><use href="#i-external" /></svg>预览</button>
+                <button class="btn btn-sm btn-primary"><svg class="i i-12"><use href="#i-check" /></svg>通过</button>
+                <button class="btn btn-sm btn-danger"><svg class="i i-12"><use href="#i-trash" /></svg>下架</button>
+              </td>
+            </tr>
+            <tr>
+              <td>资产异步加载</td>
+              <td class="mono" style="font-size:var(--fs-xs)">n17852326702</td>
+              <td><span class="tag tag-ok"><svg class="i i-12"><use href="#i-globe" /></svg>public</span></td>
+              <td class="mono" style="font-size:var(--fs-xs)">09-05 20:03</td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn btn-sm"><svg class="i i-12"><use href="#i-external" /></svg>预览</button>
+                <button class="btn btn-sm">撤回</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h4>这一屏的修法</h4>
+  <ul class="fixlist">
+    <li><b>危险操作是红的</b>：原版每行 3 个 ghost 按钮，「删除」和「预览」长得一模一样。</li>
+    <li><b>内置导航而不是第二份侧栏</b>：原版在「目录管理」里塞了一个 320×460 的 <code>TreeSidebar</code>，等于在后台里再放一个笔记本。</li>
+    <li><b>表格有 hover / 斑马纹</b>，日期与 ID 用等宽字体对齐。</li>
+    <li><b>加载/空/错误三态</b>：原版 4 处都是裸文字「加载中…」，空态是表格里的一个 <code>&lt;tr&gt;</code>，错误只弹 toast 且无重试。</li>
+  </ul>
+</div>
+
+<!-- ═══════════════ 9. 空态与组件 ═══════════════ -->
+<div class="sec-head">
+  <div class="sec-num">09</div>
+  <h2>空态 / 加载 / 组件总览</h2>
+  <p>把散落各处的按钮、输入、tag、tab、弹窗收成一套。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>设计系统</strong><span class="url">tokens · primitives</span>
+  </div>
+  <div class="screen-inner" style="padding:var(--sp-9) var(--sp-10)">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--sp-9)">
+
+      <section>
+        <div class="kicker" style="margin-bottom:var(--sp-6)">按钮</div>
+        <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary">主行动</button>
+          <button class="btn">次要</button>
+          <button class="btn btn-ghost">幽灵</button>
+          <button class="btn btn-danger">危险</button>
+          <button class="btn btn-sm">小号</button>
+          <button class="btn-icon" aria-label="图标按钮"><svg class="i i-14"><use href="#i-pencil" /></svg></button>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-6)">原来后台的「删除」和「预览」用同一个 class，AI 草稿的 3 个动作 3 种样式。</p>
+      </section>
+
+      <section>
+        <div class="kicker" style="margin-bottom:var(--sp-6)">输入</div>
+        <input class="field" placeholder="默认输入框" style="margin-bottom:var(--sp-5)" />
+        <input class="field" placeholder="聚焦态（accent 描边 + 柔光）" style="border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft);margin-bottom:var(--sp-5)" />
+        <textarea class="field" rows="3" placeholder="多行输入"></textarea>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-6)">现有 9 种输入皮肤、3 种圆角（4/6/8px），这里收成 1 种 + 尺寸变体。</p>
+      </section>
+
+      <section>
+        <div class="kicker" style="margin-bottom:var(--sp-6)">标签 / 状态</div>
+        <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap">
+          <span class="tag">默认</span>
+          <span class="tag tag-accent">强调</span>
+          <span class="tag tag-ok"><svg class="i i-12"><use href="#i-check" /></svg>已保存</span>
+          <span class="tag tag-warn"><svg class="i i-12"><use href="#i-alert" /></svg>待审</span>
+          <span class="tag tag-danger">高风险</span>
+        </div>
+        <div class="kicker" style="margin:var(--sp-8) 0 var(--sp-5)">分段控件（统一 6 套 tab）</div>
+        <div class="tabs"><button class="is-on">广场</button><button>个人</button><button>圈子</button></div>
+        <div class="kicker" style="margin:var(--sp-8) 0 var(--sp-5)">开关</div>
+        <div style="display:flex;align-items:center;gap:var(--sp-5);font-size:var(--fs-sm)">
+          <span style="width:34px;height:20px;border-radius:var(--r-pill);background:var(--accent);position:relative;display:block"><i style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:var(--on-accent);display:block"></i></span>
+          已启用
+          <span style="width:34px;height:20px;border-radius:var(--r-pill);background:var(--surface-3);border:1px solid var(--border);position:relative;display:block"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text-muted);display:block"></i></span>
+          已停用
+        </div>
+      </section>
+
+      <section>
+        <div class="kicker" style="margin-bottom:var(--sp-6)">加载态</div>
+        <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+          <span class="skeleton" style="height:12px;width:70%;border-radius:var(--r-xs);background:var(--surface-3);display:block"></span>
+          <span class="skeleton" style="height:12px;width:92%;border-radius:var(--r-xs);background:var(--surface-3);display:block"></span>
+          <span class="skeleton" style="height:12px;width:55%;border-radius:var(--r-xs);background:var(--surface-3);display:block"></span>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-6)">博客已有 skeleton，笔记本/后台/任务/AI 现在还是裸文字「加载中…」（4 处）。</p>
+      </section>
+
+      <section>
+        <div class="kicker" style="margin-bottom:var(--sp-6)">空态</div>
+        <div class="empty" style="padding:var(--sp-9) var(--sp-6);border:1px dashed var(--border);border-radius:var(--r-md)">
+          <span class="ico"><svg class="i i-24"><use href="#i-file" /></svg></span>
+          <h3>这里还没有内容</h3>
+          <p>新建一篇笔记，或从左侧目录选一个栏目。</p>
+          <button class="btn btn-primary btn-sm"><svg class="i i-12"><use href="#i-plus" /></svg>新建笔记</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="kicker" style="margin-bottom:var(--sp-6)">图标（24 个线性 SVG，替代 48 处 emoji）</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:var(--sp-5);color:var(--text-dim)">
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-book" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-folder" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-folder-open" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-file" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-plus" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-check-square" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-pencil" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-trash" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-search" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-list-tree" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-sparkles" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-globe" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-lock" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-users" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-clock" /></svg></span>
+          <span style="display:grid;place-items:center;height:26px"><svg class="i i-20"><use href="#i-grip" /></svg></span>
+        </div>
+        <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-6)">全部 <code>stroke: currentColor</code>，跟随主题色；父级按钮加 <code>aria-label</code>。</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="sec-head">
+  <div class="sec-num">10</div>
+  <h2>Token 定义（可直接抄进 global.css）</h2>
+</div>
+<div class="note" style="margin-bottom:var(--sp-11)">
+  <ul class="fixlist">
+    <li><code>--bg:#14161a</code> · <code>--surface-1:#191c21</code> · <code>--surface-2:#1f232a</code> · <code>--surface-3:#262b33</code> · <code>--canvas:#101317</code></li>
+    <li><code>--text:#eae6df</code> · <code>--text-dim:#a29d94</code> · <code>--text-muted:#7c776e</code>（<b>修掉原 <code>--muted</code> 拼写</b>）</li>
+    <li><code>--accent:#c4a574</code> · <code>--accent-strong:#b8945f</code> · <code>--accent-bright:#d8bd91</code> · <code>--on-accent:#191410</code> · <code>--edge:var(--accent)</code></li>
+    <li><code>--border:#2b3038</code> · <code>--border-subtle:#23272e</code> · <code>--border-strong:#3a414b</code></li>
+    <li>字号 8 档：11 / 12 / 13 / 14 / 16 / 20 / 26 / 34px；间距 9 档：2/4/6/8/10/12/14/18/24px</li>
+    <li>圆角：4 / 6 / 8 / 12 / 16 / pill；阴影 3 档（原来 <code>0 4px 14px rgba(0,0,0,.35)</code> 手写 7 遍）</li>
+  </ul>
+</div>
+
+<!-- ── 图标 sprite ─────────────────────────────────────────────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 9h18l-2.2 8.4A2 2 0 0 1 16.9 19H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-square" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></symbol>
+    <symbol id="i-list-tree" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 4v14a2 2 0 0 0 2 2h1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M18 20a6.6 6.6 0 0 0-1.6-4.3"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H2.9a2 2 0 1 1 0-4H3a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7z"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 17.2v.2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H6M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></symbol>
+    <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6M11 8.5v5M8.5 11h5"/></symbol>
+    <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6M8.5 11h5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-13.7-5.2L3 9"/><path d="M3 4v5h5"/><path d="M4 13a8 8 0 0 0 13.7 5.2L21 15"/><path d="M21 20v-5h-5"/></symbol>
+  </defs>
+</svg>
+
+</body>
+</html>

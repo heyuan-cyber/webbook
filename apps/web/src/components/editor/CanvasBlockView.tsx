@@ -13,6 +13,7 @@ import {
   fetchLinkMetaForElement,
 } from './canvasPaste';
 import { handleImageFile } from './imageUpload';
+import { Icon } from '@/components/Icon';
 
 interface Props {
   block: CanvasBlock;
@@ -167,7 +168,9 @@ export function CanvasBlockView({
     <div className={`canvas-block ${isActive ? 'canvas-block-active' : ''}`}>
       {!readOnly && (
         <div className="canvas-toolbar">
-          <span className="muted">🎨 自由画布{isActive ? '（已选中 · Ctrl+V 粘贴）' : ''}</span>
+          <span className="muted">
+            <Icon name="layers" size={14} /> 自由画布{isActive ? '（已选中 · Ctrl+V 粘贴）' : ''}
+          </span>
           <button type="button" className="btn btn-ghost" onClick={() => addElement('sticky')}>
             + 便签
           </button>

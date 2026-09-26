@@ -15,6 +15,7 @@ import type {
   NoteStage,
 } from '@webbook/shared';
 import { uid } from '@/lib/id';
+import { Icon } from '@/components/Icon';
 import {
   DEFAULT_NOTE_STAGE,
   defaultCardSize,
@@ -1175,6 +1176,7 @@ export function BlockEditor({
                     type="button"
                     className="block-drag-handle"
                     title="拖拽调整块顺序"
+                    aria-label="拖拽调整块顺序"
                     draggable
                     onDragStart={(e) => {
                       e.dataTransfer.setData('text/webbook-block-index', String(i));
@@ -1183,7 +1185,7 @@ export function BlockEditor({
                     }}
                     onDragEnd={() => setDragBlockIndex(null)}
                   >
-                    ⠿
+                    <Icon name="grip" size={14} />
                   </button>
                 )}
                 <BlockView
@@ -1210,7 +1212,7 @@ export function BlockEditor({
           })}
           </AnimatePresence>
           {blocks.length === 0 && readOnly && (
-            <EmptyState icon="📝" title="空笔记" body="这篇笔记还没有内容。" />
+            <EmptyState icon="file" title="空笔记" body="这篇笔记还没有内容。" />
           )}
         </div>
         ) : null
@@ -1399,8 +1401,14 @@ function BlockView({
 }: BlockViewProps) {
   const ro = Boolean(readOnly);
   const delBtn = !ro && (
-    <button className="block-del btn btn-ghost" title="删除块" onClick={() => remove(block.id)}>
-      ✕
+    <button
+      type="button"
+      className="block-del btn btn-ghost"
+      title="删除块"
+      aria-label="删除块"
+      onClick={() => remove(block.id)}
+    >
+      <Icon name="x" size={14} />
     </button>
   );
 
@@ -1435,13 +1443,14 @@ function BlockView({
               title={collapsed.has(block.id) ? '展开本节' : '折叠本节'}
               onClick={() => onToggleHeadingCollapse(block.id)}
             >
-              {collapsed.has(block.id) ? '▸' : '▾'}
+              <Icon name={collapsed.has(block.id) ? 'chevron-right' : 'chevron-down'} size={12} />
             </button>
           )}
           {!ro && (
             <select
               className="heading-level"
               value={block.level}
+              aria-label="标题级别"
               onChange={(e) => patch(block.id, { level: Number(e.target.value) as 1 | 2 | 3 })}
             >
               <option value={1}>H1</option>
@@ -1560,7 +1569,9 @@ function BlockView({
     case 'sticky':
       return (
         <div className="block block-sticky-placeholder muted">
-          <span>📌 便签（覆层，见画布）</span>
+          <span>
+            <Icon name="pin" size={14} /> 便签（覆层，见画布）
+          </span>
           {delBtn}
         </div>
       );

@@ -16,6 +16,14 @@ import { FeishuZipActions } from './FeishuZipActions';
 import { FeishuExportButton } from './FeishuExportButton';
 import { toast } from '@/store/useToastStore';
 import { outlineCollapseState, layoutUiState } from '@/lib/storage';
+import { Icon, type IconName } from '@/components/Icon';
+
+/** 可见性 → 图标（原先是写进 <option> 文本里的 🔒 / 👥 / 🌐） */
+const VISIBILITY_ICON: Record<NoteVisibility, IconName> = {
+  private: 'lock',
+  circle: 'users',
+  public: 'globe',
+};
 
 export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const { id } = useParams();
@@ -100,7 +108,7 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
           <h2>欢迎使用 WebBook</h2>
           <p className="muted">
             {isMobile
-              ? '点左上角 ☰ 打开目录，选择或新建一篇笔记。'
+              ? '点左上角「目录」按钮打开目录，选择或新建一篇笔记。'
               : '从左侧选择或新建一篇笔记。舞台：Ctrl+滚轮或按住左键+滚轮缩放画板，滚轮平移。'}
           </p>
         </div>
@@ -154,68 +162,84 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
             value={activeNote.title}
             onChange={(e) => setActiveTitle(e.target.value)}
             placeholder="笔记标题"
+            aria-label="笔记标题"
           />
         )}
-        <span className={`save-state muted ${saveError ? 'save-err' : ''}`}>
-          {saving ? '保存中…' : saveError ? '本地已存' : '已保存'}
-        </span>
-        {!readOnly && !isGuest && activeNote && (
-          <button
-            type="button"
-            className={`btn btn-ghost ${preview ? 'active' : ''}`}
-            onClick={() => setPreview((p) => !p)}
+        {/* 元信息行：保存态 / 可见性 / 操作。原来这 8 个控件与标题同处一行 */}
+        <div className="editor-meta">
+          <span
+            className={`save-state ${saveError ? 'save-err' : ''}`}
+            title={saveError ? '云端同步失败，内容已保存在本机' : '已同步到云端'}
           >
-            {preview ? '编辑' : '预览'}
-          </button>
-        )}
-        {!readOnly && !isGuest && (
-          <label className="visibility-toggle">
-            <select
-              value={activeNote.visibility}
-              onChange={(e) =>
-                setActiveVisibility(e.target.value as NoteVisibility)
-              }
-            >
-              <option value="private">🔒 仅自己</option>
-              <option value="circle">👥 圈子可见</option>
-              <option value="public">🌐 完全公开</option>
-            </select>
-          </label>
-        )}
-        {(activeNote.visibility === 'public' || activeNote.visibility === 'circle') && (
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
-            {activeNote.visibility === 'public' ? '已公开' : '圈子成员可读'}
+            <Icon name={saveError ? 'alert' : 'check'} size={12} />
+            {saving ? '保存中…' : saveError ? '本地已存 · 未同步' : '已保存'}
           </span>
-        )}
-        {activeNote.visibility === 'public' && (
-          <Link
-            className="btn btn-ghost"
-            to={
-              session?.userId
-                ? `/blog/${session.userId}/${activeNote.id}`
-                : `/blog/${activeNote.id}`
-            }
-            target="_blank"
-          >
-            博客预览
-          </Link>
-        )}
-        {!readOnly && (
-          <NoteHistoryPanel
-            noteId={activeNote.id}
-            onRestore={(note) => {
-              setActiveTitle(note.title);
-              updateActiveBlocks(note.blocks);
-              updateActiveEdges(note.edges ?? []);
-            }}
-          />
-        )}
-        {!readOnly && (
-          <>
-            <FeishuZipActions compact />
-            <FeishuExportButton />
-          </>
-        )}
+          {!readOnly && !isGuest && (
+            <label className="visibility-toggle">
+              <Icon name={VISIBILITY_ICON[activeNote.visibility]} size={12} />
+              <select
+                value={activeNote.visibility}
+                aria-label="笔记可见性"
+                onChange={(e) =>
+                  setActiveVisibility(e.target.value as NoteVisibility)
+                }
+              >
+                <option value="private">仅自己</option>
+                <option value="circle">圈子可见</option>
+                <option value="public">完全公开</option>
+              </select>
+            </label>
+          )}
+          {(activeNote.visibility === 'public' || activeNote.visibility === 'circle') &&
+            !readOnly &&
+            !isGuest && (
+              <span className="muted">
+                {activeNote.visibility === 'public' ? '已公开' : '圈子成员可读'}
+              </span>
+            )}
+          <span className="spacer" />
+          {!readOnly && !isGuest && (
+            <button
+              type="button"
+              className={`btn btn-ghost ${preview ? 'active' : ''}`}
+              aria-pressed={preview}
+              onClick={() => setPreview((p) => !p)}
+            >
+              <Icon name="eye" size={14} />
+              {preview ? '编辑' : '预览'}
+            </button>
+          )}
+          {activeNote.visibility === 'public' && (
+            <Link
+              className="btn btn-ghost"
+              to={
+                session?.userId
+                  ? `/blog/${session.userId}/${activeNote.id}`
+                  : `/blog/${activeNote.id}`
+              }
+              target="_blank"
+            >
+              <Icon name="external" size={14} />
+              博客预览
+            </Link>
+          )}
+          {!readOnly && (
+            <NoteHistoryPanel
+              noteId={activeNote.id}
+              onRestore={(note) => {
+                setActiveTitle(note.title);
+                updateActiveBlocks(note.blocks);
+                updateActiveEdges(note.edges ?? []);
+              }}
+            />
+          )}
+          {!readOnly && (
+            <>
+              <FeishuZipActions compact />
+              <FeishuExportButton />
+            </>
+          )}
+        </div>
       </div>
       {activeNote.summary && (
         <div className="ai-summary">

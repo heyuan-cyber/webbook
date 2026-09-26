@@ -3,6 +3,8 @@ export interface AiQuickCommand {
   id: string;
   label: string;
   prompt: string;
+  /** 需要联网工具（工具调用无法流式，走阻塞式接口） */
+  needsResearch?: boolean;
 }
 
 export const AI_QUICK_COMMANDS: AiQuickCommand[] = [
@@ -27,6 +29,7 @@ export const AI_QUICK_COMMANDS: AiQuickCommand[] = [
   {
     id: 'news',
     label: '今日新闻简报',
+    needsResearch: true,
     prompt:
       '帮我全面整理今日新闻与热点：国内来源为主（约七成），国际要闻单独一节；按科技/财经/社会等分类，每条附真实链接与一句分析。',
   },

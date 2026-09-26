@@ -8,12 +8,32 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>WebBook · 个人知识库</title>
+    <!--
+      首屏防闪：在样式表生效前把皮肤写到 <html data-theme>。
+      必须内联且同步执行（不能等 React），否则会先闪一下默认的墨金皮肤。
+      取值需与 src/lib/storage.ts 的 THEME_SKINS 保持一致。
+    -->
+    <script>
+      (function () {
+        try {
+          var skin = localStorage.getItem('webbook:theme');
+          if (skin !== 'paper' && skin !== 'blueprint' && skin !== 'gold') skin = 'gold';
+          document.documentElement.dataset.theme = skin;
+          document.documentElement.style.colorScheme = skin === 'paper' ? 'light' : 'dark';
+          var colors = { gold: '#14161a', paper: '#f4f1ea', blueprint: '#0e1114' };
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', colors[skin]);
+        } catch (e) {
+          document.documentElement.dataset.theme = 'gold';
+        }
+      })();
+    </script>
   </head>
   <body>
     <script>

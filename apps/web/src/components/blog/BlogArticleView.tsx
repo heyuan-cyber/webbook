@@ -1,6 +1,7 @@
 import type { Block } from '@webbook/shared';
 import { assetUrl } from '@/lib/api';
 import { renderInlineMarkdown, renderMarkdownDocument } from '@/lib/markdown';
+import { Icon } from '@/components/Icon';
 
 interface Props {
   blocks: Block[];
@@ -53,7 +54,9 @@ function BlogBlock({ block }: { block: Block }) {
     case 'checkbox':
       return (
         <p className={`blog-a-check ${block.checked ? 'is-done' : ''}`}>
-          <span aria-hidden>{block.checked ? '☑' : '☐'}</span>{' '}
+          <span aria-hidden>
+            <Icon name={block.checked ? 'check-square' : 'square'} size={14} />
+          </span>{' '}
           {renderInlineMarkdown(block.text)}
         </p>
       );

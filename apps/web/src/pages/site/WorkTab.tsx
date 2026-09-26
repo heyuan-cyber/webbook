@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { assetUrl } from '@/lib/api';
 import { blogPostPath } from '@/lib/blog';
 import { Link } from 'react-router-dom';
+import { Icon } from '@/components/Icon';
 
 /**
  * 项目示例 —— Swiss 卡片网格：一个 section 内的 selected work 卡（封面/标题/分类/简介 + 查看）。
@@ -20,7 +21,7 @@ export function WorkTab({
   if (posts.length === 0) {
     return (
       <EmptyState
-        icon="🗂️"
+        icon="folder"
         title="项目示例待配置"
         body={isOwner ? '去设置里把笔记指派到「项目示例」区。' : '这位作者还没配置项目示例。'}
         action={
@@ -65,7 +66,9 @@ export function WorkTab({
                   {post.summary ? (
                     <span className="swiss-work-summary">{post.summary}</span>
                   ) : null}
-                  <span className="swiss-work-cta">View Project →</span>
+                  <span className="swiss-work-cta">
+                    View Project <Icon name="arrow-right" size={12} />
+                  </span>
                 </span>
               </Link>
             </Reveal>

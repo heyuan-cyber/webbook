@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 03 圈子与后台（同一外壳）</title>
+<link rel="stylesheet" href="r2.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-sliders"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><path d="M15 5v4M9 15v4"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-lock"><path d="M6 11h12v9H6z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></g>
+<g id="i-ext"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-download"><path d="M12 4v11M7 11l5 5 5-5M4 20h16"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 二阶段 · 一体外壳</div>
+  <h1 class="doc-h1">圈子与后台：不要再各造一套顶栏</h1>
+  <p class="doc-sub">这是「<strong style="color:var(--text)">只有 2/14 个路由有外壳</strong>」最刺眼的地方：<code>/app/circles</code> 是登录后的功能却完全裸奔 —— 没有侧栏、没有顶栏、没有 ⌘K、没有皮肤开关，还得自己手写一个「返回」链接。而且游客打进去直接撞上登录页。</p>
+
+  <h2>现在的问题（实拍证据）</h2>
+  <table class="tbl">
+    <tr><th style="width:150px">症状</th><th>证据</th></tr>
+    <tr><td><strong>游客撞登录墙</strong></td><td><code>/app/circles</code> 对游客渲染 <code>.auth-page</code>（与 <code>/login</code> 逐字节相同的截图）</td></tr>
+    <tr><td><strong>自己手写返回</strong></td><td><code>CircleListPage.tsx:109-111</code>、<code>CircleDetailPage.tsx:133-135</code> 各写了一个 back 链接，因为外壳不管它们</td></tr>
+    <tr><td><strong>后台自带一套</strong></td><td><code>AdminPanel.tsx:49-78</code> 有 <code>.admin-top</code> + <code>.admin-nav</code>，5 个 tab 用裸 <code>&lt;button class="active"&gt;</code>，无 ARIA</td></tr>
+    <tr><td><strong>加载态是裸文字</strong></td><td><code>AdminPanel.tsx:149,253,312,381</code>、<code>CircleListPage.tsx:152</code>、<code>CircleDetailPage.tsx:174</code> 全是 <code>&lt;p&gt;加载中…&lt;/p&gt;</code>，而博客面已经用了 Skeleton</td></tr>
+    <tr><td><strong>原生 confirm</strong></td><td>6 处 <code>window.confirm</code>：<code>AdminPanel.tsx:115,131</code>、<code>useNotesStore.ts:344</code>、<code>LoginPage.tsx:29</code>、<code>TreeSyncNotice.tsx:37</code>、<code>TreeHistoryPanel.tsx:85</code></td></tr>
+  </table>
+
+  <h2>圈子：外壳 + 侧栏子导航 + 游客可读的空态</h2>
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / app / circles — 圈子（游客也能看）</span></div>
+    <div class="frame-body">
+      <div class="app">
+        <nav class="rail">
+          <div class="rail-logo"><svg class="i i-20"><use href="#i-book"/></svg></div>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-tree"/></svg>笔记</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-globe"/></svg>博客</button>
+          <button class="rail-item on"><svg class="i i-20"><use href="#i-users"/></svg>圈子<span class="badge">2</span></button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-user"/></svg>我</button>
+          <div class="rail-spacer"></div>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-sliders"/></svg>皮肤</button>
+          <div class="rail-avatar">?</div>
+        </nav>
+        <aside class="sb">
+          <div class="sb-head"><span class="sb-title">圈子</span><span class="sb-count">3</span></div>
+          <div class="sb-body" style="padding-top:10px">
+            <div class="tree-row on"><svg class="i i-14"><use href="#i-users"/></svg>我的圈子<span class="sb-count" style="margin-left:auto">2</span></div>
+            <div class="tree-row"><svg class="i i-14"><use href="#i-globe"/></svg>发现公开圈子<span class="sb-count" style="margin-left:auto">1</span></div>
+            <div class="tree-row"><svg class="i i-14"><use href="#i-send"/></svg>待处理邀请</div>
+          </div>
+        </aside>
+        <div class="stage" style="background:var(--bg)">
+          <header class="tb">
+            <div class="crumb"><b>圈子</b><span class="sep">/</span><span>我的圈子</span></div>
+            <div class="tb-spacer"></div>
+            <button class="kbtn" style="min-width:180px"><svg class="i i-14"><use href="#i-search"/></svg>搜索<span class="kbd">Ctrl K</span></button>
+            <button class="btn btn-primary btn-sm"><svg class="i i-12"><use href="#i-plus"/></svg>创建圈子</button>
+          </header>
+          <div class="read-wrap"><div class="read-body"><div class="wrap">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+              <h1 style="font-size:var(--fs-3xl)">我的圈子</h1>
+              <button class="btn btn-sm"><svg class="i i-12"><use href="#i-globe"/></svg>发现公开圈子</button>
+            </div>
+            <p style="color:var(--text-dim);font-size:var(--fs-md);margin-bottom:26px">圈内笔记只有成员能读。圈子不会出现在公开广场。</p>
+            <div class="grid-3">
+              <article class="card"><div class="cover c2" style="height:92px"></div><div class="card-pad">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+                  <h3 class="card-title" style="margin:0">渲染组</h3>
+                  <span class="pill dim"><svg class="i i-12"><use href="#i-lock"/></svg>私密</span>
+                </div>
+                <p class="card-sum">GS 性能、光照管线、材质规范的内部讨论。</p>
+                <div class="meta"><svg class="i i-12"><use href="#i-users"/></svg><span>8 位成员</span><span class="dot"></span><span class="mono">3 篇协作笔记</span></div>
+              </div></article>
+              <article class="card"><div class="cover c3" style="height:92px"></div><div class="card-pad">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+                  <h3 class="card-title" style="margin:0">战斗组</h3>
+                  <span class="pill gold"><svg class="i i-12"><use href="#i-globe"/></svg>公开</span>
+                </div>
+                <p class="card-sum">战斗演出、技能框架、编辑器扩展。</p>
+                <div class="meta"><svg class="i i-12"><use href="#i-users"/></svg><span>5 位成员</span><span class="dot"></span><span class="mono">1 篇协作笔记</span></div>
+              </div></article>
+              <article class="card" style="display:grid;place-items:center;min-height:212px;border-style:dashed;background:transparent">
+                <div class="empty" style="padding:24px">
+                  <div class="empty-ico"><svg class="i i-20"><use href="#i-plus"/></svg></div>
+                  <h3 style="font-size:var(--fs-md);font-family:var(--font-sans);font-weight:600">创建圈子</h3>
+                  <p style="font-size:var(--fs-xs)">邀请同事，共写一份内部笔记。</p>
+                </div>
+              </article>
+            </div>
+            <div style="margin-top:34px;padding:16px 18px;border-radius:var(--r-lg);border:1px solid var(--accent-line);background:var(--accent-softer);display:flex;gap:12px;align-items:flex-start">
+              <svg class="i i-20" style="color:var(--accent);margin-top:2px"><use href="#i-info"/></svg>
+              <div>
+                <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:3px">你正在以游客身份浏览</div>
+                <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.7">公开圈子可以直接看。要创建圈子、接受邀请或写协作笔记，登录即可（本地草稿不会丢）。</p>
+                <div style="margin-top:10px;display:flex;gap:8px">
+                  <button class="btn btn-primary btn-sm">登录</button>
+                  <button class="btn btn-sm">先逛逛公开圈子</button>
+                </div>
+              </div>
+            </div>
+          </div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">修掉</span> 游客撞登录墙 → 可读的圈子页 + 一条登录提示 · 手写返回 → 顶栏面包屑 · 裸文字加载态 → Skeleton　　<span class="callout ghost">不动</span> 圈子的权限与邀请逻辑</p>
+
+  <h2>后台：外壳 + 侧栏子导航 + 设计系统弹窗</h2>
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / admin — 公开内容审核</span></div>
+    <div class="frame-body">
+      <div class="app">
+        <nav class="rail">
+          <div class="rail-logo"><svg class="i i-20"><use href="#i-book"/></svg></div>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-tree"/></svg>笔记</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-globe"/></svg>博客</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-users"/></svg>圈子</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-user"/></svg>我</button>
+          <div class="rail-spacer"></div>
+          <button class="rail-item on"><svg class="i i-20"><use href="#i-sliders"/></svg>后台</button>
+          <div class="rail-avatar on">何</div>
+        </nav>
+        <aside class="sb">
+          <div class="sb-head"><span class="sb-title">管理后台</span></div>
+          <div class="sb-body" style="padding-top:10px">
+            <div class="tree-row"><svg class="i i-14"><use href="#i-folder"/></svg>目录管理</div>
+            <div class="tree-row on"><svg class="i i-14"><use href="#i-eye"/></svg>公开内容</div>
+            <div class="tree-row"><svg class="i i-14"><use href="#i-sparkles"/></svg>AI 策略</div>
+            <div class="tree-row"><svg class="i i-14"><use href="#i-users"/></svg>用户管理</div>
+            <div class="tree-row"><svg class="i i-14"><use href="#i-sliders"/></svg>系统设置</div>
+            <div style="height:12px"></div>
+            <div class="tree-row" style="color:var(--text-muted)"><svg class="i i-14"><use href="#i-ext"/></svg>回到用户端</div>
+          </div>
+        </aside>
+        <div class="stage" style="background:var(--bg)">
+          <header class="tb">
+            <div class="crumb"><b>后台</b><span class="sep">/</span><span>公开内容</span></div>
+            <div class="tb-spacer"></div>
+            <span class="pill dim">管理员 · 1060707057@qq.com</span>
+            <button class="btn btn-sm"><svg class="i i-12"><use href="#i-download"/></svg>导出</button>
+          </header>
+          <div class="read-wrap"><div class="read-body"><div class="wrap">
+            <h1 style="font-size:var(--fs-3xl);margin-bottom:6px">公开内容</h1>
+            <p style="color:var(--text-dim);font-size:var(--fs-md);margin-bottom:22px">3 篇公开文章待审核或已上线。设为私密会立刻从广场与个人页移除。</p>
+            <div class="card" style="padding:0">
+              <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border-subtle)">
+                <svg class="i i-14" style="color:var(--text-muted)"><use href="#i-file"/></svg>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:var(--fs-md);font-weight:600">战损贴花使用指南</div>
+                  <div class="meta" style="margin-top:3px"><span>何源</span><span class="dot"></span><span class="mono">2026-09-10</span><span class="dot"></span><span class="pill gold">公开</span></div>
+                </div>
+                <a class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-ext"/></svg>查看</a>
+                <button class="btn btn-sm" style="color:var(--danger);border-color:rgba(224,131,124,.4)"><svg class="i i-12"><use href="#i-lock"/></svg>设为私密</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border-subtle)">
+                <svg class="i i-14" style="color:var(--text-muted)"><use href="#i-file"/></svg>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:var(--fs-md);font-weight:600">GS 性能分析：Profiler 实录</div>
+                  <div class="meta" style="margin-top:3px"><span>n17852326702</span><span class="dot"></span><span class="mono">2026-09-18</span><span class="dot"></span><span class="pill gold">公开</span></div>
+                </div>
+                <a class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-ext"/></svg>查看</a>
+                <button class="btn btn-sm" style="color:var(--danger);border-color:rgba(224,131,124,.4)"><svg class="i i-12"><use href="#i-lock"/></svg>设为私密</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:13px 16px">
+                <div class="sk" style="width:14px;height:14px"></div>
+                <div style="flex:1">
+                  <div class="sk" style="width:38%;height:13px;margin-bottom:7px"></div>
+                  <div class="sk" style="width:24%;height:10px"></div>
+                </div>
+                <div class="sk" style="width:64px;height:26px"></div>
+              </div>
+            </div>
+            <div class="scrim" style="position:fixed">
+              <div class="dlg">
+                <div class="dlg-head"><svg class="i i-20" style="color:var(--danger)"><use href="#i-lock"/></svg><h3>设为私密？</h3></div>
+                <div class="dlg-body">
+                  《战损贴花使用指南》会立刻从博客广场和作者个人页移除，已有的评论会保留。
+                  作者本人不受影响 —— 他的笔记还在，只是不再公开。
+                </div>
+                <div class="dlg-foot">
+                  <button class="btn btn-ghost">取消</button>
+                  <button class="btn btn-primary">设为私密</button>
+                </div>
+              </div>
+            </div>
+          </div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">修掉</span> 自带 <code>.admin-top/.admin-nav</code> → 共用外壳与侧栏子导航 · <code>window.confirm</code> → 设计系统 Dialog（含对象名与影响说明）· 裸文字加载 → Skeleton</p>
+
+  <h2>一并收口的零件</h2>
+  <table class="tbl">
+    <tr><th style="width:170px">零件</th><th>现状</th><th style="width:190px">改法</th></tr>
+    <tr><td><strong>弹窗</strong></td><td>8 套各自为政的背板 + 6 处原生 <code>confirm</code></td><td>一个 <code>&lt;Dialog&gt;</code>：标题 / 图标 / 正文 / 危险主按钮，Esc 关闭、焦点陷阱</td></tr>
+    <tr><td><strong>Tabs</strong></td><td>4 套（<code>blog-tabs</code>×2、<code>admin-nav</code>、<code>io-site-tab</code>），其中 <code>CircleDetailPage</code> 那份连 <code>role="tab"</code> 都没有</td><td>一个 <code>&lt;Tabs&gt;</code>，URL search param 驱动，补齐 ARIA</td></tr>
+    <tr><td><strong>加载态</strong></td><td>Skeleton 只在博客面；其余 15+ 处裸 <code>加载中…</code></td><td>三种骨架：列表 / 卡片网格 / 详情，替换全部裸文字</td></tr>
+    <tr><td><strong>残留字符图标</strong></td><td><code>CanvasBlockView.tsx:170</code> 的 <code>🎨</code>；<code>SettingsTab.tsx:114,189</code> 的 <code>✓</code></td><td>换 <code>Icon name="image" / "check"</code></td></tr>
+  </table>
+</div>
+</body>
+</html>

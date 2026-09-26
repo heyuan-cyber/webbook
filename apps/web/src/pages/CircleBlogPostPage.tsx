@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { apiClient } from '@/lib/api';
 import { BlogArticleView } from '@/components/blog/BlogArticleView';
 import { blogHubPath } from '@/lib/blog';
+import { Icon } from '@/components/Icon';
 
 export function CircleBlogPostPage() {
   const { circleId, ownerId, noteId } = useParams();
@@ -37,7 +38,7 @@ export function CircleBlogPostPage() {
       <header className="blog-header">
         <div className="blog-header-inner blog-post-head">
           <Link to={blogHubPath('circles')} className="blog-back muted">
-            ← 圈子博客
+            <Icon name="arrow-left" size={14} /> 圈子博客
           </Link>
           {note && <h1>{note.title}</h1>}
           {ownerEmail && <p className="muted">{ownerEmail} · 圈内文章</p>}

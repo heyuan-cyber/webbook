@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api';
 import { AI_QUICK_COMMANDS } from '@/lib/aiQuickCommands';
 import { toast } from '@/store/useToastStore';
 import { BlockEditor } from './editor/BlockEditor';
+import { Icon } from '@/components/Icon';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -116,7 +117,9 @@ export function AiChatPanel({ note, disabled, onApplyBlocks }: Props) {
           onClick={() => setCollapsed((c) => !c)}
           aria-expanded={!collapsed}
         >
-          <span className="ai-chat-title">🤖 AI 助手</span>
+          <span className="ai-chat-title">
+            <Icon name="sparkles" size={14} /> AI 助手
+          </span>
           <span className="muted">{collapsed ? '展开' : '收起'}</span>
         </button>
       </header>

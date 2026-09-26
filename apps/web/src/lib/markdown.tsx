@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon } from '@/components/Icon';
 
 /** 固定色板（`{red}文本{/}`） */
 export const MD_COLOR_NAMES: Record<string, string> = {
@@ -13,6 +14,24 @@ export const MD_COLOR_NAMES: Record<string, string> = {
 };
 
 export const MD_COLOR_LIST = Object.keys(MD_COLOR_NAMES);
+
+/**
+ * 颜色名的中文标签。
+ *
+ * 工具栏里的色块按钮**只有背景色、没有文字**（`.md-color-dot`），
+ * 原先只挂了 `title="red"` —— 屏幕阅读器会读出一个空按钮，
+ * 且英文色名对中文界面也不合适。这里给每个色号一个可朗读的名字。
+ */
+export const MD_COLOR_LABELS: Record<string, string> = {
+  red: '红色',
+  orange: '橙色',
+  yellow: '黄色',
+  green: '绿色',
+  blue: '蓝色',
+  purple: '紫色',
+  pink: '粉色',
+  gray: '灰色',
+};
 
 function resolveColor(name: string): string | null {
   const key = name.trim().toLowerCase();
@@ -233,7 +252,7 @@ export function renderMarkdownDocument(text: string, lineClassName = 'preview-li
                 {b.items.map((it, j) => (
                   <li key={j} className={it.checked ? 'is-checked' : ''}>
                     <span className="md-task-box" aria-hidden>
-                      {it.checked ? '☑' : '☐'}
+                      <Icon name={it.checked ? 'check-square' : 'square'} size={14} />
                     </span>
                     <span>{renderInline(it.text)}</span>
                   </li>

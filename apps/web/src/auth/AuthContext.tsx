@@ -25,6 +25,12 @@ interface AuthState {
 
 const AuthCtx = createContext<AuthState | null>(null);
 
+/**
+ * 仅供本地验证挂载点（main.tsx 的 __wbTest，需 VITE_EXPOSE_TEST_HARNESS=1 构建）注入伪造会话。
+ * 用于在没有已部署后端的环境里挂载需要登录态的组件；正常渲染路径不使用它。
+ */
+export const AuthContextForTests = AuthCtx;
+
 export function AuthProviderComponent({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);

@@ -5,6 +5,9 @@ import { TreeSidebar } from '@/components/TreeSidebar';
 import type { AIStrategy, PublicFeedItem, SystemSettings } from '@webbook/shared';
 import { apiClient } from '@/lib/api';
 import { toast } from '@/store/useToastStore';
+import { Icon } from '@/components/Icon';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { ShellTopBar } from '@/components/ShellTopBar';
 
 type Tab = 'tree' | 'public' | 'ai' | 'users' | 'settings';
 
@@ -45,11 +48,29 @@ export function AdminPanel() {
 
   return (
     <div className="admin">
+      {/* 共享顶栏：后台也获得 ⌘K 与账号菜单（原先只有页面自己的 admin-top） */}
+      <ShellTopBar
+        left={
+          <nav className="crumb" aria-label="当前位置">
+            <span className="crumb-part">
+              <span className="crumb-link">WebBook</span>
+            </span>
+            <span className="crumb-part">
+              <span className="crumb-sep" aria-hidden="true">/</span>
+              <span className="crumb-here">管理后台</span>
+            </span>
+          </nav>
+        }
+      />
       <header className="admin-top">
-        <span className="logo">🛠 WebBook 管理后台</span>
+        <span className="logo">
+          <Icon name="settings" size={16} /> WebBook 管理后台
+        </span>
         <span className="muted">{session?.email}</span>
+        <ThemeSwitcher />
         <Link className="btn btn-ghost" to="/app">
-          → 用户端
+          <Icon name="arrow-left" size={14} />
+          用户端
         </Link>
       </header>
       <div className="admin-body">

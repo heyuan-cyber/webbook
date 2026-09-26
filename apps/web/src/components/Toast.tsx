@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, MOTION, useMotionSafe } from '@/lib/motion';
 import { useToastStore } from '@/store/useToastStore';
+import { Icon } from '@/components/Icon';
 
 export function ToastHost() {
   const toasts = useToastStore((s) => s.toasts);
@@ -23,8 +24,13 @@ export function ToastHost() {
             transition={reduced ? { duration: 0 } : MOTION.base}
           >
             <span>{t.message}</span>
-            <button type="button" className="toast-close" onClick={() => dismiss(t.id)}>
-              ✕
+            <button
+              type="button"
+              className="toast-close"
+              aria-label="关闭提示"
+              onClick={() => dismiss(t.id)}
+            >
+              <Icon name="x" size={14} />
             </button>
           </motion.div>
         ))}

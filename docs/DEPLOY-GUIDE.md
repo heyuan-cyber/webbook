@@ -73,7 +73,8 @@ WebBook 把一个块编辑器笔记应用直接搬上 GitHub Pages + Cloudflare 
 | 公共 feed 聚合、去重、广场 | `publicFeed.ts` |
 | 圈子创建、邀请、成员鉴权、协作 | `circles.ts` + `circleData.ts` |
 | 文章评论（公开 + 登录） | `comments.ts` |
-| 待办提醒 | `reminders.ts` |
+| 待办提醒 | 已下线，见「任务规划」（`plan.ts`） |
+| **任务规划（单文件 + 乐观锁）** | `plan.ts` |
 | 资产上传 / 分卷存储（多仓、40MB 上限） | `assets.ts` + `volumes.ts` |
 | AI 策略（保存后总结等） | `aiStrategies.ts` |
 | 飞书 OAuth + 导出 / zip 导入 | `feishu.ts` |
@@ -213,11 +214,52 @@ data/
 9. 前端显示「已保存」绿色提示
         │
 10.【异步】Worker 若有 on_save AI 策略 → 调 DeepSeek
-    → 可能产生摘要 / 更新 reminders.json → 写入 GitHub（又是一个 commit）
+    → 可能产生摘要 → 写入 GitHub（又是一个 commit）
+
+    注：保存笔记不再产生任何任务副作用。任务只从规划弹窗创建，
+        见「任务规划」一节。
 ```
 
-**这条链路上谁看得到笔记内容：**
+### 任务规划（plan.json + 乐观锁）
 
+**数据布局**：整棵任务树存在**单个文件** `data/users/{userId}/plan.json`。
+
+```
+data/users/{uid}/
+  ├── tree.json          结构中枢（folder / note 嵌套）
+  ├── notes/{id}.json
+  ├── reminders.json     已下线，仅一次性迁移时读取，不再写入
+  └── plan.json          任务规划：{ schemaVersion, nodes: PlanNode[], migratedReminders? }
+```
+
+选单文件而非每节点一个文件，是因为**父栏目要聚合到最深后代**：分片方案下打开一个深层栏目
+需要按后代数量发起 N 次 Contents API 请求，延迟随层级线性增长。
+
+**代价**：每次变更都提交整份文档。若 `plan.json` 超过约 1MB 或节点数超过约 3000，
+应考虑按栏目子树分片 + 顶层索引（属独立变更，当前未实现）。
+
+**并发语义（重要）**：`github.ts` 的常规写入是 last-write-wins，且把 409 当网络抖动重试。
+规划写入**不能**复用这条路径，否则两设备并发会静默丢掉整份规划。因此：
+
+```
+GET /api/plan → { plan, baseSha }
+PUT /api/plan → body { plan, baseSha }
+     Worker: getSha(path) !== baseSha → 409 { error:'conflict', baseSha }   ← 不重试
+     前端:   409 → 重拉最新版 → 把本地这份整体重放一次；连续 3 次失败则提示
+```
+
+`putFileConditional()` 走同一把 repo 写锁，因此"读 sha → 写"在同一 isolate 内不可分割。
+改动这一层时请保持 `FileConflictError` 不被外层 catch 压成 500——客户端要靠状态码区分
+"该重拉重放"与"该直接报错"。
+
+**锚定模型**：每个任务可带 `anchorNodeId` 指向 `TreeNode.id`。打开某节点的规划时，
+可见任务 = 锚在该节点**及其全部后代**上的任务。这个聚合在前端用纯函数完成
+（`packages/shared/src/plan.ts`），Worker 不需要知道笔记树的结构。
+
+**任务只从规划弹窗创建**：`- [ ]` 文本不再被抽取成任务。原来的 `extract_todos`
+动作（含 cron 策略）已随 reminders 下线。
+
+**这条链路上谁看得到笔记内容：**
 | 环节 | 谁能看到正文 |
 |------|-------------|
 | 你的浏览器 | **你** |
@@ -226,6 +268,39 @@ data/
 | GitHub API 传输 | 加密，GitHub 服务端日志记录 |
 | GitHub 私有仓磁盘 | **有你仓库 PAT 的人、仓库协作者** |
 | **Supabase** | **看不到**（只校验 JWT 签名，不碰笔记） |
+
+### 目录树（tree.json + 乐观锁）
+
+目录树此前是**无条件整树覆盖**：任何客户端把自己手里的那棵树 PUT 上去就直接落盘，没有版本比对。
+2026-09-26 的一次写入因此在**一次提交内**抹掉了 23 个栏目、13 篇笔记引用——写入方持有的是一棵
+只在浏览器本地存在过的旧树（详见 `openspec/changes/tree-sync-integrity/`）。
+
+现在与规划共用同一套条件写原语，但**冲突的处理方式刻意不同**：
+
+```
+GET /api/tree → { schemaVersion, roots, _rev }
+PUT /api/tree → body { tree, baseRev }
+     Worker: getSha(path) !== baseRev → 409 { error:'conflict', _rev }   ← 不重试
+     前端:   409 → 暂停目录的自动写入，询问用户「保留云端版本」还是「用本地覆盖云端」
+```
+
+与规划的关键差别：规划冲突后可以**自动重放**（单份文档、单人编辑）；目录树**绝不自动重放**——
+重放一棵过期的树正是要修的那个故障，所以必须由人来决定保留哪一份。
+
+另外两条防线：
+
+- **降级读不得升格为权威写**：云端目录读失败、或服务端未返回 `_rev`（旧版 Worker）时，客户端进入
+  「本地模式」，其间目录改动只写本机 IndexedDB，不发远端写，并在界面上明确提示。
+- **游客目录以并集合并，不覆盖**：登录时上传本地草稿，是把本地节点按 id 并入云端树
+  （`packages/shared/src/treeMerge.ts`），云端已有节点一律保持原样。
+
+**服务端内部写也必须带 revision**：笔记保存路径上的「可见性同步」同样是整树读-改-写，
+现走 `saveUserTreeConditional` 并带当前 revision（冲突重读一次，失败不阻断笔记保存）。
+只有 legacy 的一次性引导迁移仍使用无条件写。
+
+**体检**：`npm run audit:tree` 只读比对「树引用的笔记」与「磁盘上存在的笔记文件」，
+报告孤儿（文件在、树里没有）、悬空引用与重复节点 id。孤儿**不代表数据损坏**——笔记文件是完整的，
+只是目录树不再引用它，可通过「目录历史」回滚或重新挂回。
 
 ### 3.2 游客保存（不登录）
 
@@ -339,18 +414,20 @@ WebBook 是从单用户版本迁移过来的。旧数据路径 `data/tree.json` 
 
 | 路径 | 作用 |
 |------|------|
-| `GET /api/tree` | 读自己的完整目录（含 private 节点） |
-| `PUT /api/tree` | 保存目录结构 |
+| `GET /api/tree` | 读自己的完整目录（含 private 节点），响应带 `_rev`（当前 revision） |
+| `PUT /api/tree` | 保存目录结构；**必须**带 `baseRev`（无该字段返回 400 `missing_baseRev`），revision 不符返回 409 `conflict` |
+| `GET /api/tree/history` | 目录树版本历史（最新在前，最多 30 条） |
+| `GET /api/tree/versions/{sha}` | 某个历史版本的目录树 |
 | `GET /api/notes/{id}` | 读笔记 |
 | `PUT /api/notes/{id}` | 保存笔记（触发云同步 + AI 策略） |
 | `DELETE /api/notes/{id}` | 删笔记 |
 | `GET /api/notes/{id}/history` | 版本历史列表 |
 | `GET /api/notes/{id}/versions/{sha}` | 某版本内容 |
-| `GET /api/reminders` | 提醒列表 |
-| `POST /api/reminders` | 添加待办提醒 |
+| `GET /api/plan` | 任务规划（整棵计划树 + `baseSha`） |
+| `PUT /api/plan` | 保存规划（带 `baseSha`，冲突返回 409） |
 | `POST /api/assets/upload` | 上传图片 |
 | `POST /api/ai/chat` | AI 对话（含笔记上下文） |
-| `POST /api/ai/run` | AI 动作（总结 / 提取 TODO） |
+| `POST /api/ai/run` | AI 动作（总结） |
 | `GET /api/ai/providers` | 节点生成：按密钥列出可用模型 |
 | `POST /api/ai/generate` | 节点生成：文 / 图（等） |
 | `POST /api/migrate/legacy` | 手动触发旧数据迁移 |
@@ -591,6 +668,24 @@ npm run dev:api    # API   http://localhost:8787（.dev.vars + [ai] binding）
 | 管理员邮箱 | 改 `wrangler.toml` + `deploy.yml` 后前者 `wrangler deploy`，后者 `git push` |
 | 仅数据仓笔记 | 在 App 里编辑保存即可，无需重新部署 |
 
+### 目录树并发语义变更的部署顺序（重要）
+
+`PUT /api/tree` 由「无条件整树覆盖」改为「带 `baseRev` 的条件写」是一次**前后端耦合**的变更，
+两侧必须一起上线。**先前端，后 Worker**：
+
+```
+1) git push 前端          ← 新前端拿到不含 _rev 的响应时会进入"本地模式"，
+                            暂停目录写入并在界面明确提示（fail-closed）
+2) npx wrangler deploy    ← Worker 开始返回 _rev 并要求 baseRev
+3) 刷新页面               ← 目录同步恢复正常
+```
+
+**为什么不能反过来**：先部署 Worker 的话，旧前端仍在发不带 `baseRev` 的请求，会被 400 拒绝；
+而旧前端的 `saveTree` 会吞掉这个错误，表现为"目录改动悄悄没保存"——正是这次要消灭的那类静默失败。
+反过来先上前端则只是**短暂地拒绝写入并大声报错**，期间不会有数据被覆盖。
+
+回滚同样安全：条件写只可能**阻止**写入，不会让数据卡在中间态。
+
 ---
 
 ## 十一、费用估计
@@ -628,7 +723,7 @@ WebBook/
 │   ├── circles.ts                     #   圈子逻辑（创建/加入/审批/协作/feed/成员）
 │   ├── circleData.ts                  #   圈子 树 / 协作笔记 读写
 │   ├── comments.ts                    #   文章评论（公开 + 登录）
-│   ├── reminders.ts                   #   待办提醒
+│   ├── plan.ts                        #   任务规划（单文件 + 乐观锁）
 │   ├── assets.ts / volumes.ts         #   资产上传 / 分卷存储（40MB 上限、registry）
 │   ├── aiStrategies.ts                #   AI 策略（保存后总结等）
 │   ├── migrateLegacy.ts               #   旧版单用户 → 多用户 迁移

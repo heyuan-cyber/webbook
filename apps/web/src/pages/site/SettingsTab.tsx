@@ -4,6 +4,8 @@ import { apiClient, type SiteConfig } from '@/lib/api';
 import { useAuth } from '@/auth/AuthContext';
 import { assetUrl } from '@/lib/api';
 import { Skeleton } from '@/components/Skeleton';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { Icon } from '@/components/Icon';
 
 /**
  * 设置（仅站主可见）：为「项目示例」「博客」两个区域指派笔记，并调整博客类别顺序。
@@ -110,7 +112,9 @@ export function SettingsTab({
                   <span className="io-settings-item-title">{p.title}</span>
                   {p.category ? <span className="io-settings-item-cat muted">{p.category}</span> : null}
                 </span>
-                <span className="io-settings-check" aria-hidden="true">{on ? '✓' : ''}</span>
+                <span className="io-settings-check" aria-hidden="true">
+                  {on ? <Icon name="check" size={12} /> : ''}
+                </span>
               </button>
             );
           })
@@ -127,6 +131,14 @@ export function SettingsTab({
           为「项目示例」和「博客」两个区域指派公开笔记。只有你能看到并修改这里。
         </p>
       </header>
+
+      <div className="io-settings-block">
+        <h3 className="io-settings-title">页面皮肤</h3>
+        <p className="io-settings-hint muted">
+          切换整站配色。选择保存在本机，不影响其他设备。
+        </p>
+        <ThemeSwitcher variant="panel" />
+      </div>
 
       <NotePicker
         head="项目示例区"
@@ -156,17 +168,19 @@ export function SettingsTab({
                     type="button"
                     className="btn btn-ghost btn-sm"
                     disabled={i === 0}
+                    aria-label={`「${c}」上移`}
                     onClick={() => moveCat(orderedCats, i, -1)}
                   >
-                    ↑
+                    <Icon name="arrow-up" size={12} />
                   </button>
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
                     disabled={i === orderedCats.length - 1}
+                    aria-label={`「${c}」下移`}
                     onClick={() => moveCat(orderedCats, i, 1)}
                   >
-                    ↓
+                    <Icon name="arrow-down" size={12} />
                   </button>
                 </span>
               </li>
@@ -177,7 +191,11 @@ export function SettingsTab({
 
       <div className="io-settings-actions">
         {error ? <span className="auth-error">{error}</span> : null}
-        {saved ? <span className="io-settings-saved">已保存 ✓</span> : null}
+        {saved ? (
+          <span className="io-settings-saved">
+            已保存 <Icon name="check" size={12} />
+          </span>
+        ) : null}
         <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
           {saving ? '保存中…' : '保存设置'}
         </button>

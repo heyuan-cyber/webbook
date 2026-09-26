@@ -23,7 +23,16 @@
   text-align: center;
   color: var(--text-dim);
 }
-.es-icon { font-size: 2rem; opacity: 0.7; line-height: 1; }
+.es-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-lg);
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
 .es-title {
   margin: 0;
   font-family: var(--font-serif);
@@ -90,81 +99,97 @@
 .cp-item:hover { background: var(--accent-soft); }
 .cp-hint { font-size: 12px; }
 
+/* ── 设计 token（openspec 方向一 · 墨金 Warm Editorial）──────────────
+   分层约定：
+     1) 尺度层  —— 字号 / 间距 / 圆角 / 阴影 / 层级（与配色无关，三方向共用）
+     2) 语义层  —— surface / text / accent / border / status / glass
+     3) 场景层  —— 画布、连线、媒体、手柄（原先散落在 layout.css 里写死的冷色）
+   layout.css 只消费 token，不再出现字面色值。
+   ─────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: dark;
-  /* surfaces */
-  --bg: #14161a;
-  --bg-elev: #1c1f26;
-  --bg-elev-1: #20242d;
-  --bg-elev-2: #252a34;
-  --bg-elev-3: #2e3440;
-  --surface: #1c1f26;
-  /* text */
-  --text: #e8e6e1;
-  --text-dim: #9c9890;
-  --text-muted: #7d7a72;
-  --on-accent: #1a1510;
-  /* accent ramp */
-  --accent: #c4a574;
-  --accent-strong: #b8945f;
-  --accent-bright: #d4b88a;
-  --accent-soft: rgba(196, 165, 116, 0.14);
-  --accent-glow: rgba(196, 165, 116, 0.38);
-  --accent-line: rgba(196, 165, 116, 0.5);
-  /* borders */
-  --border: #323845;
-  --border-subtle: #2a2e38;
-  --border-highlight: rgba(255, 255, 255, 0.06);
-  /* status */
-  --danger: #e07a7a;
-  --danger-soft: rgba(224, 122, 122, 0.5);
-  --ok: #7eb88a;
-  --ok-soft: rgba(126, 184, 138, 0.5);
-  --warn: #fbbf24;
-  /* scrims */
-  --scrim: rgba(8, 9, 11, 0.55);
-  --scrim-deep: rgba(0, 0, 0, 0.88);
-  /* glass */
-  --glass-bg: rgba(28, 31, 38, 0.58);
-  --glass-bg-strong: rgba(28, 31, 38, 0.76);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --glass-blur: blur(18px);
-  --hover-overlay: rgba(255, 255, 255, 0.09);
-  /* radius */
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-xs: 6px;
-  --radius-lg: 16px;
-  /* shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.35);
+
+  /* ── 1. 尺度层 ───────────────────────────────────────────── */
+  /* 字号阶：8 档，覆盖 layout.css 原有的 11 种 px 值
+     （10/15→2xs，11→2xs，12→xs，13→sm，14→md，16→lg，18/20→xl，22/26→2xl） */
+  --fs-2xs: 11px;   /* 微标签 / kicker */
+  --fs-xs: 12px;    /* 次级信息：时间、计数、提示 */
+  --fs-sm: 13px;    /* UI 文本：按钮、标签、工具条（最高频） */
+  --fs-md: 14px;    /* 目录行 / 正文-小 */
+  --fs-lg: 16px;    /* 正文 / 输入面 */
+  --fs-xl: 20px;    /* 小标题 */
+  --fs-2xl: 26px;   /* 区块标题 */
+  --fs-3xl: 34px;   /* 页面标题 */
+  --fs-display: 46px;
+  /* 兼容旧名（原 global.css 定义，代码中已无引用，保留一版防外部引用） */
+  --fs-h1: var(--fs-3xl);
+  --fs-h2: var(--fs-2xl);
+  --fs-h3: var(--fs-xl);
+  --fs-body: var(--fs-lg);
+  --fs-ui: var(--fs-sm);
+  --fs-caption: var(--fs-xs);
+
+  /* 间距阶：9 档，把原先散落的 6/10/14/18px 也纳入 */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 10px;
+  --sp-6: 12px;
+  --sp-7: 14px;
+  --sp-8: 18px;
+  --sp-9: 24px;
+  --sp-10: 32px;
+  --sp-11: 40px;
+
+  /* 圆角阶（覆盖原有 2/3/4/6/8/10/12px + 999px） */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+  --radius: var(--r-lg);
+  --radius-sm: var(--r-md);
+  --radius-xs: var(--r-sm);
+  --radius-lg: var(--r-xl);
+
+  /* 阴影阶 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.42);
   --shadow-glow: 0 0 0 1px var(--accent-glow), 0 0 26px -2px var(--accent-glow);
-  /* elevation / z-index */
+
+  /* 层级（layout.css 中原有 40 处裸 z-index，逐步归位） */
   --z-content: 1;
   --z-floating: 20;
   --z-panel: 40;
   --z-modal: 60;
   --z-toast: 100;
   --z-help: 12000;
-  /* motion */
+
+  /* 动效 */
   --dur-fast: 120ms;
   --dur-base: 180ms;
   --dur-slow: 260ms;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  /* spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  /* layout */
+
+  /* ── 结构 ───────────────────────────────────────────────── */
   --sidebar-w: 300px;
-  /* typography */
+  --measure: 68ch;
+  --content-max: 1180px;
+
+  /* ── 语义层（表面 / 文字 / 强调 / 描边 / 状态 / 遮罩 / 玻璃 / 画布）
+        已全部移到 theme.css —— 那里是颜色的唯一来源，并按
+        [data-theme] 提供 gold / paper / blueprint 三套皮肤。
+        本文件只保留与配色无关的尺度层。 ─────────────────────── */
+
+  --surface-1: var(--bg-elev);
+  --surface-2: var(--bg-elev-1);
+  --surface-3: var(--bg-elev-2);
+
+  /* ── 字体 ───────────────────────────────────────────────── */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
     'Microsoft YaHei', sans-serif;
   --font-serif: 'Noto Serif SC', 'Source Serif 4', Georgia, 'Songti SC', serif;
@@ -173,18 +198,11 @@
   --leading-heading: 1.25;
   --leading-body: 1.65;
   --leading-article: 1.85;
-  /* type scale */
-  --fs-h1: 2rem;
-  --fs-h2: 1.6rem;
-  --fs-h3: 1.25rem;
   --fw-h1: 700;
   --fw-h2: 700;
   --fw-h3: 650;
   --ls-heading: 0.02em;
-  --fs-body: 1rem;
-  --fs-sm: 0.875rem;
-  --fs-caption: 0.8rem;
-  --fs-ui: 0.8125rem;
+
   font-family: var(--font-sans);
 }
 
@@ -207,7 +225,9 @@ body {
   line-height: var(--leading-body);
 }
 
-/* Aurora / mesh atmosphere behind it all, non-interactive and motion-safe. */
+/* 氛围：只保留极淡的暖色雾，取消原来的三色极光 + 全屏噪声。
+   原实现是 3 层 radial（含一层冷蓝 rgba(104,126,164,.22)）+ opacity .05 的
+   fractalNoise 叠加在整个产品上，长时间写作时背景一直在"呼吸"。 */
 body::before {
   content: '';
   position: fixed;
@@ -215,22 +235,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(58% 52% at 16% 6%, rgba(196, 165, 116, 0.2) 0%, transparent 62%),
-    radial-gradient(54% 50% at 86% 12%, rgba(104, 126, 164, 0.22) 0%, transparent 58%),
-    radial-gradient(72% 62% at 50% 112%, rgba(168, 132, 88, 0.16) 0%, transparent 62%);
-  filter: saturate(1.12);
-  translate: 0 0;
-}
-/* Film grain, very low, layered above every surface for a premium texture. */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    radial-gradient(46% 40% at 14% -4%, rgba(196, 165, 116, 0.06) 0%, transparent 64%),
+    radial-gradient(60% 50% at 50% 116%, rgba(168, 132, 88, 0.05) 0%, transparent 66%);
 }
 /* Content + chrome sit above the atmosphere. */
 .shell, .auth-page, .admin, .blog-shell, .md-help-backdrop { position: relative; z-index: 1; }
@@ -347,6 +353,31 @@ select {
 .muted {
   color: var(--text-dim);
 }
+
+/* ── Icon ─────────────────────────────────────────────────
+   与 apps/web/src/components/Icon.tsx 配套。
+   原先界面上约 48 处 emoji / 字符图标（📁 ＋ ☑ ✎ 🗑 ⠿ 🤖 🛠 ⟳ …）改为线性 SVG：
+   emoji 会随 font-size 被动缩放、无法跟随主题色，且三端字形不一致。 */
+.i {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: inline-block;
+  vertical-align: -2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.i-12 { width: var(--fs-xs); height: var(--fs-xs); }
+.i-14 { width: var(--fs-md); height: var(--fs-md); }
+.i-18 { width: var(--sp-8); height: var(--sp-8); }
+.i-20 { width: var(--fs-xl); height: var(--fs-xl); }
+.i-24 { width: var(--sp-9); height: var(--sp-9); }
+.i-32 { width: var(--sp-10); height: var(--sp-10); stroke-width: 1.4; }
+/* 12px 的图标线宽要略粗，否则在 1x 屏上会发虚 */
+.i-12 { stroke-width: 2; }
 
 .install-banner {
   display: flex;
@@ -499,6 +530,113 @@ select {
   justify-content: flex-end;
 }
 
+/* ── Tree sync integrity ──────────────────────────────── */
+/* 目录树同步状态（本地模式 / 冲突待决）与目录历史面板。 */
+.tree-sync-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0 0 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+}
+.tree-sync-conflict { border-color: var(--danger-soft); }
+.tree-sync-local { border-color: var(--accent-line); }
+.tree-sync-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+}
+.tree-sync-text strong { font-weight: 600; }
+.tree-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tree-sync-danger {
+  color: var(--danger);
+  border: 1px solid var(--danger-soft);
+  background: transparent;
+}
+.tree-sync-danger:hover { background: var(--danger-soft); }
+
+.tree-hist-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 20px 20px;
+  background: var(--scrim);
+}
+.tree-hist {
+  display: flex;
+  flex-direction: column;
+  width: min(620px, 100%);
+  max-height: 70vh;
+  padding: 16px 18px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-strong);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+}
+.tree-hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tree-hist-head h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+}
+.tree-hist-hint {
+  margin: 6px 0 12px;
+  font-size: 0.85rem;
+}
+.tree-hist-list {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.tree-hist-item {
+  padding: 8px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.tree-hist-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tree-hist-when { flex: 1; min-width: 140px; }
+.tree-hist-sha {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+}
+.tree-hist-actions { display: flex; gap: 6px; }
+.tree-hist-preview {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elev-1);
+  font-size: 0.85rem;
+}
+.tree-hist-roots {
+  margin-top: 4px;
+  word-break: break-word;
+}
+
 /* Reduced motion: settle decorative animation and transitions. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -510,12 +648,5 @@ select {
     scroll-behavior: auto !important;
   }
 }
-@media (prefers-reduced-motion: no-preference) {
-  body::before {
-    animation: aurora-drift 60s ease-in-out infinite alternate;
-  }
-}
-@keyframes aurora-drift {
-  from { filter: saturate(1.12) hue-rotate(0deg); translate: 0 0; }
-  to { filter: saturate(1.28) hue-rotate(14deg); translate: 0 -26px; }
-}
+/* 极光漂移动画已移除（方向一：静态氛围）。`aurora-drift` keyframes 与
+   对应的 no-preference 媒体查询一并删除，减少无用的合成层。 */

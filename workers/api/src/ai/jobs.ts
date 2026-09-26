@@ -111,6 +111,14 @@ export async function refreshAiJob(env: Env, user: AuthUser, jobId: string): Pro
     return job;
   }
 
+  // 轮询必须“免费”：只有状态真的变了才写盘（否则每次轮询都会产生一次 GitHub commit）。
+  const before = {
+    status: job.status,
+    resultUrl: job.resultUrl,
+    posterUrl: job.posterUrl,
+    error: job.error,
+  };
+
   try {
     if (job.provider === 'seedance') {
       const polled = await pollSeedanceTask(env, job.providerTaskId);
@@ -149,6 +157,13 @@ export async function refreshAiJob(env: Env, user: AuthUser, jobId: string): Pro
     job.status = 'failed';
     job.error = (e as Error).message || 'poll error';
   }
+
+  const changed =
+    job.status !== before.status ||
+    job.resultUrl !== before.resultUrl ||
+    job.posterUrl !== before.posterUrl ||
+    job.error !== before.error;
+  if (!changed) return job;
 
   job.updatedAt = new Date().toISOString();
   await saveAiJob(env, job);

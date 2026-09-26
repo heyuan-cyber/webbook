@@ -1,0 +1,431 @@
+/* ============================================================================
+   WebBook · 页面皮肤（三套主题色，可自由切换）
+   ----------------------------------------------------------------------------
+   切换方式：<html data-theme="gold|paper|blueprint">
+     gold      （默认）墨金 Warm Editorial —— 暖石墨 + 金
+     paper     纸墨 Ink & Paper        —— 纸白 + 墨 + 朱砂
+     blueprint 蓝图 Blueprint          —— 冷石墨 + 青
+
+   设计约束：
+     1) 只覆盖语义 token（表面 / 文字 / 强调 / 描边 / 状态 / 遮罩 / 玻璃 / 画布），
+        不动尺度 token（字号、间距、圆角、阴影）—— 换肤不该改变排版与密度。
+     2) 所有取值都在此处集中定义；layout.css / 全局组件只消费 token。
+     3) 每个皮肤自带 color-scheme，浏览器原生控件（滚动条、select、checkbox）
+        会跟着切换明暗。
+   ========================================================================= */
+
+/* ── 皮肤 1 · 墨金（默认，与 :root 同值；显式写出便于对照）────────────── */
+:root,
+[data-theme='gold'] {
+  color-scheme: dark;
+
+  --bg: #14161a;
+  --bg-deep: #0c0e12;
+  --bg-elev: #1a1d23;
+  --bg-elev-1: #1f232a;
+  --bg-elev-2: #252a32;
+  --bg-elev-3: #2c313a;
+  --surface: #1a1d23;
+
+  --text: #eae6df;
+  --text-dim: #a29d94;
+  --text-muted: #7c776e;
+  --on-accent: #1a1510;
+
+  --accent: #c4a574;
+  --accent-strong: #b8945f;
+  --accent-bright: #d8bd91;
+  --accent-soft: rgba(196, 165, 116, 0.14);
+  --accent-glow: rgba(196, 165, 116, 0.38);
+  --accent-line: rgba(196, 165, 116, 0.42);
+
+  --border: #2b3038;
+  --border-subtle: #23272e;
+  --border-strong: #3a414b;
+  --border-highlight: rgba(255, 255, 255, 0.06);
+
+  --ok: #7eb88a;
+  --ok-soft: rgba(126, 184, 138, 0.5);
+  --warn: #e0b062;
+  --warn-soft: rgba(224, 176, 98, 0.16);
+  --warn-strong: #f59e0b;
+  --danger: #e0837c;
+  --danger-soft: rgba(224, 131, 124, 0.5);
+  --info: #8aa6c8;
+  --info-soft: rgba(138, 166, 200, 0.16);
+
+  --scrim: rgba(8, 9, 11, 0.55);
+  --scrim-deep: rgba(0, 0, 0, 0.88);
+  --glass-bg: rgba(26, 29, 35, 0.62);
+  --glass-bg-strong: rgba(26, 29, 35, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(14px);
+  --hover-overlay: rgba(255, 255, 255, 0.09);
+
+  --canvas: #101317;
+  --canvas-grid: rgba(196, 165, 116, 0.07);
+  --stage-bg: var(--canvas);
+  --edge: var(--accent);
+  --edge-preview: var(--text-muted);
+  --handle: #ffffff;
+  --media-bg: #000000;
+  --on-media: rgba(255, 255, 255, 0.85);
+  --code-bg: #0f1216;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --code-bg: #0a0e12;
+  --overlay: rgba(0, 0, 0, 0.58);
+  /* 分层遮罩：媒体上的压暗层按强度分四档，全部由 media-bg 派生（皮肤相关） */
+  --scrim-1: color-mix(in srgb, var(--media-bg) 8%, transparent);
+  --scrim-2: color-mix(in srgb, var(--media-bg) 20%, transparent);
+  --scrim-3: color-mix(in srgb, var(--media-bg) 45%, transparent);
+  --scrim-4: color-mix(in srgb, var(--media-bg) 65%, transparent);
+  /* 纯黑压暗（与皮肤无关，用于图片/视频上的文字底） */
+  --blackout-1: rgba(0, 0, 0, 0.15);
+  --blackout-2: rgba(0, 0, 0, 0.4);
+  --blackout-3: rgba(0, 0, 0, 0.6);
+  --blackout-4: rgba(0, 0, 0, 0.88);
+  /* 强调色的透明度档：替代各处自算的 rgba(196,165,116,.06/.08/.1/.12/.22/.26/.28/.35) */
+  --accent-faint: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-soft-2: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-soft-3: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-mid: color-mix(in srgb, var(--accent) 30%, transparent);  /* 分层遮罩：媒体上的压暗层按强度分四档，全部由 media-bg 派生（皮肤相关） */
+  --scrim-1: color-mix(in srgb, var(--media-bg) 8%, transparent);
+  --scrim-2: color-mix(in srgb, var(--media-bg) 20%, transparent);
+  --scrim-3: color-mix(in srgb, var(--media-bg) 45%, transparent);
+  --scrim-4: color-mix(in srgb, var(--media-bg) 65%, transparent);
+  /* 纯黑压暗（与皮肤无关，用于图片/视频上的文字底） */
+  --blackout-1: rgba(0, 0, 0, 0.15);
+  --blackout-2: rgba(0, 0, 0, 0.4);
+  --blackout-3: rgba(0, 0, 0, 0.6);
+  --blackout-4: rgba(0, 0, 0, 0.88);
+  /* 强调色的透明度档：替代各处自算的 rgba(196,165,116,.06/.08/.1/.12/.22/.26/.28/.35) */
+  --accent-faint: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-soft-2: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-soft-3: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-mid: color-mix(in srgb, var(--accent) 30%, transparent);  --hover-raise: translateY(-2px);
+}
+
+/* ── 皮肤 2 · 纸墨 Ink & Paper ─────────────────────────────────────────── */
+[data-theme='paper'] {
+  color-scheme: light;
+
+  --bg: #f4f1ea;
+  --bg-deep: #ece7db;
+  --bg-elev: #fbf9f4;
+  --bg-elev-1: #ffffff;
+  --bg-elev-2: #efeade;
+  --bg-elev-3: #e6dfd0;
+  --surface: #fbf9f4;
+
+  --text: #1b1a17;
+  --text-dim: #5c574d;
+  --text-muted: #8a8377;
+  --on-accent: #fdf8f3;
+
+  --accent: #a8442a;
+  --accent-strong: #8f3820;
+  --accent-bright: #c25438;
+  --accent-soft: rgba(168, 68, 42, 0.1);
+  --accent-glow: rgba(168, 68, 42, 0.2);
+  --accent-line: rgba(168, 68, 42, 0.35);
+
+  --border: #ddd6c6;
+  --border-subtle: #e7e1d3;
+  --border-strong: #c9c0ac;
+  --border-highlight: rgba(27, 26, 23, 0.05);
+
+  --ok: #2f7a4f;
+  --ok-soft: rgba(47, 122, 79, 0.4);
+  --warn: #a06a1a;
+  --warn-soft: rgba(160, 106, 26, 0.14);
+  --warn-strong: #8a5a12;
+  --danger: #b3372a;
+  --danger-soft: rgba(179, 55, 42, 0.4);
+  --info: #33587f;
+  --info-soft: rgba(51, 88, 127, 0.12);
+
+  /* 纸上不要重模糊：数字面板用近乎不透明的纸面 + 细边 */
+  --scrim: rgba(27, 26, 23, 0.4);
+  --scrim-deep: rgba(27, 26, 23, 0.72);
+  --glass-bg: rgba(251, 249, 244, 0.9);
+  --glass-bg-strong: rgba(251, 249, 244, 0.97);
+  --glass-border: rgba(27, 26, 23, 0.12);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --glass-blur: blur(8px);
+  --hover-overlay: rgba(27, 26, 23, 0.06);
+
+  --canvas: #f7f4ec;
+  --canvas-grid: rgba(27, 26, 23, 0.07);
+  --stage-bg: var(--canvas);
+  --edge: var(--accent);
+  --edge-preview: var(--text-muted);
+  --handle: #ffffff;
+  --media-bg: #1b1a17;
+  --on-media: rgba(255, 255, 255, 0.92);
+  --code-bg: #e8e2d5;
+  --overlay: rgba(27, 26, 23, 0.55);
+  /* 分层遮罩：媒体上的压暗层按强度分四档，全部由 media-bg 派生（皮肤相关） */
+  --scrim-1: color-mix(in srgb, var(--media-bg) 8%, transparent);
+  --scrim-2: color-mix(in srgb, var(--media-bg) 20%, transparent);
+  --scrim-3: color-mix(in srgb, var(--media-bg) 45%, transparent);
+  --scrim-4: color-mix(in srgb, var(--media-bg) 65%, transparent);
+  /* 纯黑压暗（与皮肤无关，用于图片/视频上的文字底） */
+  --blackout-1: rgba(0, 0, 0, 0.15);
+  --blackout-2: rgba(0, 0, 0, 0.4);
+  --blackout-3: rgba(0, 0, 0, 0.6);
+  --blackout-4: rgba(0, 0, 0, 0.88);
+  /* 强调色的透明度档：替代各处自算的 rgba(196,165,116,.06/.08/.1/.12/.22/.26/.28/.35) */
+  --accent-faint: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-soft-2: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-soft-3: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-mid: color-mix(in srgb, var(--accent) 30%, transparent);  --hover-raise: translateY(-1px);
+}
+
+/* ── 皮肤 3 · 蓝图 Blueprint ───────────────────────────────────────────── */
+[data-theme='blueprint'] {
+  color-scheme: dark;
+
+  --bg: #0e1114;
+  --bg-deep: #090c0f;
+  --bg-elev: #13171c;
+  --bg-elev-1: #171c22;
+  --bg-elev-2: #1d232a;
+  --bg-elev-3: #232a32;
+  --surface: #13171c;
+
+  --text: #dfe5ea;
+  --text-dim: #93a1ad;
+  --text-muted: #6c7986;
+  --on-accent: #06201c;
+
+  --accent: #35d0ba;
+  --accent-strong: #26b8a3;
+  --accent-bright: #5ee0cd;
+  --accent-soft: rgba(53, 208, 186, 0.12);
+  --accent-glow: rgba(53, 208, 186, 0.34);
+  --accent-line: rgba(53, 208, 186, 0.4);
+
+  --border: #232a32;
+  --border-subtle: #1c2229;
+  --border-strong: #33404b;
+  --border-highlight: rgba(255, 255, 255, 0.07);
+
+  --ok: #4fc08d;
+  --ok-soft: rgba(79, 192, 141, 0.5);
+  --warn: #e0b055;
+  --warn-soft: rgba(224, 176, 85, 0.16);
+  --warn-strong: #f0a53a;
+  --danger: #e56a6a;
+  --danger-soft: rgba(229, 106, 106, 0.5);
+  --info: #5fa8d3;
+  --info-soft: rgba(95, 168, 211, 0.16);
+
+  --scrim: rgba(5, 8, 10, 0.68);
+  --scrim-deep: rgba(0, 0, 0, 0.9);
+  --glass-bg: rgba(19, 23, 28, 0.66);
+  --glass-bg-strong: rgba(19, 23, 28, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --glass-blur: blur(14px);
+  --hover-overlay: rgba(255, 255, 255, 0.08);
+
+  --canvas: #0b0f13;
+  --canvas-grid: rgba(53, 208, 186, 0.09);
+  --stage-bg: var(--canvas);
+  --edge: var(--accent);
+  --edge-preview: var(--text-muted);
+  --handle: #ffffff;
+  --media-bg: #000000;
+  --on-media: rgba(255, 255, 255, 0.88);
+  --code-bg: #0f1216;
+  --overlay: rgba(0, 0, 0, 0.55);
+  /* 分层遮罩：媒体上的压暗层按强度分四档，全部由 media-bg 派生（皮肤相关） */
+  --scrim-1: color-mix(in srgb, var(--media-bg) 8%, transparent);
+  --scrim-2: color-mix(in srgb, var(--media-bg) 20%, transparent);
+  --scrim-3: color-mix(in srgb, var(--media-bg) 45%, transparent);
+  --scrim-4: color-mix(in srgb, var(--media-bg) 65%, transparent);
+  /* 纯黑压暗（与皮肤无关，用于图片/视频上的文字底） */
+  --blackout-1: rgba(0, 0, 0, 0.15);
+  --blackout-2: rgba(0, 0, 0, 0.4);
+  --blackout-3: rgba(0, 0, 0, 0.6);
+  --blackout-4: rgba(0, 0, 0, 0.88);
+  /* 强调色的透明度档：替代各处自算的 rgba(196,165,116,.06/.08/.1/.12/.22/.26/.28/.35) */
+  --accent-faint: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-soft-2: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-soft-3: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-mid: color-mix(in srgb, var(--accent) 30%, transparent);  --hover-raise: translateY(-2px);
+}
+
+/* ── 个人主页（Swiss 那套）：原先是纯黑 + 蓝的独立 token 岛。
+      现在改成映射到上面的皮肤 token —— 整站跟随皮肤切换，
+      但保留它自己的排版意图（衬线大写标题、蓝/青作为强调色由 --accent 提供）。*/
+.swiss-home {
+  --s-bg: var(--bg);
+  --s-text: var(--text);
+  --s-dim: var(--text-dim);
+  --s-faint: var(--text-muted);
+  --s-line: var(--border);
+  --s-line-strong: var(--border-strong);
+  --s-accent: var(--accent);
+  --s-accent-soft: var(--accent-soft);
+  --s-accent-line: var(--accent-line);
+  --s-radius: var(--r-xl);
+  --s-card: var(--bg-elev-1);
+  --s-card-2: var(--bg-elev-2);
+  --s-font-display: 'Playfair Display', 'Noto Serif SC', 'Source Serif 4', Georgia, serif;
+}
+
+/* ── 皮肤专属质感（只加纹理/材质，不改结构）──────────────────────────── */
+
+/* 纸墨：整页极淡纸纹 */
+[data-theme='paper'] body {
+  background-image: repeating-linear-gradient(
+    135deg, rgba(27, 26, 23, 0.012) 0 1px, transparent 1px 4px);
+}
+
+/* 蓝图：侧栏加网格底纹（只加侧栏，内容区保持干净——正文背后铺网格会干扰长文阅读）*/
+[data-theme='blueprint'] .sidebar {
+  background-image:
+    linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-attachment: local;
+}
+
+/* 墨金：保持安静，不加纹理 */
+
+/* ── 皮肤切换器 UI ─────────────────────────────────────────────────────── */
+.theme-switch {
+  position: relative;
+  display: inline-flex;
+}
+.theme-switch-trigger {
+  gap: var(--sp-3);
+}
+.theme-switch-label {
+  font-size: var(--fs-xs);
+}
+.theme-switch-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.theme-switch-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  display: block;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.theme-switch-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-panel);
+  min-width: 210px;
+  padding: var(--sp-3);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+}
+.theme-switch-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  width: 100%;
+  padding: var(--sp-5) var(--sp-5);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.theme-switch-item:hover {
+  background: var(--accent-soft);
+}
+.theme-switch-item.is-on {
+  color: var(--accent);
+}
+.theme-switch-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+.theme-switch-item-body strong {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.theme-switch-item-body .muted {
+  font-size: var(--fs-2xs);
+}
+
+/* 面板型（设置页）：三选一卡片 */
+.theme-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-6);
+}
+.theme-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-6) var(--sp-7);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elev-1);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-base) var(--ease), background var(--dur-base) var(--ease);
+}
+.theme-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-elev-2);
+}
+.theme-card.is-on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.theme-card-swatch {
+  display: flex;
+  flex: none;
+  border-radius: var(--r-xs);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.theme-card-swatch i {
+  width: 14px;
+  height: 30px;
+  display: block;
+}
+.theme-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.theme-card-body strong {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.theme-card-body .muted {
+  font-size: var(--fs-2xs);
+}
+
+/* 纸墨皮肤下，玻璃面板改用实底 + 细边（浅色上模糊会发灰） */
+[data-theme='paper'] .theme-switch-menu {
+  background: var(--bg-elev-1);
+  backdrop-filter: none;
+  box-shadow: var(--shadow-md);
+}
+

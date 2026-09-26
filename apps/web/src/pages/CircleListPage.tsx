@@ -4,6 +4,7 @@ import type { CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCir
 import { useAuth } from '@/auth/AuthContext';
 import { apiClient } from '@/lib/api';
 import { toast } from '@/store/useToastStore';
+import { ShellTopBar } from '@/components/ShellTopBar';
 
 function joinPolicyLabel(policy: CircleJoinPolicy): string {
   return policy === 'open' ? '无需审核' : '需圈主同意';
@@ -102,7 +103,23 @@ export function CircleListPage() {
   const discoverFiltered = discover.filter((c) => c.myStatus !== 'member');
 
   return (
-    <div className="circle-page">
+    <div className="circle-shell">
+      <ShellTopBar
+        left={
+        <nav className="crumb" aria-label="当前位置">
+          <span className="crumb-part">
+            <span className="crumb-link">WebBook</span>
+          </span>
+          <span className="crumb-part">
+            <span className="crumb-sep" aria-hidden="true">/</span>
+            <span className="crumb-here">笔记圈子</span>
+          </span>
+        </nav>
+        }
+        />
+      <div className="circle-page">
+      {/* 共享顶栏：圈子原先完全没有顶栏/⌘K/账号入口 */}
+      
       <header className="circle-page-head">
         <h1>笔记圈子</h1>
         <p className="muted">发现公开圈子、协作笔记与圈内博客。</p>
@@ -253,6 +270,7 @@ export function CircleListPage() {
           ))}
         </ul>
       </section>
+    </div>
     </div>
   );
 }

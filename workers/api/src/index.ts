@@ -7,26 +7,32 @@ import {
   MAX_ASSET_BYTES,
   storeUserAsset,
 } from './volumes';
-import { summarizeNote, extractTodos, assistNoteChat } from './ai';
+import { summarizeNote, assistNoteChat, streamNoteChat } from './ai';
 import { listAiProviders, runAiGenerate } from './ai/generateProviders';
 import { refreshAiJob } from './ai/jobs';
 import type { AiGenerateRequest } from '@webbook/shared';
 import { extractBearer, verifyUserToken } from './auth';
+import { loadUserPlanWithSha, saveUserPlan, migrateRemindersIntoPlan } from './plan';
+import { FileConflictError } from './github';
 import { loadUserProfile, saveUserProfile } from './userProfile';
 import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
 import type { Note, NoteTree, NoteVisibility } from '@webbook/shared';
-import { normalizeNote } from '@webbook/shared';
+import { normalizeNote, normalizePlan } from '@webbook/shared';
 import type { AIStrategiesConfig, SystemSettings } from '@webbook/shared';
 import {
   loadUserTree,
-  saveUserTree,
+  loadUserTreeWithRev,
   loadUserNote,
   saveUserNote,
   deleteUserNote,
   loadUserNoteAtSha,
   userNoteHistory,
   findNoteOwner,
+  getUserTreeRev,
+  saveUserTreeConditional,
+  loadUserTreeAtRef,
+  userTreeHistory,
 } from './userData';
 import {
   loadCircleTree,
@@ -63,13 +69,6 @@ import {
   rejectJoinRequest,
   updateCircleSettings,
 } from './circles';
-import {
-  loadUserReminders,
-  addQuickReminder,
-  patchReminder,
-  mergeTodosFromNote,
-  migrateLegacyReminders,
-} from './reminders';
 import { migrateLegacyToUser } from './migrateLegacy';
 import { runCronStrategies } from './aiStrategies';
 import {
@@ -100,6 +99,9 @@ const CORS = {
   'Access-Control-Allow-Methods': 'GET,PUT,DELETE,POST,PATCH,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+/** 目录树历史一次性返回的最大版本数（完整历史仍在 git 中） */
+const MAX_TREE_VERSIONS = 30;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -268,27 +270,35 @@ export default {
         }
       }
 
-      // ── Reminders (auth) ──
-      if (pathname === '/api/reminders' && req.method === 'GET') {
+      // ── 任务规划（单文件 + 乐观锁，design D1/D2）──
+      if (pathname === '/api/plan' && req.method === 'GET') {
         if (!user) return unauthorized();
-        await migrateLegacyReminders(env, user.id);
-        const index = await loadUserReminders(env, user.id);
-        return json(index);
+        const loaded = await loadUserPlanWithSha(env, user.id);
+        // 首次加载时把旧 reminders 并进来（幂等）
+        const migrated = await migrateRemindersIntoPlan(env, user.id, loaded);
+        return json(migrated);
       }
-      if (pathname === '/api/reminders' && req.method === 'POST') {
+      if (pathname === '/api/plan' && req.method === 'PUT') {
         if (!user) return unauthorized();
-        const body = (await req.json()) as { text?: string };
-        if (!body.text?.trim()) return json({ error: 'empty text' }, 400);
-        const reminder = await addQuickReminder(env, user.id, body.text);
-        return json(reminder, 201);
-      }
-      const reminderPatch = pathname.match(/^\/api\/reminders\/([^/]+)$/);
-      if (reminderPatch && req.method === 'PATCH') {
-        if (!user) return unauthorized();
-        const body = (await req.json()) as { done?: boolean };
-        const updated = await patchReminder(env, user.id, reminderPatch[1]!, body);
-        if (!updated) return json({ error: 'not found' }, 404);
-        return json(updated);
+        const body = (await req.json().catch(() => null)) as {
+          plan?: unknown;
+          baseSha?: string | null;
+        } | null;
+        if (!body || body.plan === undefined) return json({ error: 'plan required' }, 400);
+        const plan = normalizePlan(body.plan);
+        const baseSha = body.baseSha === undefined ? undefined : body.baseSha;
+        try {
+          const nextSha = await saveUserPlan(env, user.id, plan, baseSha);
+          return json({ ok: true, baseSha: nextSha });
+        } catch (e) {
+          // 冲突必须原样暴露给客户端：外层 catch 会把任何异常压成 500，
+          // 那客户端就分不清"该重拉重放"还是"该报错重试"。
+          // 只认 FileConflictError——网络/权限错误报成 409 会诱发无意义的重放。
+          if (e instanceof FileConflictError) {
+            return json({ error: 'conflict', baseSha: e.actualSha }, 409);
+          }
+          throw e;
+        }
       }
 
       // ── Admin ──
@@ -620,7 +630,9 @@ export default {
         return json(result);
       }
 
-      // ── User tree ──
+      // ── User tree（乐观锁：读带 _rev，写必须带 baseRev）──
+      // 目录树是"整棵文件覆盖"的写入，历史上一次无校验的写就抹掉过用户 23 个栏目。
+      // 因此读取附带 revision，写入走 compare-and-swap，冲突原样上报给客户端决定。
       if (pathname === '/api/tree') {
         if (req.method === 'GET') {
           if (!user) {
@@ -632,6 +644,7 @@ export default {
               noteId: p.noteId,
               visibility: 'public' as const,
             }));
+            // 公开目录是只读投影，没有可写路径，故不提供 _rev
             return json({ schemaVersion: 1, roots });
           }
           let tree = await loadUserTree(env, user.id);
@@ -639,15 +652,57 @@ export default {
           if (migration.merged) {
             tree = await loadUserTree(env, user.id);
           }
-          return json(tree);
+          // 迁移可能刚刚写过树，因此 rev 必须最后读取，否则会把过期 revision 交给客户端
+          const rev = await getUserTreeRev(env, user.id);
+          return json({ ...tree, _rev: rev });
         }
         if (req.method === 'PUT') {
           if (!user) return unauthorized();
-          const body = await req.text();
-          const tree = JSON.parse(body) as NoteTree;
-          await saveUserTree(env, user.id, user.email, tree);
-          return json({ ok: true });
+          const body = (await req.json().catch(() => null)) as {
+            tree?: unknown;
+            baseRev?: string | null;
+          } | null;
+          if (!body || body.tree === undefined) return json({ error: 'tree required' }, 400);
+          // 必须显式携带 baseRev（即使是 null，表示"文件应当还不存在"）。
+          // 缺省即放行会退回 last-write-wins，正是本次要堵的口子。
+          if (!('baseRev' in body)) return json({ error: 'missing_baseRev' }, 400);
+          const baseRev = body.baseRev ?? null;
+          try {
+            const nextRev = await saveUserTreeConditional(
+              env,
+              user.id,
+              user.email,
+              body.tree as NoteTree,
+              baseRev,
+            );
+            return json({ ok: true, _rev: nextRev });
+          } catch (e) {
+            // 冲突必须原样暴露给客户端：外层 catch 会把任何异常压成 500，
+            // 那客户端就分不清"该拉取后重做"还是"该报错重试"。
+            // 只认 FileConflictError——网络/权限错误报成 409 会诱发无意义的覆盖。
+            if (e instanceof FileConflictError) {
+              return json({ error: 'conflict', _rev: e.actualSha }, 409);
+            }
+            throw e;
+          }
         }
+      }
+
+      // ── User tree history / version（owner-only，只读）──
+      if (pathname === '/api/tree/history' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const versions = await userTreeHistory(env, user.id);
+        return json({ versions: versions.slice(0, MAX_TREE_VERSIONS) });
+      }
+
+      const treeVersionMatch = pathname.match(/^\/api\/tree\/versions\/([^/]+)$/);
+      if (treeVersionMatch && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const sha = treeVersionMatch[1]!;
+        if (!/^[0-9a-f]{7,40}$/i.test(sha)) return json({ error: 'not found' }, 404);
+        const tree = await loadUserTreeAtRef(env, user.id, sha);
+        if (!tree) return json({ error: 'not found' }, 404);
+        return json(tree);
       }
 
       // ── Notes ──
@@ -679,18 +734,23 @@ export default {
           const note = normalizeNote(JSON.parse(body) as Note);
           await saveUserNote(env, user.id, user.email, note);
 
-          const tree = await loadUserTree(env, user.id);
-          const prevVis = getNoteVisibilityInTree(tree, id);
-          if (prevVis !== note.visibility) {
+          // 目录树可见性同步是"整树读-改-写"，因此也必须带 revision。
+          // 原先的无条件写与客户端并发时会覆盖对方刚写入的目录结构——同一类事故的另一个入口。
+          // 尽力而为：笔记本身已经保存成功，同步失败不应把整次保存报成失败；
+          // 下次保存会重试，且 feed 侧对"树与笔记可见性不一致"本就按不收录处理。
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const { tree, rev } = await loadUserTreeWithRev(env, user.id);
+            if (getNoteVisibilityInTree(tree, id) === note.visibility) break;
             const synced = syncNoteVisibility(tree, id, note.visibility);
-            await saveUserTree(env, user.id, user.email, synced);
+            try {
+              await saveUserTreeConditional(env, user.id, user.email, synced, rev);
+              break;
+            } catch (e) {
+              // 只对冲突重读重试一次；其它错误（网络/权限）放弃同步
+              if (!(e instanceof FileConflictError)) break;
+            }
           }
 
-          try {
-            await mergeTodosFromNote(env, user.id, note);
-          } catch {
-            /* non-blocking */
-          }
           return json({ ok: true });
         }
 
@@ -861,11 +921,30 @@ export default {
         return json({ reply: result.reply, noteMarkdown: result.noteMarkdown });
       }
 
+      if (pathname === '/api/ai/chat/stream' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json()) as {
+          note: Note;
+          messages: { role: 'user' | 'assistant'; content: string }[];
+        };
+        if (!body.note || !Array.isArray(body.messages) || body.messages.length === 0) {
+          return json({ error: 'note and messages required' }, 400);
+        }
+        const stream = streamNoteChat(env, normalizeNote(body.note), body.messages);
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'X-Accel-Buffering': 'no',
+            ...CORS,
+          },
+        });
+      }
+
       if (pathname === '/api/ai/run' && req.method === 'POST') {
         if (!user) return unauthorized();
         const { action, note } = (await req.json()) as { action: string; note: Note };
         if (action === 'summarize') return json({ summary: await summarizeNote(env, note) });
-        if (action === 'extract_todos') return json({ todos: await extractTodos(env, note) });
         return json({ error: 'unknown action' }, 400);
       }
 

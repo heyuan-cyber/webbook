@@ -22,6 +22,9 @@ export const COMMENT_PATH = (ownerId: string, noteId: string) =>
 export const USER_REMINDERS_PATH = (userId: string) =>
   `data/users/${userId}/reminders.json`;
 
+/** 任务规划：整棵计划树单文件（旧 reminders 仅迁移时读取，不再写入） */
+export const USER_PLAN_PATH = (userId: string) => `data/users/${userId}/plan.json`;
+
 /** 飞书 User OAuth（refresh 等），仅 Worker 读写 */
 export const USER_FEISHU_OAUTH_PATH = (userId: string) =>
   `data/users/${userId}/feishu-oauth.json`;

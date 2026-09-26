@@ -14,6 +14,7 @@ import { apiClient, assetUrl } from '@/lib/api';
 import { toast } from '@/store/useToastStore';
 import { handleImageFile } from './imageUpload';
 import { uid } from '@/lib/id';
+import { Icon } from '@/components/Icon';
 
 export type NoteAiAsset = {
   id: string;
@@ -429,7 +430,7 @@ export function BlockAiPanel({
           title={expanded ? '收起 AI 助手' : '展开 AI 助手'}
           onClick={() => setExpanded((v) => !v)}
         >
-          {expanded ? '▾ AI' : '▸ AI'}
+          <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} /> AI
         </button>
       </div>
       {expanded && (

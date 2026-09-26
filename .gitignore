@@ -20,3 +20,6 @@ apps/android-twa/.gradle/
 .agents/
 .cursor/
 openspec/
+
+# TypeScript 增量构建信息（每次构建都变，不应入库）
+*.tsbuildinfo

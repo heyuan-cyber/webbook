@@ -9,6 +9,9 @@ import { Skeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { Reveal } from '@/components/Reveal';
 import { avatarInitial, formatDate, nameFromEmail, userBlogPath } from '@/lib/blog';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { Icon } from '@/components/Icon';
+import { ShellTopBar } from '@/components/ShellTopBar';
 
 function BlogFeedList({
   posts,
@@ -35,7 +38,7 @@ function BlogFeedList({
     );
   if (error) return <p className="auth-error">{error}</p>;
   if (!loading && posts.length === 0)
-    return <EmptyState icon="📄" title="暂无内容" body={emptyText} />;
+    return <EmptyState icon="file" title="暂无内容" body={emptyText} />;
   return (
     <div className="blog-list">
       {posts.map((post) => (
@@ -52,7 +55,9 @@ function BlogFeedList({
               {formatDate(post.updatedAt)}
               {post.visibility === 'circle' ? <span>· 圈内</span> : null}
             </span>
-            <span className="blog-card-cta muted">阅读 →</span>
+            <span className="blog-card-cta muted">
+              阅读 <Icon name="arrow-right" size={12} />
+            </span>
           </Link>
         </Reveal>
       ))}
@@ -150,6 +155,22 @@ export function BlogHubPage() {
 
   return (
     <div className="blog-shell">
+      {/* 共享顶栏：与笔记本同一套（面包屑 + ⌘K + 账号菜单），
+          原先这里只有页面自己的 blog-nav，没有 ⌘K、没有账号入口 */}
+      <ShellTopBar
+        showPlanner={!isGuest}
+        left={
+          <nav className="crumb" aria-label="当前位置">
+            <span className="crumb-part">
+              <span className="crumb-link">WebBook</span>
+            </span>
+            <span className="crumb-part">
+              <span className="crumb-sep" aria-hidden="true">/</span>
+              <span className="crumb-here">博客广场</span>
+            </span>
+          </nav>
+        }
+      />
       <header className="blog-header">
         <div className="blog-header-inner">
           <h1>博客</h1>
@@ -158,6 +179,7 @@ export function BlogHubPage() {
             <Link to="/app">进入笔记本</Link>
             {!isGuest && <Link to="/app/circles">圈子</Link>}
             {isGuest && <Link to="/login">登录</Link>}
+            <ThemeSwitcher />
           </nav>
           <div className="blog-tabs" role="tablist">
             {!isGuest && (

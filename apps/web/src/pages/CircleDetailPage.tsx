@@ -6,6 +6,8 @@ import { apiClient } from '@/lib/api';
 import { blogPostPath, userBlogPath } from '@/lib/blog';
 import { CircleNotesTab } from '@/components/CircleNotesTab';
 import { toast } from '@/store/useToastStore';
+import { Icon } from '@/components/Icon';
+import { ShellTopBar } from '@/components/ShellTopBar';
 
 type CircleTab = 'notes' | 'blog';
 
@@ -128,10 +130,30 @@ export function CircleDetailPage() {
   if (isGuest || !id) return null;
 
   return (
-    <div className="circle-page">
+    <div className="circle-shell">
+      <ShellTopBar
+        left={
+        <nav className="crumb" aria-label="当前位置">
+          <span className="crumb-part">
+            <span className="crumb-link">WebBook</span>
+          </span>
+          <span className="crumb-part">
+            <span className="crumb-sep" aria-hidden="true">/</span>
+            <span className="crumb-link">笔记圈子</span>
+          </span>
+          <span className="crumb-part">
+            <span className="crumb-sep" aria-hidden="true">/</span>
+            <span className="crumb-here">{circle?.name ?? '圈子'}</span>
+          </span>
+        </nav>
+        }
+        />
+      <div className="circle-page">
+      {/* 共享顶栏 */}
+      
       <header className="circle-page-head">
         <Link to="/app/circles" className="blog-back muted">
-          ← 全部圈子
+          <Icon name="arrow-left" size={14} /> 全部圈子
         </Link>
         {circle && <h1>{circle.name}</h1>}
         {myMember && myMember.role !== 'owner' && (
@@ -308,6 +330,7 @@ export function CircleDetailPage() {
           退出圈子
         </button>
       )}
+    </div>
     </div>
   );
 }

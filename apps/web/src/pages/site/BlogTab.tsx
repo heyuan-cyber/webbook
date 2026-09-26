@@ -1,4 +1,4 @@
-import { Reveal } from '@/components/Reveal';
+﻿import { Reveal } from '@/components/Reveal';
 import { EmptyState } from '@/components/EmptyState';
 import { NoteCard, type BlogGroup } from './shared';
 
@@ -17,7 +17,7 @@ export function BlogTab({
   if (groups.length === 0) {
     return (
       <EmptyState
-        icon="📄"
+        icon="file"
         title="博客待配置"
         body={isOwner ? '去设置里把笔记指派到「博客」区。' : '这位作者还没配置博客内容。'}
         action={
@@ -47,8 +47,8 @@ export function BlogTab({
             <span className="swiss-blog-cat-count">{g.posts.length} 篇</span>
           </header>
           <div className="swiss-blog-grid">
-            {g.posts.map((post) => (
-              <Reveal key={post.noteId}>
+            {g.posts.map((post, i) => (
+              <Reveal key={post.noteId} delay={Math.min(i, 5) * 70}>
                 <NoteCard post={post} />
               </Reveal>
             ))}

@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { localStore } from '@/lib/storage';
 import { apiClient } from '@/lib/api';
 import { supabase } from '@/auth/supabaseProvider';
+import { Icon } from '@/components/Icon';
 
 export function LoginPage() {
   const { signIn, signUp } = useAuth();
@@ -38,7 +39,8 @@ export function LoginPage() {
             }
             const localTree = await localStore.loadTree();
             if (localTree.roots.length > 0) {
-              await apiClient.saveTree(localTree, token);
+              // 首次登录把本地草稿目录推到云端：baseRev 传 null ⇒ 以本机为基准
+              await apiClient.saveTree(localTree, null, token);
             }
             // 本地 tree 为空时不覆盖云端（避免冲掉 legacy 目录）
           }
@@ -55,7 +57,9 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={submit}>
-        <h1>📓 WebBook</h1>
+        <h1>
+        <Icon name="book" size={24} /> WebBook
+      </h1>
         <p className="muted">{mode === 'in' ? '登录以同步你的笔记' : '注册新账号'}</p>
         <input
           type="email"

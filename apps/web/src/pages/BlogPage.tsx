@@ -4,6 +4,7 @@ import type { BloggerSummary } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
 import { apiClient } from '@/lib/api';
 import { userBlogPath } from '@/lib/blog';
+import { Icon } from '@/components/Icon';
 
 /** /blog 根路径：登录用户进我的博客；游客看博主目录 */
 export function BlogPage() {
@@ -52,7 +53,9 @@ export function BlogPage() {
               <Link to={userBlogPath(b.userId)} className="blog-card">
                 <span className="blog-card-title">{b.email}</span>
                 <span className="blog-card-meta muted">{b.postCount} 篇公开文章</span>
-                <span className="blog-card-cta muted">进入博客 →</span>
+                <span className="blog-card-cta muted">
+                  进入博客 <Icon name="arrow-right" size={12} />
+                </span>
               </Link>
             </li>
           ))}

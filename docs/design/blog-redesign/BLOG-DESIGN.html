@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="gold">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebBook 博客 · 美化设计稿 v1</title>
+<link rel="stylesheet" href="../mockups/design-system.css" />
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   博客专用样式（设计稿）
+   约束：颜色一律走 theme 的语义 token，所以三套皮肤都能直接继承。
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* 博客的排版意图与笔记本不同：更宽的容器、更松弛的行距、衬线主导 */
+.blog-root {
+  --bl-hub: 1200px;      /* 广场容器（原 920px，右侧 2/3 空着的根因）*/
+  --bl-read: 720px;      /* 长文行宽 */
+  --bl-gutter: var(--sp-10);
+  /* 正式实现里这两个由 styles/theme.css 按皮肤提供 */
+  --hover-raise: translateY(-2px);
+  --canvas-grid: rgba(196, 165, 116, 0.07);
+}
+[data-theme='paper'] .blog-root { --hover-raise: translateY(-1px); --canvas-grid: rgba(27, 26, 23, 0.07); }
+[data-theme='blueprint'] .blog-root { --canvas-grid: rgba(53, 208, 186, 0.09); }
+
+/* ── 页头：整宽 masthead，不再把标题/导航/tab 挤在一列 ─────────────── */
+.bl-masthead {
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-highlight);
+}
+.bl-masthead-in {
+  max-width: var(--bl-hub);
+  margin: 0 auto;
+  padding: var(--sp-10) var(--bl-gutter) var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+.bl-brand-row { display: flex; align-items: flex-end; gap: var(--sp-8); flex-wrap: wrap; }
+.bl-brand h1 {
+  font-size: clamp(2.2rem, 5vw, 3.1rem);
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--sp-4);
+}
+.bl-brand .lede { margin: 0; color: var(--text-dim); font-size: var(--fs-md); }
+.bl-brand-row .sp { flex: 1; min-width: 0; }
+.bl-brand-actions { display: flex; align-items: center; gap: var(--sp-4); }
+
+/* tab 条：贴在 masthead 底边，指示器用 2px 底线（原为按钮加 .active 覆盖） */
+.bl-tabs { display: flex; gap: var(--sp-8); border-top: 1px solid var(--border-subtle); padding-top: var(--sp-5); }
+.bl-tab {
+  position: relative;
+  border: 0; background: transparent; cursor: pointer;
+  padding: 0 0 var(--sp-5);
+  color: var(--text-dim); font-size: var(--fs-md); font-weight: 500;
+}
+.bl-tab:hover { color: var(--text); }
+.bl-tab.is-on { color: var(--text); }
+.bl-tab.is-on::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--accent); border-radius: var(--r-pill) var(--r-pill) 0 0;
+}
+.bl-tab .n { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-2xs); margin-left: 4px; }
+
+/* 检索条 */
+.bl-search { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.bl-search .field { flex: 1; min-width: 220px; max-width: 420px; height: 36px; }
+.bl-chips { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.bl-chip {
+  border: 1px solid var(--border); background: var(--bg-elev-1);
+  color: var(--text-dim); border-radius: var(--r-pill);
+  padding: var(--sp-3) var(--sp-6); font-size: var(--fs-xs); cursor: pointer;
+}
+.bl-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.bl-chip.is-on { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+
+/* ── 广场主体 ────────────────────────────────────────────────────────── */
+.bl-body { max-width: var(--bl-hub); margin: 0 auto; padding: var(--sp-10) var(--bl-gutter) var(--sp-11); }
+
+.bl-sec-head {
+  display: flex; align-items: baseline; gap: var(--sp-6);
+  margin: var(--sp-10) 0 var(--sp-7);
+}
+.bl-sec-head:first-child { margin-top: 0; }
+.bl-sec-head h2 { font-family: var(--font-sans); font-size: var(--fs-xl); font-weight: 650; letter-spacing: 0; }
+.bl-sec-head .more { margin-left: auto; font-size: var(--fs-sm); }
+.bl-sec-head .cnt { color: var(--text-muted); font-size: var(--fs-xs); font-family: var(--font-mono); }
+
+/* 博主：横滑条 + 两端渐隐（原为换行 flex，手机上会把视口撑破）*/
+.bl-authors {
+  display: flex; gap: var(--sp-5);
+  overflow-x: auto; padding-bottom: var(--sp-4);
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 2%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 2%, #000 96%, transparent);
+}
+.bl-authors::-webkit-scrollbar { display: none; }
+.bl-author {
+  flex: none; display: flex; align-items: center; gap: var(--sp-5);
+  padding: var(--sp-4) var(--sp-7) var(--sp-4) var(--sp-4);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-pill);
+  background: var(--bg-elev-1); font-size: var(--fs-sm); color: var(--text);
+}
+.bl-author:hover { border-color: var(--accent-line); text-decoration: none; }
+.bl-author .av {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  background: var(--bg-elev-3); color: var(--text-dim);
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600;
+}
+.bl-author.is-me .av { background: var(--accent); color: var(--on-accent); }
+.bl-author .n { color: var(--text-muted); font-size: var(--fs-2xs); font-family: var(--font-mono); }
+
+/* ── 头条：整宽大卡（原来没有"重点"层级，所有卡片一样大）──────────── */
+.bl-hero {
+  display: grid; grid-template-columns: minmax(0, 1.9fr) 288px; gap: 0;
+  border: 1px solid var(--border-subtle); border-radius: var(--r-xl);
+  overflow: hidden; background: var(--bg-elev-1);
+  transition: border-color var(--dur-base) var(--ease), transform var(--dur-base) var(--ease-out);
+}
+.bl-hero:hover { border-color: var(--accent-line); transform: var(--hover-raise, translateY(-2px)); }
+.bl-hero-main { padding: var(--sp-10); display: flex; flex-direction: column; }
+.bl-hero-kicker {
+  display: flex; align-items: center; gap: var(--sp-4);
+  font-size: var(--fs-2xs); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin-bottom: var(--sp-6);
+}
+.bl-hero h3 { font-size: clamp(1.6rem, 2.6vw, 2.1rem); margin-bottom: var(--sp-6); }
+.bl-hero .excerpt {
+  color: var(--text-dim); font-size: var(--fs-lg); line-height: 1.8;
+  margin: 0 0 var(--sp-8); max-width: 62ch;
+}
+.bl-hero-foot { margin-top: auto; display: flex; align-items: center; gap: var(--sp-5); font-size: var(--fs-xs); color: var(--text-muted); flex-wrap: wrap; }
+.bl-hero-foot .sp { flex: 1; }
+
+/* 头条右栏：窄栏竖排统计，无封面时也不塌（避免大块空洞）*/
+.bl-hero-aside {
+  border-left: 1px solid var(--border-subtle);
+  background:
+    radial-gradient(120% 90% at 80% 10%, var(--accent-soft), transparent 60%),
+    linear-gradient(160deg, var(--bg-elev-2), var(--bg-elev-1));
+  padding: var(--sp-9) var(--sp-8);
+  display: flex; flex-direction: column; gap: var(--sp-6);
+}
+.bl-hero-aside .stat { display: flex; align-items: baseline; gap: var(--sp-5); }
+.bl-hero-aside .stat b { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 600; min-width: 4.2em; }
+.bl-hero-aside .stat span { font-size: var(--fs-2xs); color: var(--text-muted); letter-spacing: 0.06em; }
+.bl-hero-aside .rule { height: 1px; background: var(--border-subtle); }
+.bl-hero-cover {
+  aspect-ratio: 16 / 10; border-radius: var(--r-md); overflow: hidden;
+  border: 1px solid var(--border-subtle); background: var(--bg);
+  display: grid; place-items: center; color: var(--text-muted);
+}
+
+/* ── 文章网格：等高 + 页脚对齐 ──────────────────────────────────────── */
+.bl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--sp-7); }
+.bl-card {
+  display: flex; flex-direction: column;
+  min-height: 210px;
+  padding: var(--sp-8);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  background: var(--bg-elev-1);
+  transition: border-color var(--dur-base) var(--ease), background var(--dur-base) var(--ease),
+    transform var(--dur-base) var(--ease-out);
+}
+.bl-card:hover { border-color: var(--accent-line); background: var(--bg-elev-2); transform: var(--hover-raise, translateY(-2px)); }
+.bl-card-cover {
+  aspect-ratio: 16 / 9; margin: calc(var(--sp-8) * -1) calc(var(--sp-8) * -1) var(--sp-7);
+  background: var(--bg-elev-2); border-bottom: 1px solid var(--border-subtle);
+  display: grid; place-items: center; color: var(--text-muted); overflow: hidden;
+}
+.bl-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bl-card h3 { font-size: var(--fs-lg); margin-bottom: var(--sp-4); line-height: 1.4; }
+.bl-card .excerpt {
+  color: var(--text-dim); font-size: var(--fs-sm); line-height: 1.7; margin: 0 0 var(--sp-6);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bl-cats { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-5); }
+.bl-cat {
+  font-size: var(--fs-2xs); color: var(--text-muted);
+  border: 1px solid var(--border-subtle); border-radius: var(--r-xs);
+  padding: 1px var(--sp-4); background: var(--bg);
+}
+.bl-card-foot, .bl-row-foot {
+  margin-top: auto; padding-top: var(--sp-6);
+  border-top: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: var(--sp-4);
+  font-size: var(--fs-2xs); color: var(--text-muted);
+}
+.bl-card-foot .sp, .bl-row-foot .sp { flex: 1; }
+.bl-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border-strong); }
+
+/* ── 时间线列表（更新流）────────────────────────────────────────────── */
+.bl-rows { border-top: 1px solid var(--border-subtle); }
+.bl-row {
+  display: grid; grid-template-columns: 96px 1fr auto; gap: var(--sp-8);
+  align-items: baseline;
+  padding: var(--sp-7) var(--sp-5);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text);
+}
+.bl-row:hover { background: var(--bg-elev-1); text-decoration: none; }
+.bl-row .dt { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+.bl-row .ttl { font-family: var(--font-serif); font-size: var(--fs-lg); font-weight: 600; }
+.bl-row .sub { display: block; margin-top: var(--sp-3); font-size: var(--fs-xs); color: var(--text-muted); font-weight: 400; font-family: var(--font-sans); }
+.bl-row .who { font-size: var(--fs-xs); color: var(--text-muted); text-align: right; }
+@media (max-width: 720px) {
+  .bl-row { grid-template-columns: 1fr; gap: var(--sp-3); }
+  .bl-row .who { text-align: left; }
+}
+
+/* ── 文章阅读页 ─────────────────────────────────────────────────────── */
+.bl-progress {
+  position: fixed; left: 0; right: 0; top: 0; height: 2px; z-index: var(--z-sticky);
+  background: transparent;
+}
+.bl-progress i { display: block; height: 100%; width: 38%; background: var(--accent); }
+
+.bl-art-top {
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+}
+.bl-art-top-in {
+  max-width: var(--bl-hub); margin: 0 auto;
+  padding: var(--sp-6) var(--bl-gutter);
+  display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-sm);
+}
+.bl-art-top .back { display: inline-flex; align-items: center; gap: var(--sp-4); color: var(--text-dim); }
+.bl-art-top .sp { flex: 1; }
+
+.bl-art-wrap {
+  max-width: var(--bl-hub); margin: 0 auto;
+  padding: var(--sp-11) var(--bl-gutter) var(--sp-11);
+  display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: var(--sp-11);
+  align-items: start;
+}
+.bl-art { max-width: var(--bl-read); }
+.bl-art-head { margin-bottom: var(--sp-9); }
+.bl-art-head h1 {
+  font-size: clamp(2.1rem, 4.4vw, 3rem);
+  line-height: 1.18; letter-spacing: -0.01em;
+  margin: var(--sp-6) 0 var(--sp-7);
+}
+.bl-art-summary {
+  font-size: var(--fs-lg); line-height: 1.75; color: var(--text-dim);
+  padding-left: var(--sp-7); border-left: 2px solid var(--accent-line);
+  margin-bottom: var(--sp-9);
+}
+.bl-byline {
+  display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap;
+  padding-bottom: var(--sp-8); border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs); color: var(--text-muted);
+}
+.bl-byline .av {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; flex: none;
+  background: var(--accent); color: var(--on-accent);
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600;
+}
+.bl-byline .sp { flex: 1; }
+
+/* 正文排版：18px / 1.85 / 68ch（原来正文 18px 但行宽与标题混在 920px 里）*/
+.bl-prose { font-size: var(--fs-lg); line-height: 1.85; color: var(--text); }
+.bl-prose > p { margin: 0 0 var(--sp-8); }
+.bl-prose h2 {
+  font-size: var(--fs-2xl); margin: var(--sp-11) 0 var(--sp-6);
+  padding-top: var(--sp-7); border-top: 1px solid var(--border-subtle);
+}
+.bl-prose h3 { font-size: var(--fs-xl); margin: var(--sp-10) 0 var(--sp-5); }
+.bl-prose ul, .bl-prose ol { padding-left: 1.35em; margin: 0 0 var(--sp-8); }
+.bl-prose li { margin-bottom: var(--sp-4); }
+.bl-prose li::marker { color: var(--accent); }
+.bl-prose blockquote {
+  margin: var(--sp-9) 0; padding: var(--sp-2) 0 var(--sp-2) var(--sp-9);
+  border-left: 2px solid var(--accent); color: var(--text-dim);
+  font-family: var(--font-serif); font-size: 1.05em;
+}
+.bl-prose code {
+  font-family: var(--font-mono); font-size: 0.88em;
+  background: var(--bg-elev-2); color: var(--accent);
+  padding: 2px 6px; border-radius: var(--r-xs);
+}
+.bl-prose pre {
+  position: relative;
+  margin: 0 0 var(--sp-8); padding: var(--sp-8) var(--sp-8) var(--sp-8);
+  background: var(--bg-elev-1); border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md); overflow: auto;
+  font-size: var(--fs-sm); line-height: 1.7;
+}
+.bl-prose pre code { background: none; color: var(--text); padding: 0; }
+.bl-prose pre .lang {
+  position: absolute; top: var(--sp-4); right: var(--sp-6);
+  font-size: var(--fs-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.bl-figure { margin: var(--sp-9) 0; }
+.bl-figure .frame {
+  border: 1px solid var(--border-subtle); border-radius: var(--r-md);
+  background: var(--bg-elev-1); aspect-ratio: 16 / 9;
+  display: grid; place-items: center; color: var(--text-muted);
+}
+.bl-figure figcaption {
+  margin-top: var(--sp-5); font-size: var(--fs-xs); color: var(--text-muted);
+  text-align: center; font-family: var(--font-sans);
+}
+.bl-callout {
+  display: flex; gap: var(--sp-5); margin: 0 0 var(--sp-8);
+  padding: var(--sp-7) var(--sp-8);
+  border: 1px solid var(--accent-line); border-radius: var(--r-md);
+  background: var(--accent-soft); font-size: var(--fs-md);
+}
+.bl-callout .i { color: var(--accent); margin-top: 4px; }
+
+/* 目录：常驻右栏，随阅读高亮 */
+.bl-toc { position: sticky; top: var(--sp-9); font-size: var(--fs-sm); }
+.bl-toc .kicker { display: block; margin-bottom: var(--sp-6); }
+.bl-toc a {
+  display: block; padding: var(--sp-3) 0 var(--sp-3) var(--sp-6);
+  color: var(--text-muted); border-left: 2px solid var(--border-subtle);
+}
+.bl-toc a:hover { color: var(--text); text-decoration: none; }
+.bl-toc a.is-on { color: var(--accent); border-left-color: var(--accent); }
+.bl-toc-foot { margin-top: var(--sp-9); padding-top: var(--sp-7); border-top: 1px solid var(--border-subtle); }
+
+/* 文末：作者卡 + 相关文章 + 评论 */
+.bl-art-foot { max-width: var(--bl-read); margin-top: var(--sp-11); }
+.bl-author-card {
+  display: flex; gap: var(--sp-7); align-items: center;
+  padding: var(--sp-8); border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  background: var(--bg-elev-1);
+}
+.bl-author-card .av {
+  width: 46px; height: 46px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; background: var(--accent); color: var(--on-accent);
+  font-family: var(--font-mono); font-weight: 700;
+}
+.bl-related { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); }
+.bl-comment {
+  display: flex; gap: var(--sp-6); padding: var(--sp-7) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.bl-comment .av {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; background: var(--bg-elev-3); color: var(--text-dim);
+  font-size: var(--fs-xs); font-family: var(--font-mono);
+}
+.bl-comment .who { font-size: var(--fs-sm); font-weight: 600; }
+.bl-comment .when { font-size: var(--fs-xs); color: var(--text-muted); margin-left: var(--sp-4); font-weight: 400; }
+.bl-comment p { margin: var(--sp-4) 0 0; font-size: var(--fs-md); color: var(--text-dim); }
+
+/* ── 个人主页：hero 用整宽，不再"空黑一大片"───────────────────────── */
+.bl-site-hero {
+  position: relative; overflow: hidden;
+  background: linear-gradient(170deg, var(--bg-elev-2) 0%, var(--bg) 62%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.bl-site-hero::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(80% 70% at 22% 30%, #000, transparent 72%);
+  mask-image: radial-gradient(80% 70% at 22% 30%, #000, transparent 72%);
+}
+.bl-site-hero-in {
+  position: relative; z-index: 1;
+  max-width: var(--bl-hub); margin: 0 auto;
+  padding: clamp(72px, 11vw, 148px) var(--bl-gutter) clamp(56px, 8vw, 104px);
+}
+.bl-site-hero .overline {
+  font-family: var(--font-mono); font-size: var(--fs-2xs);
+  letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: var(--sp-7);
+}
+.bl-site-hero h1 {
+  font-family: 'Playfair Display', var(--font-serif);
+  font-size: clamp(2.6rem, 8.5vw, 6.5rem);
+  line-height: 1.02; letter-spacing: -0.02em; margin: 0 0 var(--sp-8);
+}
+.bl-site-hero h1 em { font-style: italic; color: var(--accent); }
+.bl-site-hero .lede { font-size: var(--fs-lg); color: var(--text-dim); max-width: 54ch; margin: 0 0 var(--sp-9); }
+.bl-site-hero .cta { display: flex; gap: var(--sp-5); flex-wrap: wrap; }
+.bl-site-stats {
+  display: flex; gap: var(--sp-11); flex-wrap: wrap;
+  margin-top: var(--sp-11); padding-top: var(--sp-9);
+  border-top: 1px solid var(--border-subtle);
+}
+.bl-site-stats div { display: flex; flex-direction: column; gap: 2px; }
+.bl-site-stats b { font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 600; }
+.bl-site-stats span { font-size: var(--fs-2xs); color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* 作品：横向滚动卡（有封面时更饱满）*/
+.bl-work { display: flex; gap: var(--sp-7); overflow-x: auto; padding-bottom: var(--sp-5); scroll-snap-type: x mandatory; }
+.bl-work-card {
+  flex: none; width: 340px; scroll-snap-align: start;
+  border: 1px solid var(--border-subtle); border-radius: var(--r-lg);
+  background: var(--bg-elev-1); overflow: hidden; color: var(--text);
+}
+.bl-work-card:hover { border-color: var(--accent-line); text-decoration: none; }
+.bl-work-cover {
+  aspect-ratio: 16 / 10; background: linear-gradient(140deg, var(--bg-elev-3), var(--bg-elev-1));
+  display: grid; place-items: center; color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.bl-work-body { padding: var(--sp-7); }
+.bl-work-body h4 { font-family: var(--font-sans); font-size: var(--fs-md); margin-bottom: var(--sp-4); }
+.bl-work-body p { font-size: var(--fs-sm); color: var(--text-dim); margin: 0; }
+
+/* ── 移动端 ─────────────────────────────────────────────────────────── */
+.bl-mobile { padding: 0; }
+.bl-mobile .bl-masthead-in { padding: var(--sp-8) var(--sp-7) var(--sp-6); }
+.bl-mobile .bl-body { padding: var(--sp-7) var(--sp-7) var(--sp-11); }
+.bl-mobile .bl-grid { grid-template-columns: 1fr; }
+.bl-mobile .bl-hero { grid-template-columns: 1fr; }
+.bl-mobile .bl-hero-aside { border-left: 0; border-top: 1px solid var(--border-subtle); }
+.bl-mobile .bl-art-wrap { grid-template-columns: 1fr; padding: var(--sp-8) var(--sp-7) var(--sp-11); }
+/* 手机画板：显式声明容器宽度，避免依赖 design-system.css 的 .phone 层叠 */
+.bl-mobile-frame {
+  width: 390px; flex: none;
+  border: 1px solid var(--border); border-radius: 30px; padding: 9px;
+  background: var(--surface-2); box-shadow: var(--shadow-lg);
+}
+.bl-mobile-frame .phone-in { width: 372px; }
+.bl-toc-mobile {
+  border: 1px solid var(--border-subtle); border-radius: var(--r-md);
+  background: var(--bg-elev-1); margin-bottom: var(--sp-8);
+}
+.bl-toc-mobile summary {
+  padding: var(--sp-6) var(--sp-7); cursor: pointer; font-size: var(--fs-sm);
+  display: flex; align-items: center; gap: var(--sp-4); list-style: none;
+}
+.bl-toc-mobile summary::-webkit-details-marker { display: none; }
+.bl-toc-mobile .in { padding: 0 var(--sp-7) var(--sp-6); }
+
+/* 「现状 → 改后」标注 */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-7); max-width: 1200px; margin: 0 auto var(--sp-9); padding: 0 var(--sp-9); }
+@media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+.pair figure { margin: 0; }
+.pair img { width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); display: block; }
+.pair figcaption { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-4); font-family: var(--font-mono); }
+.bad { color: var(--danger); }
+.good { color: var(--ok); }
+</style>
+</head>
+<body class="blog-root">
+
+<header class="doc-head">
+  <div class="doc-head-in">
+    <div class="doc-title">WebBook 博客 · 美化设计稿<span>v1 待评审</span></div>
+    <nav class="doc-nav">
+      <a href="../mockups/INDEX.html">← 回到总览</a>
+      <a href="#hub" aria-current="page">博客广场</a>
+      <a href="#article">文章页</a>
+      <a href="#site">个人主页</a>
+      <a href="#mobile">移动端</a>
+      <a href="#notes">设计说明</a>
+    </nav>
+    <span style="display:flex;align-items:center;gap:8px">
+      <button class="bl-chip" onclick="setSkin('gold')">墨金</button>
+      <button class="bl-chip" onclick="setSkin('paper')">纸墨</button>
+      <button class="bl-chip" onclick="setSkin('blueprint')">蓝图</button>
+    </span>
+  </div>
+</header>
+
+<div class="note" style="margin-top:var(--sp-9);max-width:1200px">
+  <h4>这版博客改了什么（先看结论）</h4>
+  <ul class="fixlist">
+    <li><b>容器从 920px 放到 1200px</b> —— 实测线上 <code>.blog-header-inner</code> 与 <code>.blog-main</code> 都是 <code>max-width:920px</code>，
+        但内容只用到其中 ~560px（<code>.blog-list</code> 864px 里两列卡），1600px 屏上右侧三成是空的。这是"页面看着空"的根因。</li>
+    <li><b>页头从"一列堆叠"改成整宽 masthead</b> —— 标题、导航、tab、检索按品牌区/操作区/tab 条三层排开，不再挤在同一列。</li>
+    <li><b>补上"重点"层级</b> —— 现在所有卡片一样大、一样空。改为「1 张头条大卡 + 等高网格」，
+        头条用编辑式排版（kicker + 大标题 + 摘要）撑起首屏，无封面也不塌。</li>
+    <li><b>卡片把数据用起来</b> —— <code>PublicFeedItem</code> 里本来就有 <code>summary</code> / <code>cover</code> / <code>category</code> / <code>updatedAt</code>，
+        但界面只显示了标题 + 作者 + 日期 + 「阅读 →」。现在补摘要两行、分类 chip、封面可选、底部对齐。</li>
+    <li><b>加一条时间线"更新流"</b> —— 广场下方按更新时间列全部公开文，日期用等宽字体成列，扫读快。</li>
+    <li><b>文章页重排</b> —— 标题区（分类/kicker → 大标题 → 摘要引文 → 署名）与正文分开；正文 18px/1.85/68ch；
+        右栏常驻目录随阅读高亮；代码块带语言标签；图片有 <code>figcaption</code>。</li>
+    <li><b>文末补齐</b> —— 作者卡 + 相关文章 + 评论（原来文章读完就断了）。</li>
+    <li><b>移动端</b> —— 博主条改横滑（现在换行 flex 会把内容顶出屏幕），卡片单列，目录折成可展开条。</li>
+    <li><b>全部走 token</b> —— 换皮肤（墨金/纸墨/蓝图）博客一起变，不会出现"白字压白纸"。</li>
+  </ul>
+</div>
+
+<div class="sec-head" id="hub">
+  <div class="sec-num">01</div>
+  <h2>博客广场 · /blog</h2>
+  <p>公开广场首页。头条 + 等高网格 + 更新流。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>博客广场</strong><span class="url">/blog</span>
+    <span class="tag tag-accent">改造后</span>
+  </div>
+  <div class="screen-inner">
+    <!-- masthead -->
+    <div class="bl-masthead">
+      <div class="bl-masthead-in">
+        <div class="bl-brand-row">
+          <div class="bl-brand">
+            <div class="kicker">PUBLIC FEED</div>
+            <h1>博客</h1>
+            <p class="lede">个人博客 · 公开广场 · 圈子动态</p>
+          </div>
+          <span class="sp"></span>
+          <div class="bl-brand-actions">
+            <a class="btn btn-ghost" href="#">进入笔记本</a>
+            <a class="btn btn-ghost" href="#">圈子</a>
+            <span class="bl-chip is-on">● 墨金</span>
+            <a class="btn btn-primary" href="#">登录</a>
+          </div>
+        </div>
+
+        <div class="bl-tabs">
+          <button class="bl-tab is-on">广场 <span class="n">5</span></button>
+          <button class="bl-tab">个人博客 <span class="n">2</span></button>
+          <button class="bl-tab">圈子 <span class="n">3</span></button>
+        </div>
+
+        <div class="bl-search">
+          <input class="field" placeholder="搜索标题、分类或作者…" aria-label="搜索公开文章" />
+          <div class="bl-chips">
+            <button class="bl-chip is-on">全部</button>
+            <button class="bl-chip">基础游戏开发</button>
+            <button class="bl-chip">战斗演出</button>
+            <button class="bl-chip">贴花系统</button>
+            <button class="bl-chip">脚本工具</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bl-body">
+      <!-- 博主 -->
+      <div class="bl-sec-head">
+        <h2>博主</h2>
+        <span class="cnt">2 位 · 5 篇</span>
+        <a class="more" href="#">全部 →</a>
+      </div>
+      <div class="bl-authors">
+        <a class="bl-author is-me" href="#">
+          <span class="av">1</span>
+          <span>1060707057</span>
+          <span class="n">3 篇</span>
+        </a>
+        <a class="bl-author" href="#">
+          <span class="av">N</span>
+          <span>n17852326702</span>
+          <span class="n">2 篇</span>
+        </a>
+        <a class="bl-author" href="#">
+          <span class="av">C</span>
+          <span>Cyril</span>
+          <span class="n">6 篇</span>
+        </a>
+      </div>
+
+      <!-- 头条 -->
+      <div class="bl-sec-head">
+        <h2>本期头条</h2>
+        <span class="cnt">最近更新</span>
+      </div>
+      <a class="bl-hero" href="#">
+        <div class="bl-hero-main">
+          <div class="bl-hero-kicker">
+            <svg class="i i-12"><use href="#i-sparkles" /></svg> FEATURED
+          </div>
+          <h3>战损贴花使用指南</h3>
+          <p class="excerpt">
+            贴花是战损表现里最便宜的手段：一张带透明通道的贴图投影到受击面，不需要改模型拓扑。
+            但它有两个容易被低估的成本 —— 层数和排序。本文给出三档质量预设与对应的 drawcall 实测。
+          </p>
+          <div class="bl-hero-foot">
+            <span class="av" style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);font-size:11px;font-family:var(--font-mono);font-weight:600">1</span>
+            <span>1060707057</span>
+            <span class="bl-dot"></span>
+            <span>2026-09-10</span>
+            <span class="bl-dot"></span>
+            <span>约 6 分钟</span>
+            <span class="sp"></span>
+            <span class="tag">基础游戏开发 / 贴花系统</span>
+          </div>
+        </div>
+        <div class="bl-hero-aside">
+          <div class="bl-hero-cover">
+            <span style="text-align:center;font-size:var(--fs-xs);line-height:1.7">
+              <svg class="i i-32"><use href="#i-image" /></svg><br />暂无封面
+            </span>
+          </div>
+          <div class="rule"></div>
+          <div class="stat"><b>6 min</b><span>阅读时长</span></div>
+          <div class="stat"><b>2 480</b><span>字数</span></div>
+          <div class="stat"><b>3</b><span>评论</span></div>
+        </div>
+      </a>
+
+      <!-- 网格 -->
+      <div class="bl-sec-head">
+        <h2>最新文章</h2>
+        <span class="cnt">按更新时间</span>
+        <a class="more" href="#">RSS →</a>
+      </div>
+      <div class="bl-grid">
+        <a class="bl-card" href="#">
+          <div class="bl-cats"><span class="bl-cat">基础游戏开发</span><span class="bl-cat">战斗演出</span></div>
+          <h3>战斗演出编辑器架构设计</h3>
+          <p class="excerpt">把时间轴编辑、资源装配、运行时预览收在一个舞台里：分层方式、数据流，以及与 GS 侧脚本工具的边界。</p>
+          <div class="bl-card-foot">
+            <span>1060707057</span><span class="bl-dot"></span><span>3 天前</span>
+            <span class="sp"></span><span>9 分钟</span>
+          </div>
+        </a>
+        <a class="bl-card" href="#">
+          <div class="bl-cats"><span class="bl-cat">脚本工具</span><span class="bl-cat">GS</span></div>
+          <h3>资产异步加载</h3>
+          <p class="excerpt">加载失败的重试策略与超时阈值，以及为什么不要在 onComplete 里同步解析资源。</p>
+          <div class="bl-card-foot">
+            <span>n17852326702</span><span class="bl-dot"></span><span>1 周前</span>
+            <span class="sp"></span><span>4 分钟</span>
+          </div>
+        </a>
+        <a class="bl-card" href="#">
+          <div class="bl-cats"><span class="bl-cat">AI 工具</span></div>
+          <h3>工具汇总</h3>
+          <p class="excerpt">生图 / 生视频 / 生模型三类工具的选型记录，附各自适合的分镜阶段与成本估算。</p>
+          <div class="bl-card-foot">
+            <span>1060707057</span><span class="bl-dot"></span><span>2 周前</span>
+            <span class="sp"></span><span>5 分钟</span>
+          </div>
+        </a>
+        <a class="bl-card" href="#">
+          <div class="bl-cats"><span class="bl-cat">渲染开发</span></div>
+          <h3>UI 框架</h3>
+          <p class="excerpt">现有 UI 框架的层级与绘制开销，以及迁移到统一控件库的评估结论。</p>
+          <div class="bl-card-foot">
+            <span>n17852326702</span><span class="bl-dot"></span><span>3 周前</span>
+            <span class="sp"></span><span>7 分钟</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- 更新流 -->
+      <div class="bl-sec-head">
+        <h2>更新流</h2>
+        <span class="cnt">全部公开文章</span>
+      </div>
+      <div class="bl-rows">
+        <a class="bl-row" href="#">
+          <span class="dt">09-10</span>
+          <span class="ttl">战损贴花使用指南<span class="sub">贴花按层叠加，注意 GPU 开销随层数增长</span></span>
+          <span class="who">1060707057</span>
+        </a>
+        <a class="bl-row" href="#">
+          <span class="dt">09-07</span>
+          <span class="ttl">战斗演出编辑器架构设计<span class="sub">三层结构与数据流，编辑器只声明不执行</span></span>
+          <span class="who">1060707057</span>
+        </a>
+        <a class="bl-row" href="#">
+          <span class="dt">09-01</span>
+          <span class="ttl">资产异步加载<span class="sub">重试策略与超时阈值</span></span>
+          <span class="who">n17852326702</span>
+        </a>
+        <a class="bl-row" href="#">
+          <span class="dt">08-24</span>
+          <span class="ttl">工具汇总<span class="sub">生图 / 生视频 / 生模型选型</span></span>
+          <span class="who">1060707057</span>
+        </a>
+        <a class="bl-row" href="#">
+          <span class="dt">08-15</span>
+          <span class="ttl">UI 框架<span class="sub">层级与绘制开销评估</span></span>
+          <span class="who">n17852326702</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note" style="max-width:1200px">
+  <h4>与现状的对照</h4>
+  <ul class="fixlist">
+    <li><span class="bad">现状</span> 页头 <code>max-width:920px</code> 但内部只有标题+lede+导航+tab 四个窄元素 → 1600px 屏上右侧 ~700px 全空。
+        <span class="good">改后</span> masthead 整宽三段式，右侧放操作区，视觉重心回到中间。</li>
+    <li><span class="bad">现状</span> <code>.blog-list</code> 是 864px 的两列 grid，卡片最小高度不齐、页脚不贴底。
+        <span class="good">改后</span> <code>auto-fill minmax(320px,1fr)</code> + <code>margin-top:auto</code> 页脚，三列自适应且等高。</li>
+    <li><span class="bad">现状</span> 卡片信息量 = 标题 + 作者 + 日期 + 「阅读 →」，大片留白。
+        <span class="good">改后</span> 摘要两行（<code>-webkit-line-clamp:2</code>）+ 分类 chip + 阅读时长，数据全部来自已有的 <code>PublicFeedItem</code>。</li>
+    <li><span class="bad">现状</span> 「博主」是 <code>flex-wrap</code>，390px 手机上把内容顶出视口。
+        <span class="good">改后</span> 横向滚动 + 两端 <code>mask</code> 渐隐，任意宽度不破版。</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════ 文章页 ══════════════════════ -->
+<div class="sec-head" id="article">
+  <div class="sec-num">02</div>
+  <h2>文章阅读页 · /blog/:owner/:note</h2>
+  <p>长文阅读。标题区 / 正文 / 常驻目录 / 文末。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>文章</strong><span class="url">/blog/1060707057/war-decal-guide</span>
+    <span class="tag tag-accent">改造后</span>
+  </div>
+  <div class="screen-inner">
+    <div class="bl-progress" aria-hidden="true"><i></i></div>
+
+    <div class="bl-art-top">
+      <div class="bl-art-top-in">
+        <a class="back" href="#"><svg class="i i-14"><use href="#i-arrow-left" /></svg> 博客广场</a>
+        <span style="color:var(--text-muted)">/</span>
+        <a href="#" style="color:var(--text-dim)">1060707057</a>
+        <span class="sp"></span>
+        <span class="tag">阅读进度 38%</span>
+        <button class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-link" /></svg>复制链接</button>
+      </div>
+    </div>
+
+    <div class="bl-art-wrap">
+      <article class="bl-art">
+        <header class="bl-art-head">
+          <div class="bl-cats">
+            <span class="bl-cat">基础游戏开发</span>
+            <span class="bl-cat">Gameplay开发</span>
+            <span class="bl-cat">贴花系统</span>
+          </div>
+          <h1>战损贴花使用指南</h1>
+          <p class="bl-art-summary">
+            贴花是战损表现里最便宜的手段，但层数与排序决定了它是省事还是掉帧。这篇给出三档质量预设、实测 drawcall，以及移动端该关掉什么。
+          </p>
+          <div class="bl-byline">
+            <span class="av">1</span>
+            <span style="color:var(--text);font-weight:600">1060707057</span>
+            <span class="bl-dot"></span><span>2026-09-10</span>
+            <span class="bl-dot"></span><span>约 6 分钟</span>
+            <span class="bl-dot"></span><span>2 480 字</span>
+            <span class="sp"></span>
+            <span class="tag tag-ok"><svg class="i i-12"><use href="#i-globe" /></svg>public</span>
+          </div>
+        </header>
+
+        <div class="bl-prose">
+          <p>贴花（decal）是战损表现里最便宜的手段：一张带透明通道的贴图投影到受击面，不需要改模型拓扑。但它有两个容易被低估的成本 —— <b>层数</b>和<b>排序</b>。</p>
+
+          <h2 id="s1">三档质量预设</h2>
+          <p>按目标机型给出三档，每档限制最大同时存在的贴花数：</p>
+          <pre><span class="lang">text</span><code>low    : 24 个 · 512²  · 不参与排序
+medium : 64 个 · 1024² · 按距离排序
+high   : 128 个 · 2048² · 按距离 + 法线夹角</code></pre>
+
+          <div class="bl-callout">
+            <svg class="i i-14"><use href="#i-alert" /></svg>
+            <div>先测 drawcall，再调贴图尺寸。多数时候瓶颈在提交次数而不是带宽。</div>
+          </div>
+
+          <h2 id="s2">常见坑</h2>
+          <ul>
+            <li>贴花法线与受击面夹角大于 60° 时会出现拉伸，需要在 shader 里做投影裁剪。</li>
+            <li>同一帧内叠加超过 8 层会触发 overdraw 警告，建议按材质分组合批。</li>
+            <li>透明通道的边缘要用 <code>alphaTest</code> 而不是混合，否则排序会闪。</li>
+          </ul>
+
+          <figure class="bl-figure">
+            <div class="frame">
+              <span style="text-align:center;font-size:var(--fs-xs);line-height:1.7">
+                <svg class="i i-32"><use href="#i-image" /></svg><br />图示：三档预设的贴花密度对比
+              </span>
+            </div>
+            <figcaption>图 1 · 同一受击面在 low / medium / high 三档下的贴花密度与 drawcall 变化</figcaption>
+          </figure>
+
+          <h3 id="s3">移动端取舍</h3>
+          <p>移动端不要开 <code>high</code> 档的按法线夹角排序，实测 GPU 时间增加 40%，而画面差异在 6 寸屏上几乎看不出来。</p>
+          <blockquote>如果只能记一句话：把层数上限当成帧预算来管，而不是当成美术参数来调。</blockquote>
+        </div>
+
+        <div class="bl-art-foot">
+          <div class="bl-author-card">
+            <span class="av">1</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;margin-bottom:4px">1060707057</div>
+              <div class="muted" style="font-size:var(--fs-sm)">写了 3 篇公开文章 · 主要关于渲染与 Gameplay 工具链</div>
+            </div>
+            <a class="btn" href="#">查看主页</a>
+          </div>
+
+          <div class="bl-sec-head">
+            <h2>继续阅读</h2>
+          </div>
+          <div class="bl-related">
+            <a class="bl-card" href="#" style="min-height:0">
+              <h3 style="font-size:var(--fs-md)">战斗演出编辑器架构设计</h3>
+              <p class="excerpt">三层结构与数据流。</p>
+              <div class="bl-card-foot"><span>1060707057</span><span class="sp"></span><span>9 分钟</span></div>
+            </a>
+            <a class="bl-card" href="#" style="min-height:0">
+              <h3 style="font-size:var(--fs-md)">资产异步加载</h3>
+              <p class="excerpt">重试策略与超时阈值。</p>
+              <div class="bl-card-foot"><span>n17852326702</span><span class="sp"></span><span>4 分钟</span></div>
+            </a>
+          </div>
+
+          <div class="bl-sec-head">
+            <h2>评论 <span class="cnt">3</span></h2>
+          </div>
+          <div class="bl-comment">
+            <span class="av">A</span>
+            <div style="flex:1">
+              <span class="who">anonymous</span><span class="when">2 天前</span>
+              <p>“层数上限当成帧预算来管”这句很受用，之前一直在美术那边来回扯。</p>
+            </div>
+          </div>
+          <div class="bl-comment">
+            <span class="av">C</span>
+            <div style="flex:1">
+              <span class="who">Cyril</span><span class="when">1 天前</span>
+              <p>建议补一张 8 层 overdraw 的截图，光看数字不太直观。</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:var(--sp-5);margin-top:var(--sp-8)">
+            <input class="field" placeholder="写下你的看法…（游客可直接评论）" aria-label="评论内容" />
+            <button class="btn btn-primary">发表</button>
+          </div>
+        </div>
+      </article>
+
+      <aside class="bl-toc">
+        <span class="kicker">本文目录</span>
+        <a href="#s1" class="is-on">三档质量预设</a>
+        <a href="#s2">常见坑</a>
+        <a href="#s3">移动端取舍</a>
+        <div class="bl-toc-foot">
+          <div class="kicker" style="margin-bottom:var(--sp-5)">阅读进度</div>
+          <div class="bar"><i style="width:38%"></i></div>
+          <div class="muted" style="font-size:var(--fs-2xs);margin-top:var(--sp-4);font-family:var(--font-mono)">38% · 还剩 4 分钟</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="note" style="max-width:1200px">
+  <h4>文章页的改动点</h4>
+  <ul class="fixlist">
+    <li><b>标题区成为独立模块</b>：分类 chip → 大标题（clamp 2.1–3rem）→ 摘要引文（左侧 2px 强调线）→ 署名行（头像/作者/日期/时长/字数/可见性）。
+        原来文章头与正文糊在一起，读完不知道在读谁写的什么。</li>
+    <li><b>正文规格</b>：18px / 行高 1.85 / 行宽 72ch；段落间距 18px；<code>h2</code> 上方加 1px 分割线形成章节切分；
+        列表 marker 用强调色；代码块带语言标签；图片包在 <code>figure</code> + <code>figcaption</code>。</li>
+    <li><b>目录常驻右栏</b>（232px，<code>position:sticky</code>），当前章节高亮；底部顺带放阅读进度。
+        原来 <code>.blog-toc</code> 只在 ≤720px 才出现折叠开关，桌面反而没有。</li>
+    <li><b>文末补齐</b>：作者卡 → 继续阅读（2 张相关文）→ 评论区（游客可直接发）。原来文章读完直接结束。</li>
+    <li><b>顶部进度条</b> 2px 强调色，<code>position:fixed</code>；尊重 <code>prefers-reduced-motion</code>（只做宽度过渡）。</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════ 个人主页 ══════════════════════ -->
+<div class="sec-head" id="site">
+  <div class="sec-num">03</div>
+  <h2>个人主页 · /blog/u/:userId</h2>
+  <p>整宽 hero + 作品横滑 + 博客分组。修掉"空黑一大片"。</p>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="traffic"><i></i><i></i><i></i></span>
+    <strong>个人主页</strong><span class="url">/blog/u/1060707057</span>
+  </div>
+  <div class="screen-inner">
+    <div class="bl-art-top" style="position:sticky;top:0;z-index:20">
+      <div class="bl-art-top-in">
+        <span class="av" style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);font-family:var(--font-mono);font-size:11px;font-weight:600">1</span>
+        <strong style="font-size:var(--fs-sm)">1060707057</strong>
+        <span class="sp"></span>
+        <nav style="display:flex;gap:var(--sp-5);font-size:var(--fs-sm)">
+          <a href="#" style="color:var(--accent)">首页</a>
+          <a href="#" style="color:var(--text-dim)">项目示例</a>
+          <a href="#" style="color:var(--text-dim)">博客</a>
+          <a href="#" style="color:var(--text-dim)">设置</a>
+        </nav>
+      </div>
+    </div>
+
+    <section class="bl-site-hero">
+      <div class="bl-site-hero-in">
+        <div class="overline">RENDERING · GAMEPLAY TOOLS</div>
+        <h1>把复杂的<em>管线</em><br />写成别人能用的文档</h1>
+        <p class="lede">渲染与 Gameplay 工具链的实践记录。贴花、战斗演出、脚本工具，以及一路踩过的坑。</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="#">读最新一篇</a>
+          <a class="btn" href="#">进入笔记本</a>
+        </div>
+        <div class="bl-site-stats">
+          <div><b>5</b><span>公开文章</span></div>
+          <div><b>4</b><span>分类</span></div>
+          <div><b>12</b><span>项目示例</span></div>
+          <div><b>2026-09</b><span>最近更新</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="bl-body">
+      <div class="bl-sec-head">
+        <h2>项目示例</h2>
+        <span class="cnt">横向滚动</span>
+      </div>
+      <div class="bl-work">
+        <a class="bl-work-card" href="#">
+          <div class="bl-work-cover"><svg class="i i-32"><use href="#i-layers" /></svg></div>
+          <div class="bl-work-body">
+            <h4>战斗演出编辑器</h4>
+            <p>时间轴 / 舞台 / 资源装配三层的统一编辑器。</p>
+          </div>
+        </a>
+        <a class="bl-work-card" href="#">
+          <div class="bl-work-cover"><svg class="i i-32"><use href="#i-image" /></svg></div>
+          <div class="bl-work-body">
+            <h4>战损贴花系统</h4>
+            <p>三档质量预设与 drawcall 预算管理。</p>
+          </div>
+        </a>
+        <a class="bl-work-card" href="#">
+          <div class="bl-work-cover"><svg class="i i-32"><use href="#i-box" /></svg></div>
+          <div class="bl-work-body">
+            <h4>资产异步加载</h4>
+            <p>重试策略、超时阈值与失败降级。</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="bl-sec-head">
+        <h2>博客</h2>
+        <span class="cnt">按分类</span>
+      </div>
+      <div class="bl-grid">
+        <a class="bl-card" href="#">
+          <div class="bl-cats"><span class="bl-cat">基础游戏开发</span></div>
+          <h3>战损贴花使用指南</h3>
+          <p class="excerpt">三档质量预设与对应的 drawcall 实测数据。</p>
+          <div class="bl-card-foot"><span>2026-09-10</span><span class="sp"></span><span>6 分钟</span></div>
+        </a>
+        <a class="bl-card" href="#">
+          <div class="bl-cats"><span class="bl-cat">AI 工具</span></div>
+          <h3>工具汇总</h3>
+          <p class="excerpt">生图 / 生视频 / 生模型三类工具的选型记录。</p>
+          <div class="bl-card-foot"><span>2026-08-24</span><span class="sp"></span><span>5 分钟</span></div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note" style="max-width:1200px">
+  <h4>个人主页的改动点</h4>
+  <ul class="fixlist">
+    <li><b>hero 用满整宽</b>（1200px）而不是窄列：大号衬线标题 + 副标题 + 两个 CTA + 一行统计。
+        线上实测这块是空黑一大片（只有 800×320 的居中空态）。</li>
+    <li><b>背景加"图纸网格"</b>：<code>radial-gradient</code> 遮罩的 56px 网格，从左上淡出，给暗底一点质感，不干扰阅读。</li>
+    <li><b>作品卡片横滑 + <code>scroll-snap</code></b>，卡宽 340px；无封面时用图标占位而不是空洞。</li>
+    <li><b>最近更新改成"条目列表"</b>：日期成列（等宽字体）+ 标题 + 一行摘要，扫读效率远高于卡片。</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════ 移动端 ══════════════════════ -->
+<div class="sec-head" id="mobile">
+  <div class="sec-num">04</div>
+  <h2>移动端 · 390px</h2>
+  <p>博主条横滑、卡片单列、目录折叠、正文留白。</p>
+</div>
+
+<div class="phone-row">
+  <div>
+    <div class="bl-mobile-frame blog-root bl-mobile">
+      <div class="phone-in" style="height:800px">
+        <div class="bl-masthead" style="border-radius:0">
+          <div class="bl-masthead-in">
+            <div class="bl-brand">
+              <div class="kicker">PUBLIC FEED</div>
+              <h1 style="font-size:2rem">博客</h1>
+            </div>
+            <div class="bl-tabs" style="gap:var(--sp-7)">
+              <button class="bl-tab is-on">广场</button>
+              <button class="bl-tab">个人</button>
+              <button class="bl-tab">圈子</button>
+            </div>
+          </div>
+        </div>
+        <div class="m-body bl-body">
+          <div class="bl-authors" style="margin-bottom:var(--sp-7)">
+            <a class="bl-author is-me" href="#"><span class="av">1</span><span>1060707057</span></a>
+            <a class="bl-author" href="#"><span class="av">N</span><span>n17852326702</span></a>
+          </div>
+          <a class="bl-card" href="#" style="min-height:0;margin-bottom:var(--sp-6)">
+            <div class="bl-cats"><span class="bl-cat">贴花系统</span></div>
+            <h3>战损贴花使用指南</h3>
+            <p class="excerpt">贴花按层叠加，注意 GPU 开销随层数增长。</p>
+            <div class="bl-card-foot"><span>1060707057</span><span class="sp"></span><span>6 分钟</span></div>
+          </a>
+          <a class="bl-card" href="#" style="min-height:0;margin-bottom:var(--sp-6)">
+            <div class="bl-cats"><span class="bl-cat">脚本工具</span></div>
+            <h3>资产异步加载</h3>
+            <p class="excerpt">重试策略与超时阈值。</p>
+            <div class="bl-card-foot"><span>n17852326702</span><span class="sp"></span><span>4 分钟</span></div>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="phone-cap">广场：博主横滑 + 单列卡片，无横向溢出</div>
+  </div>
+
+  <div>
+    <div class="bl-mobile-frame blog-root bl-mobile">
+      <div class="phone-in" style="height:800px">
+        <div class="bl-art-top">
+          <div class="bl-art-top-in" style="padding:var(--sp-5) var(--sp-7)">
+            <a class="back" href="#"><svg class="i i-14"><use href="#i-arrow-left" /></svg> 返回</a>
+            <span class="sp"></span>
+            <span class="tag">38%</span>
+          </div>
+        </div>
+        <div class="m-body bl-art-wrap">
+          <div class="bl-cats"><span class="bl-cat">贴花系统</span></div>
+          <h1 style="font-size:1.75rem;margin:var(--sp-4) 0 var(--sp-6)">战损贴花使用指南</h1>
+          <details class="bl-toc-mobile" open>
+            <summary><svg class="i i-14"><use href="#i-list-tree" /></svg> 本文目录 <span class="sp" style="flex:1"></span>3 节</summary>
+            <div class="in">
+              <a href="#" style="display:block;padding:4px 0;color:var(--accent);font-size:var(--fs-sm)">三档质量预设</a>
+              <a href="#" style="display:block;padding:4px 0;color:var(--text-dim);font-size:var(--fs-sm)">常见坑</a>
+              <a href="#" style="display:block;padding:4px 0;color:var(--text-dim);font-size:var(--fs-sm)">移动端取舍</a>
+            </div>
+          </details>
+          <div class="bl-prose" style="font-size:var(--fs-md)">
+            <p>贴花是战损表现里最便宜的手段，但层数与排序决定了它是省事还是掉帧。</p>
+            <h2 style="font-size:var(--fs-xl);margin-top:var(--sp-9)">三档质量预设</h2>
+            <pre style="padding:var(--sp-7)"><code>low    : 24 个 · 512²
+medium : 64 个 · 1024²
+high   : 128 个 · 2048²</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-cap">文章：目录折成可展开条，正文 14px/1.8 单列</div>
+  </div>
+</div>
+
+<div class="note" style="max-width:1200px">
+  <h4>移动端修的两个硬伤</h4>
+  <ul class="fixlist">
+    <li><span class="bad">现状</span> 「博主」用 <code>flex-wrap</code>，390px 下 chip 总宽超过视口，第二张被切掉一半（实拍 <code>before/02-hub-mobile.png</code> 可见）。
+        <span class="good">改后</span> 横向滚动 + 两端 2% <code>mask</code> 渐隐，永不溢出。</li>
+    <li><span class="bad">现状</span> 移动端 masthead 把标题、lede、导航、tab 四行竖着堆，占掉首屏 1/3。
+        <span class="good">改后</span> 移动端只留品牌 + tab 两行，搜索与 chips 收进 tab 下方。</li>
+    <li>文章页目录在移动端折成 <code>&lt;details&gt;</code>，默认展开当前章节；正文降到 14px/1.8 保持单列可读。</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════ 设计说明 ══════════════════════ -->
+<div class="sec-head" id="notes">
+  <div class="sec-num">05</div>
+  <h2>设计说明与落地要点</h2>
+</div>
+
+<div class="note" style="max-width:1200px;margin-bottom:var(--sp-11)">
+  <h4>一、为什么是"编辑式"而不是"卡片瀑布"</h4>
+  <ul class="fixlist">
+    <li>WebBook 的博客本质是<b>技术文档的公开面</b>，不是内容农场。技术读者要的是"这篇讲什么、多长、谁写的、什么时候"，而不是图片墙。</li>
+    <li>而且你现在的数据里<b>大多数文章没有封面图</b>（<code>cover</code> 可选）。所以设计必须在无图时依然成立 —— 头条用排版撑场，卡片用摘要撑场，图片只在有时才放大。</li>
+    <li>因此没有做瀑布流/大图卡片墙：那会让无图文章变成一堆空洞。</li>
+  </ul>
+
+  <h4 style="margin-top:var(--sp-8)">二、信息层级（三层，不再"所有卡片一样重"）</h4>
+  <ul class="fixlist">
+    <li><b>头条</b>（1 张，整宽两栏）：kicker + 大标题 + 完整摘要 + 元信息 + 右栏统计/封面。</li>
+    <li><b>最新文章</b>（等高网格，自适应 2–3 列）：分类 chip + 标题 + 两行摘要 + 底栏元信息。</li>
+    <li><b>更新流</b>（条目列表）：日期成列 + 标题 + 一行摘要 + 作者。用于"我就要找那篇"的场景。</li>
+  </ul>
+
+  <h4 style="margin-top:var(--sp-8)">三、效果清单（都做了降级）</h4>
+  <ul class="fixlist">
+    <li><b>卡片 hover</b>：边框转强调色 + 背景提亮一级 + <code>translateY(-2px)</code>；用 <code>--hover-raise</code>，纸墨皮肤下减为 -1px（纸上位移感更弱）。</li>
+    <li><b>封面 zoom</b>：仅在 <code>@media (hover:hover)</code> 下对封面做 <code>scale(1.04)</code>，避免触屏误触。</li>
+    <li><b>滚动揭示</b>：沿用现有 <code>Reveal</code>，但把 <code>stagger</code> 限制在首屏 4 个元素内，且 <code>prefers-reduced-motion</code> 下直接静态。</li>
+    <li><b>阅读进度</b>：顶部 2px 条 + 目录底部百分比，均只过渡 <code>width</code>。</li>
+    <li>所有动效只动 <code>border-color / background / transform / opacity</code>，不触发布局重排。</li>
+  </ul>
+
+  <h4 style="margin-top:var(--sp-8)">四、需要你拍板的三件事</h4>
+  <ul class="fixlist">
+    <li><b>「更新流」要不要？</b> 它让广场变长，但扫读效率最高。若你觉得重复，可以只保留"头条 + 网格"。</li>
+    <li><b>头条固定取"最新一篇"还是支持手动置顶？</b> 手动置顶需要在站点配置里加字段（<code>SiteConfig</code>）。</li>
+    <li><b>要不要显示阅读时长/字数？</b> 需要按字数估算（约 400 字/分钟），会给每张卡片一次正文长度读取（若走 feed 接口拿不到正文，可先用摘要字数近似）。</li>
+  </ul>
+
+  <h4 style="margin-top:var(--sp-8)">五、落地顺序建议</h4>
+  <ul class="fixlist">
+    <li><b>P0</b> 容器 920→1200 + masthead 重排 + 卡片等高/页脚贴底（纯 CSS，改动最小，收益最大）。</li>
+    <li><b>P1</b> 卡片补摘要/分类/时长（用已有 <code>PublicFeedItem</code> 字段，无需改后端）。</li>
+    <li><b>P2</b> 头条模块（新增标记，纯前端）。</li>
+    <li><b>P3</b> 文章页重排（标题区 / 正文规格 / 目录 / 文末三段）。</li>
+    <li><b>P4</b> 个人主页 hero + 作品横滑。</li>
+    <li><b>P5</b> 更新流 + 检索/分类筛选（需要前端过滤，数据量小时够用）。</li>
+  </ul>
+</div>
+
+<!-- 图标 sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-square" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></symbol>
+    <symbol id="i-list-tree" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 4v14a2 2 0 0 0 2 2h1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M21 16l-5-5-6 6-3-3-4 4"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 17.2v.2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H6M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></symbol>
+  </defs>
+</svg>
+
+<script>
+  // 三套皮肤即时预览（设计稿用；正式实现走 styles/theme.css 的 [data-theme]）
+  function setSkin(skin) {
+    document.documentElement.dataset.theme = skin;
+    document.querySelectorAll('.doc-nav .bl-chip').forEach((b) => {
+      b.classList.toggle('is-on', b.textContent.trim() === { gold: '墨金', paper: '纸墨', blueprint: '蓝图' }[skin]);
+    });
+  }
+  setSkin('gold');
+</script>
+</body>
+</html>

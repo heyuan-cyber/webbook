@@ -15,6 +15,7 @@ import type { LiveBlockGeometry } from './StageEdgesLayer';
 import { worldPointFromClient } from './stageCoords';
 import { useAutoSizeHeight } from './useAutoSizeHeight';
 import { toast } from '@/store/useToastStore';
+import { Icon } from '@/components/Icon';
 
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const HANDLES: Handle[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
@@ -441,7 +442,7 @@ export function AbsoluteCardBlockView({
                   onToggleHeadingCollapse();
                 }}
               >
-                {headingCollapsed ? '▸' : '▾'}
+                <Icon name={headingCollapsed ? 'chevron-right' : 'chevron-down'} size={12} />
               </button>
               {renderCardBody(block, Boolean(readOnly), onPatch, Boolean(autoFocus))}
             </div>

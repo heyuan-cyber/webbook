@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { ReadingProgress } from '@/components/ReadingProgress';
 import { CommentSection } from '@/components/CommentSection';
 import { ArticleToc } from '@/components/ArticleToc';
+import { Icon } from '@/components/Icon';
 
 function ShareButton() {
   const [copied, setCopied] = useState(false);
@@ -92,7 +93,7 @@ export function BlogPostPage() {
       <header className="blog-header">
         <div className="blog-header-inner blog-post-head">
           <Link to={userBlogPath(owner)} className="blog-back muted">
-            ← 作者博客
+            <Icon name="arrow-left" size={14} /> 作者博客
           </Link>
           <div className="blog-post-head-actions">
             {note && <h1>{note.title}</h1>}
@@ -139,7 +140,7 @@ export function BlogPostPage() {
         aria-label="回到顶部"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       >
-        ↑
+        <Icon name="arrow-up" size={16} />
       </button>
     </div>
   );

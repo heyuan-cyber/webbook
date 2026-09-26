@@ -1,3 +1,4 @@
+import { Icon } from '@/components/Icon';
 import type { Block } from '@webbook/shared';
 import {
   buildOutline,
@@ -112,7 +113,7 @@ function SectionTree({
             aria-expanded={!isCollapsed}
             onClick={() => onToggleCollapse(node.blockId)}
           >
-            {isCollapsed ? '▸' : '▾'}
+            <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} size={12} />
           </button>
         ) : (
           <span className="outline-twisty leaf">·</span>

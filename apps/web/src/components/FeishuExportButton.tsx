@@ -4,6 +4,7 @@ import { apiClient } from '@/lib/api';
 import { collectFeishuExportPayload } from '@/lib/feishuZipIo';
 import { useNotesStore } from '@/store/useNotesStore';
 import { toast } from '@/store/useToastStore';
+import { Icon } from '@/components/Icon';
 
 const LAST_FOLDER_KEY = 'webbook:feishu:lastFolderToken';
 const RESUME_EXPORT_KEY = 'webbook:feishu:resumeExport';
@@ -228,7 +229,9 @@ export function FeishuExportButton() {
                       checked={selected === f.token}
                       onChange={() => setSelected(f.token)}
                     />
-                    <span>📁 {f.name}</span>
+                    <span>
+                      <Icon name="folder" size={14} /> {f.name}
+                    </span>
                   </label>
                   <button
                     type="button"

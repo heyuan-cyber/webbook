@@ -77,5 +77,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    watch: {
+      // 部分编辑器用「写临时目录再改名」的方式保存文件。chokidar 会在这个临时目录
+      // 尚未释放时去 watch 它，触发 EBUSY 并让 dev server 直接退出（不是热更新失败，是进程死亡）。
+      // 这类临时目录对构建毫无意义，直接忽略掉。
+      ignored: ['**/.*.tmpdir/**', '**/.*.tmp', '**/*.tmp'],
+    },
   },
 });

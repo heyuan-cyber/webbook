@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 04 移动端（底部导航 + 悬浮新建）</title>
+<link rel="stylesheet" href="r2.css">
+<style>
+  .m-frame { width: 390px; height: 800px; display: flex; flex-direction: column; border-radius: var(--r-xl); overflow: hidden; border: 1px solid var(--border-strong); background: var(--bg); box-shadow: var(--shadow-lg); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-checksq"><path d="M9 11.5l2.5 2.5L20 8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-al"><path d="M20 12H5M11 18l-6-6 6-6"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+<g id="i-type"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></g>
+<g id="i-cal"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3v4M16 3v4"/></g>
+<g id="i-hash"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 二阶段 · 移动端</div>
+  <h1 class="doc-h1">手机端：底部导航 + 悬浮新建</h1>
+  <p class="doc-sub">PRD 里 <code>U-03 手机端快速新建笔记</code> 至今是 ❌。实拍显示 390px 下顶栏只剩「游客模式 / 社区」，登录与个人主页被挤掉，首屏的说明文字<strong style="color:var(--text)">横向溢出被裁掉</strong>。</p>
+
+  <h2>现在的问题（实拍证据）</h2>
+  <table class="tbl">
+    <tr><th style="width:150px">症状</th><th>证据</th></tr>
+    <tr><td><strong>顶栏被挤空</strong></td><td><code>_before/04-app-mobile.png</code>：390px 下只剩 目录按钮 / 游客模式 / 半个皮肤开关 / 社区</td></tr>
+    <tr><td><strong>空态文字溢出</strong></td><td>同一张图：「点左上角『目录』按钮打开目录，选择或新建一个…」直接切在屏幕右边缘外</td></tr>
+    <tr><td><strong>没有底部导航</strong></td><td>全仓 grep <code>bottom-nav|fab|floating-action</code> 零命中</td></tr>
+    <tr><td><strong>新建要四步</strong></td><td>开抽屉 → 点「笔记」→ 等新建 → 再点标题改名字</td></tr>
+  </table>
+
+  <h2>四个屏</h2>
+  <div class="phone-row">
+    <div>
+      <div class="m-frame">
+        <div class="m-root">
+          <div class="m-top"><svg class="i i-20" style="color:var(--text-dim)"><use href="#i-tree"/></svg><span class="m-title">笔记</span><div style="flex:1"></div><svg class="i i-20" style="color:var(--text-dim)"><use href="#i-search"/></svg><div class="rail-avatar" style="width:26px;height:26px;font-size:11px">?</div></div>
+          <div class="m-body">
+            <div class="m-empty">
+              <div class="empty-ico" style="margin:0 auto"><svg class="i i-20"><use href="#i-book"/></svg></div>
+              <h3>先写下一句话</h3>
+              <p>点右下角的 ＋ 就能开始。笔记先存在这台手机上，登录后自动同步。</p>
+              <div style="display:flex;gap:8px;justify-content:center;margin-top:18px">
+                <button class="btn btn-primary btn-sm"><svg class="i i-12"><use href="#i-plus"/></svg>新建笔记</button>
+                <button class="btn btn-sm"><svg class="i i-12"><use href="#i-tree"/></svg>打开目录</button>
+              </div>
+            </div>
+          </div>
+          <button class="m-fab"><svg class="i i-24"><use href="#i-plus"/></svg></button>
+          <nav class="m-bottom">
+            <button class="m-nav on"><svg class="i i-20"><use href="#i-tree"/></svg>笔记</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-checksq"/></svg>任务</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-globe"/></svg>社区</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-user"/></svg>我</button>
+          </nav>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:390px"><strong style="color:var(--text)">① 首屏</strong><br>空态文案限宽 26ch 居中，不再溢出；底部 4 个去处 + 悬浮新建。</p>
+    </div>
+
+    <div>
+      <div class="m-frame">
+        <div class="m-root">
+          <div class="m-top"><svg class="i i-20" style="color:var(--accent)"><use href="#i-al"/></svg><span class="m-title">基础游戏开发</span><div style="flex:1"></div><svg class="i i-20" style="color:var(--text-dim)"><use href="#i-search"/></svg></div>
+          <div class="m-body">
+            <div class="m-card"><div class="thumb cover c1" style="height:54px"></div><div style="min-width:0"><h4>战斗演出编辑器架构设计</h4><p><svg class="i i-12" style="vertical-align:-2px"><use href="#i-clock"/></svg> 2 小时前 · 12 个块</p></div></div>
+            <div class="m-card"><div class="thumb cover c3" style="height:54px"></div><div style="min-width:0"><h4>光照管线笔记</h4><p>昨天 · 8 个块</p></div></div>
+            <div class="m-card"><div class="thumb cover c2" style="height:54px"></div><div style="min-width:0"><h4>战损贴花使用指南</h4><p><span class="pill gold" style="padding:1px 7px">公开</span> 2026-09-10</p></div></div>
+            <div class="m-card"><div class="thumb" style="height:54px;background:var(--bg-elev-2);display:grid;place-items:center"><svg class="i i-20" style="color:var(--text-muted)"><use href="#i-folder"/></svg></div><div style="min-width:0"><h4 style="font-family:var(--font-sans);font-weight:600">工具链</h4><p>栏目 · 4 篇</p></div></div>
+          </div>
+          <button class="m-fab"><svg class="i i-24"><use href="#i-plus"/></svg></button>
+          <nav class="m-bottom">
+            <button class="m-nav on"><svg class="i i-20"><use href="#i-tree"/></svg>笔记</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-checksq"/></svg>任务</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-globe"/></svg>社区</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-user"/></svg>我</button>
+          </nav>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:390px"><strong style="color:var(--text)">② 列表</strong><br>列表项带自动封面缩略图，扫一眼就能认出笔记，而不是一列灰字。</p>
+    </div>
+
+    <div>
+      <div class="m-frame">
+        <div class="m-root">
+          <div class="m-top"><svg class="i i-20" style="color:var(--text-dim)"><use href="#i-tree"/></svg><span class="m-title">笔记</span></div>
+          <div class="m-body" style="filter:blur(1px);opacity:.5">
+            <div class="m-card"><div class="thumb cover c1" style="height:54px"></div><div><h4>战斗演出编辑器架构设计</h4><p>2 小时前</p></div></div>
+            <div class="m-card"><div class="thumb cover c3" style="height:54px"></div><div><h4>光照管线笔记</h4><p>昨天</p></div></div>
+          </div>
+          <div class="m-sheet">
+            <div class="m-sheet-inner">
+              <div class="grab"></div>
+              <div style="padding:0 20px 10px;font-size:var(--fs-xs);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);font-weight:650">新建</div>
+              <div class="m-sheet-item"><svg class="i i-20" style="color:var(--accent)"><use href="#i-type"/></svg>空白笔记</div>
+              <div class="m-sheet-item"><svg class="i i-20"><use href="#i-cal"/></svg>今日速记<span style="margin-left:auto;font-size:var(--fs-xs);color:var(--text-muted)">2026-09-26</span></div>
+              <div class="m-sheet-item"><svg class="i i-20"><use href="#i-folder"/></svg>在「基础游戏开发」下新建</div>
+              <div class="m-sheet-item"><svg class="i i-20"><use href="#i-image"/></svg>拍照 / 传图</div>
+              <div class="m-sheet-item" style="border-top:1px solid var(--border-subtle);margin-top:6px;padding-top:15px;color:var(--text-muted)"><svg class="i i-20"><use href="#i-x"/></svg>取消</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:390px"><strong style="color:var(--text)">③ 悬浮新建展开</strong><br>一步到位：空白 / 今日速记 / 落在当前栏目下 / 传图。</p>
+    </div>
+
+    <div>
+      <div class="m-frame">
+        <div class="m-root">
+          <div class="m-top"><span class="m-title">社区</span><div style="flex:1"></div><svg class="i i-20" style="color:var(--text-dim)"><use href="#i-search"/></svg></div>
+          <div class="m-body">
+            <div style="padding:12px 14px 4px"><div class="tabs" style="width:100%;display:flex"><button class="on" style="flex:1">广场</button><button style="flex:1">圈子</button><button style="flex:1">我的</button></div></div>
+            <div class="m-card" style="flex-direction:column;gap:9px">
+              <div class="cover c2" style="height:112px;border-radius:var(--r-md)"></div>
+              <div><h4 style="font-size:var(--fs-lg)">战损贴花使用指南</h4><p><span class="pill gold" style="padding:1px 7px"><svg class="i i-12"><use href="#i-hash"/></svg>贴花</span> 何源 · 2026-09-10</p></div>
+            </div>
+            <div class="m-card"><div class="thumb cover c3" style="height:54px"></div><div><h4>GS 性能分析：Profiler 实录</h4><p>n17852326702 · 3 分钟</p></div></div>
+            <div class="m-card"><div class="thumb cover c4" style="height:54px"></div><div><h4>新笔记</h4><p>liu · 1 分钟</p></div></div>
+          </div>
+          <nav class="m-bottom">
+            <button class="m-nav"><svg class="i i-20"><use href="#i-tree"/></svg>笔记</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-checksq"/></svg>任务</button>
+            <button class="m-nav on"><svg class="i i-20"><use href="#i-globe"/></svg>社区</button>
+            <button class="m-nav"><svg class="i i-20"><use href="#i-user"/></svg>我</button>
+          </nav>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:390px"><strong style="color:var(--text)">④ 社区</strong><br>同一套 Tabs 组件；第一条卡片用大图，后面用缩略图 —— 一屏能看到 3 条。</p>
+    </div>
+  </div>
+
+  <h2>移动端要点</h2>
+  <table class="tbl">
+    <tr><th style="width:180px">项</th><th>做法</th></tr>
+    <tr><td><strong>底部导航</strong></td><td>笔记 / 任务 / 社区 / 我，58px + <code>safe-area-inset-bottom</code>；当前项金色 + 顶部 2px 指示条</td></tr>
+    <tr><td><strong>悬浮新建</strong></td><td>52px 金色圆钮，右下 16px / 距底 78px（避开底栏）；展开为底部面板（4 个选项）</td></tr>
+    <tr><td><strong>顶栏瘦身</strong></td><td>只留：返回 / 当前标题 / 搜索 / 头像。皮肤开关移进「我」页 —— 它不该占顶栏</td></tr>
+    <tr><td><strong>空态限宽</strong></td><td>所有空态正文 <code>max-width: 26ch</code> + 居中，消灭 390px 下的横向裁切</td></tr>
+    <tr><td><strong>列表缩略图</strong></td><td>54px 自动封面（按笔记 id 派生），栏目显示文件夹图标；一眼区分笔记与栏目</td></tr>
+    <tr><td><strong>触控尺寸</strong></td><td>所有可点元素 ≥ 44×44 命中区；目录树在移动端行高 40px（桌面 28px）</td></tr>
+  </table>
+</div>
+</body>
+</html>

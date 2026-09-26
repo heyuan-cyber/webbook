@@ -159,29 +159,88 @@ export async function summarizeNote(env: Env, note: Note): Promise<string> {
   );
 }
 
-const OPEN_TASK_RE = /^[-*+]\s+\[\s\]\s+(.+)$/gm;
+/** 流式对话的 system 提示词：正文直出 Markdown，不用 JSON 包裹（否则无法流式阅读） */
+function streamSystemPrompt(note: Note): string {
+  return [
+    '你是 WebBook 笔记写作助手，帮助用户从零搭建、扩写、润色和整理笔记。',
+    '直接输出笔记正文的 Markdown：不要解释、不要 JSON、不要用代码块包裹整篇内容。',
+    '排版：用 # ## ### 标题；用 - 无序列表；用 - [ ] 待办；链接用 [标题](https://...) 行内格式。',
+    '禁止编造不存在的 URL 或事实。',
+    '',
+    `当前笔记标题：${note.title}`,
+    '当前笔记正文：',
+    noteToText(note) || '（空）',
+  ].join('\n');
+}
 
-/** extract_todos：从 Markdown 未完成任务行提取（兼容旧 checkbox 块） */
-export async function extractTodos(_env: Env, note: Note): Promise<string[]> {
-  const out: string[] = [];
-  for (const b of note.blocks) {
-    if (b.type === 'checkbox') {
-      if (!b.checked && b.text.trim()) out.push(b.text.trim());
-      continue;
-    }
-    const text =
-      'text' in b && typeof b.text === 'string'
-        ? b.text
-        : b.type === 'list'
-          ? b.items.map((it) => `- [ ] ${it}`).join('\n')
-          : '';
-    if (!text) continue;
-    OPEN_TASK_RE.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = OPEN_TASK_RE.exec(text)) !== null) {
-      const t = m[1].trim();
-      if (t) out.push(t);
-    }
-  }
-  return out;
+/**
+ * 流式笔记对话：把 provider 的 SSE 增量转发为本服务的 SSE 帧。
+ * 帧格式：`data: {"delta":"..."}` … 结束 `data: [DONE]`；出错 `data: {"error":"..."}`。
+ * 说明：流式路径不使用联网工具（工具调用与流式难以并存），需要检索时走阻塞式 /api/ai/chat。
+ */
+export function streamNoteChat(
+  env: Env,
+  note: Note,
+  history: { role: 'user' | 'assistant'; content: string }[],
+): ReadableStream<Uint8Array> {
+  const messages = [
+    { role: 'system' as const, content: streamSystemPrompt(note) },
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+  ];
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const frame = (payload: unknown) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      try {
+        if (!env.AI_API_KEY) throw new Error('AI_API_KEY not configured');
+        const res = await fetch(`${env.AI_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${env.AI_API_KEY}`,
+          },
+          body: JSON.stringify({ model: env.AI_MODEL, messages, stream: true }),
+        });
+        if (!res.ok || !res.body) throw new Error(`AI provider error: ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let nl = buf.indexOf('\n');
+          while (nl >= 0) {
+            const line = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 1);
+            nl = buf.indexOf('\n');
+            if (!line.startsWith('data:')) continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(payload) as {
+                choices?: { delta?: { content?: string } }[];
+              };
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) frame({ delta });
+            } catch {
+              /* 忽略半截帧 */
+            }
+          }
+        }
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+      } catch (e) {
+        try {
+          frame({ error: (e as Error).message || 'stream failed' });
+        } catch {
+          /* controller 可能已关闭 */
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
 }

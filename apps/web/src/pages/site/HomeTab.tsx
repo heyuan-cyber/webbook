@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { Icon } from '@/components/Icon';
 
 /**
  * Swiss hero —— 参考 Pitch Black Swiss：纯黑 + 巨型衬线词标 + overline + 副行 + marquee。
@@ -43,7 +44,7 @@ export function HomeTab({
         </div>
       </div>
       <span className="swiss-hero-scroll" aria-hidden="true">
-        ▾ Scroll
+        <Icon name="chevron-down" size={14} /> Scroll
       </span>
       <div className="swiss-marquee" aria-hidden="true">
         <div className="swiss-marquee-track">

@@ -3,9 +3,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 export function Reveal({
   children,
   className = '',
+  delay = 0,
 }: {
   children: ReactNode;
   className?: string;
+  /** Stagger offset in ms; 0 (default) keeps the previous behavior for other callers. */
+  delay?: number;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
@@ -34,7 +37,11 @@ export function Reveal({
   }, []);
 
   return (
-    <div ref={ref} className={`reveal ${inView ? 'in' : ''} ${className}`}>
+    <div
+      ref={ref}
+      className={`reveal ${inView ? 'in' : ''} ${className}`}
+      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+    >
       {children}
     </div>
   );

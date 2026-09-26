@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 05 零件收口</title>
+<link rel="stylesheet" href="r2.css">
+<style>
+  .sp { padding: 24px; border: 1px solid var(--border-subtle); border-radius: var(--r-lg); background: var(--bg-elev); }
+  .sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin: 16px 0 8px; }
+  .sp-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .sp-note { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 12px; line-height: 1.7; }
+  .sp-h { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 650; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-trash"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/></g>
+<g id="i-lock"><path d="M6 11h12v9H6z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></g>
+<g id="i-alert"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+<g id="i-refresh"><path d="M20 11a8 8 0 1 0-1.6 5.6"/><path d="M20 5v6h-6"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-edit"><path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 二阶段 · 零件收口</div>
+  <h1 class="doc-h1">一套零件，替换掉现在的 4 + 8 + 6</h1>
+  <p class="doc-sub">「美化」的一半其实是<strong style="color:var(--text)">一致性</strong>：同一个东西在不同页面长得不一样，比它本身难看更伤观感。这一页是批准用的零件清单 —— 确认后这些类名可以直接变成组件。</p>
+
+  <h2>按钮</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="sp-h">层级</div>
+      <div class="sp-row">
+        <button class="btn btn-primary"><svg class="i i-14"><use href="#i-plus"/></svg>主操作</button>
+        <button class="btn">次操作</button>
+        <button class="btn btn-ghost">弱操作</button>
+        <button class="btn btn-sm">小号</button>
+        <button class="btn btn-icon btn-ghost"><svg class="i i-14"><use href="#i-search"/></svg></button>
+      </div>
+      <p class="sp-note">一屏只有一个 <code>btn-primary</code>。悬停加深 + 金色外发光（<code>--shadow-glow</code>），按下位移 1px。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">危险操作</div>
+      <div class="sp-row">
+        <button class="btn" style="color:var(--danger);border-color:rgba(224,131,124,.4)"><svg class="i i-14"><use href="#i-trash"/></svg>删除</button>
+        <button class="btn" style="color:var(--danger);border-color:rgba(224,131,124,.4)"><svg class="i i-14"><use href="#i-lock"/></svg>设为私密</button>
+        <button class="btn btn-ghost" style="color:var(--danger)">撤销</button>
+      </div>
+      <p class="sp-note">危险 = 不可逆（删除 / 改可见性）。复制、导出、刷新都不是危险操作，不该用红色。</p>
+    </div>
+  </div>
+
+  <h2>状态标记</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="sp-h">可见性 / 同步状态</div>
+      <div class="sp-row">
+        <span class="pill gold"><svg class="i i-12"><use href="#i-globe"/></svg>公开</span>
+        <span class="pill dim"><svg class="i i-12"><use href="#i-users"/></svg>圈子</span>
+        <span class="pill dim"><svg class="i i-12"><use href="#i-lock"/></svg>私密</span>
+        <span class="pill ok"><svg class="i i-12"><use href="#i-check"/></svg>已同步</span>
+        <span class="pill" style="background:rgba(224,176,98,.16);color:var(--warn);border:1px solid rgba(224,176,98,.4)"><svg class="i i-12"><use href="#i-refresh"/></svg>同步中</span>
+      </div>
+      <p class="sp-note">现在「可见性」在 <code>&lt;option&gt;</code> 里用 🔒 / 👥 / 🌐 三个 emoji，在原生下拉里无法跟随主题色 —— 改为带图标的 pill + 下拉面板。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">元信息</div>
+      <div class="sp-row" style="gap:16px">
+        <span class="meta" style="margin:0"><span class="mono">2026-09-24</span><span class="dot"></span><span>12 个块</span><span class="dot"></span><span class="mono">a3f19c2</span></span>
+      </div>
+      <p class="sp-note">日期、计数、SHA、路径统一走 <code>--font-mono</code>；正文与标题走衬线 / 无衬线。等宽字让元信息「退后」，不再和内容抢注意力。</p>
+    </div>
+  </div>
+
+  <h2>弹窗 —— 一个组件替掉 8 套背板 + 6 处 confirm</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="sp-h">危险确认</div>
+      <div class="dlg" style="margin-top:4px">
+        <div class="dlg-head"><svg class="i i-20" style="color:var(--danger)"><use href="#i-trash"/></svg><h3>删除这篇笔记？</h3></div>
+        <div class="dlg-body">《战斗演出编辑器架构设计》会连同它的 12 个块和 2 条连线一起删除。5 秒内可以撤销。</div>
+        <div class="dlg-foot"><button class="btn btn-ghost">取消</button><button class="btn btn-primary">删除</button></div>
+      </div>
+      <p class="sp-note">标题是问句，正文说清<strong style="color:var(--text)">对象名 + 后果 + 能否撤销</strong>。Esc 关闭，焦点默认落在取消上。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">普通确认 / 表单</div>
+      <div class="dlg" style="margin-top:4px">
+        <div class="dlg-head"><svg class="i i-20" style="color:var(--accent)"><use href="#i-edit"/></svg><h3>重命名栏目</h3></div>
+        <div class="dlg-body">
+          <input class="input" value="基础游戏开发">
+          <div style="margin-top:9px;font-size:var(--fs-xs);color:var(--text-muted)">子栏目与笔记的相对位置不变。</div>
+        </div>
+        <div class="dlg-foot"><button class="btn btn-ghost">取消</button><button class="btn btn-primary">保存</button></div>
+      </div>
+      <p class="sp-note">同一个壳也用于邀请成员、新建圈子 —— 不再出现浏览器原生弹窗。</p>
+    </div>
+  </div>
+
+  <h2>Tabs —— 一套替掉 4 套</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="sp-h">药丸型（页面级）</div>
+      <div class="tabs"><button class="on">最新</button><button>最热</button><button>随机</button></div>
+      <p class="sp-note">用于 <code>/blog</code> 的 我的博客 / 博客广场 / 圈子动态，以及圈子详情的 笔记 / 博客。URL search param 驱动，<code>role="tablist"</code> 补齐（现在 <code>CircleDetailPage.tsx:157-170</code> 那份没有）。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">侧栏型（后台）</div>
+      <div style="width:220px">
+        <div class="tree-row"><svg class="i i-14"><use href="#i-folder"/></svg>目录管理</div>
+        <div class="tree-row on"><svg class="i i-14"><use href="#i-eye"/></svg>公开内容</div>
+        <div class="tree-row"><svg class="i i-14"><use href="#i-sparkles"/></svg>AI 策略</div>
+      </div>
+      <p class="sp-note">后台 5 个 tab 用与目录树<strong style="color:var(--text)">同一种行</strong>（28px、同悬停、同选中金条），只是换了位置 —— 少一套视觉语言。</p>
+    </div>
+  </div>
+
+  <h2>加载态 —— 三种骨架替掉 15+ 处「加载中…」</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="sp-h">卡片网格</div>
+      <div style="border:1px solid var(--border-subtle);border-radius:var(--r-lg);overflow:hidden;background:var(--bg-elev-1)">
+        <div class="sk" style="height:100px;border-radius:0"></div>
+        <div style="padding:14px">
+          <div class="sk" style="width:44%;height:14px;margin-bottom:9px"></div>
+          <div class="sk" style="width:88%;height:10px;margin-bottom:6px"></div>
+          <div class="sk" style="width:62%;height:10px"></div>
+        </div>
+      </div>
+      <p class="sp-note">博客 / 个人主页 / 圈子列表。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">行列表</div>
+      <div style="border:1px solid var(--border-subtle);border-radius:var(--r-lg);overflow:hidden;background:var(--bg-elev-1)">
+        <div style="display:flex;gap:12px;align-items:center;padding:13px 15px;border-bottom:1px solid var(--border-subtle)">
+          <div class="sk" style="width:14px;height:14px"></div><div style="flex:1"><div class="sk" style="width:40%;height:12px;margin-bottom:7px"></div><div class="sk" style="width:24%;height:9px"></div></div><div class="sk" style="width:60px;height:24px"></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;padding:13px 15px">
+          <div class="sk" style="width:14px;height:14px"></div><div style="flex:1"><div class="sk" style="width:56%;height:12px;margin-bottom:7px"></div><div class="sk" style="width:30%;height:9px"></div></div><div class="sk" style="width:60px;height:24px"></div>
+        </div>
+      </div>
+      <p class="sp-note">后台表格 / 目录树 / 历史面板。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">正文详情</div>
+      <div>
+        <div class="sk" style="width:52%;height:26px;margin-bottom:14px"></div>
+        <div class="sk" style="width:20%;height:10px;margin-bottom:22px"></div>
+        <div class="sk" style="width:100%;height:11px;margin-bottom:8px"></div>
+        <div class="sk" style="width:94%;height:11px;margin-bottom:8px"></div>
+        <div class="sk" style="width:76%;height:11px"></div>
+      </div>
+      <p class="sp-note">文章 / 笔记打开。<code>prefers-reduced-motion</code> 下停用微光动画。</p>
+    </div>
+  </div>
+
+  <h2>空态 —— 一个组件替掉散落的灰字</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="empty" style="padding:22px">
+        <div class="empty-ico"><svg class="i i-20"><use href="#i-folder"/></svg></div>
+        <h3 style="font-size:var(--fs-md);font-family:var(--font-sans);font-weight:600">还没有内容</h3>
+        <p style="font-size:var(--fs-xs)">在右边写第一句话就会自动建一篇。</p>
+      </div>
+    </div>
+    <div class="sp">
+      <div class="empty" style="padding:22px">
+        <div class="empty-ico"><svg class="i i-20"><use href="#i-globe"/></svg></div>
+        <h3 style="font-size:var(--fs-md);font-family:var(--font-sans);font-weight:600">这里还没有公开文章</h3>
+        <p style="font-size:var(--fs-xs)">公开的笔记会出现在广场和个人页。私密笔记永远不会。</p>
+        <button class="btn btn-sm" style="margin-top:6px"><svg class="i i-12"><use href="#i-send"/></svg>去写一篇</button>
+      </div>
+    </div>
+    <div class="sp">
+      <div class="empty" style="padding:22px">
+        <div class="empty-ico" style="color:var(--danger);border-color:rgba(224,131,124,.35)"><svg class="i i-20"><use href="#i-alert"/></svg></div>
+        <h3 style="font-size:var(--fs-md);font-family:var(--font-sans);font-weight:600">没找到这篇笔记</h3>
+        <p style="font-size:var(--fs-xs)">它可能已被删除，或者属于另一个账号。</p>
+        <div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-sm">回到笔记列表</button><button class="btn btn-ghost btn-sm">重试</button></div>
+      </div>
+      <p class="sp-note">现在 <code>NoteEditor.tsx:106-114</code> 的「未找到笔记」还在转 spinner —— 错误态和加载态是两件事。</p>
+    </div>
+  </div>
+
+  <h2>Toast</h2>
+  <div class="sp-grid">
+    <div class="sp">
+      <div class="sp-row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div class="toast"><svg class="i i-14" style="color:var(--ok)"><use href="#i-check"/></svg><span style="flex:1">已保存到云端</span><span class="mono" style="font-size:11px;color:var(--text-muted)">a3f19c2</span></div>
+        <div class="toast" style="border-color:rgba(224,131,124,.45)"><svg class="i i-14" style="color:var(--danger)"><use href="#i-alert"/></svg><span style="flex:1">同步失败，已存在本地</span><button class="btn btn-sm">重试</button></div>
+        <div class="toast"><svg class="i i-14" style="color:var(--accent)"><use href="#i-info"/></svg><span style="flex:1">已删除《战斗演出编辑器架构设计》</span><button class="btn btn-ghost btn-sm">撤销</button></div>
+      </div>
+      <p class="sp-note">toast 里给出<strong style="color:var(--text)">可撤销</strong>和<strong style="color:var(--text)">重试</strong>，而不是只报「失败」。</p>
+    </div>
+    <div class="sp">
+      <div class="sp-h">图标集（已有 53 个，无需新增）</div>
+      <div class="sp-row" style="gap:14px;color:var(--text-dim);font-size:11px">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:5px"><svg class="i i-20"><use href="#i-file"/></svg>file</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:5px"><svg class="i i-20"><use href="#i-folder"/></svg>folder</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:5px"><svg class="i i-20"><use href="#i-image"/></svg>image</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:5px"><svg class="i i-20"><use href="#i-globe"/></svg>globe</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:5px"><svg class="i i-20"><use href="#i-lock"/></svg>lock</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:5px"><svg class="i i-20"><use href="#i-users"/></svg>users</span>
+      </div>
+      <p class="sp-note">只剩两处字符图标要换：<code>CanvasBlockView.tsx:170</code> 的 <code>🎨</code> → <code>image</code>；<code>SettingsTab.tsx:114,189</code> 的 <code>✓</code> → <code>check</code>。</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="d1">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebBook · 界面美化设计稿</title>
+<link rel="stylesheet" href="design-system.css" />
+<style>
+  .hero { max-width: var(--content-max); margin: 0 auto; padding: var(--sp-11) var(--sp-9) var(--sp-9); }
+  .hero h1 { font-size: 40px; margin-bottom: var(--sp-6); }
+  .hero p { color: var(--text-dim); font-size: var(--fs-lg); max-width: 62ch; }
+  .hero .meta { display:flex; gap: var(--sp-6); flex-wrap: wrap; margin-top: var(--sp-8); }
+  .cards { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--sp-9); display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--sp-8); }
+  .dcard {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border); border-radius: var(--r-xl);
+    background: var(--surface-1); overflow: hidden; text-decoration: none; color: inherit;
+    transition: border-color var(--dur-base) var(--ease), transform var(--dur-base) var(--ease-out);
+  }
+  .dcard:hover { border-color: var(--accent-line); transform: translateY(-3px); text-decoration: none; }
+  .dcard .swatch { height: 108px; display: flex; }
+  .dcard .swatch i { flex: 1; display: block; }
+  .dcard .in { padding: var(--sp-8); display: flex; flex-direction: column; flex: 1; }
+  .dcard h3 { font-family: var(--font-sans); font-size: var(--fs-lg); margin-bottom: var(--sp-3); }
+  .dcard .tagline { font-size: var(--fs-sm); color: var(--accent); margin-bottom: var(--sp-6); }
+  .dcard p { font-size: var(--fs-sm); color: var(--text-dim); margin-bottom: var(--sp-7); }
+  .dcard ul { margin: 0 0 var(--sp-8); padding-left: 1.1em; font-size: var(--fs-xs); color: var(--text-dim); }
+  .dcard li { margin-bottom: var(--sp-3); }
+  .dcard .go { margin-top: auto; display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sm); color: var(--accent); }
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-7); }
+  .ba figure { margin: 0; }
+  .ba img { width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); display: block; }
+  .ba figcaption { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-4); font-family: var(--font-mono); }
+  .issues { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--sp-9); display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: var(--sp-7); }
+  .issue { padding: var(--sp-8); border: 1px solid var(--border-subtle); border-radius: var(--r-lg); background: var(--surface-1); }
+  .issue .n { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--accent); }
+  .issue h4 { font-family: var(--font-sans); font-size: var(--fs-md); margin: var(--sp-4) 0; }
+  .issue p { font-size: var(--fs-sm); color: var(--text-dim); margin: 0; }
+  .issue .kpi { font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 600; color: var(--text); display: block; line-height: 1.1; }
+  @media (max-width: 900px) { .ba { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <div class="doc-head-in">
+    <div class="doc-title">WebBook 界面美化 · 设计稿<span>v1 待评审</span></div>
+    <nav class="doc-nav">
+      <a href="INDEX.html" aria-current="page">总览</a>
+      <a href="direction-1-warm.html">方向一 · 墨金</a>
+      <a href="direction-2-paper.html">方向二 · 纸墨</a>
+      <a href="direction-3-blueprint.html">方向三 · 蓝图</a>
+      <a href="../UI-REFRESH-AUDIT.md">审计全文</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="kicker">Design Proposal · 2026-09</div>
+  <h1>把 WebBook 从"两个 App 拼在一起"<br />收成一个有主次的笔记本</h1>
+  <p>
+    功能已经够多了，问题出在视觉体系：<b>token 只覆盖了外壳</b>，画布层偷偷用了另一套冷色，
+    侧栏在 6 级目录下会被挤爆，顶栏 7 个入口没有主次。
+    下面三份设计稿覆盖同样 9 个界面，只有"语言"不同 —— 请挑一个方向，或告诉我混搭哪几块。
+  </p>
+  <div class="meta">
+    <span class="tag tag-accent"><svg class="i i-12"><use href="#i-image" /></svg>9 个界面 × 3 方向</span>
+    <span class="tag"><svg class="i i-12"><use href="#i-layers" /></svg>全部走 token，可直接抄进 global.css</span>
+    <span class="tag"><svg class="i i-12"><use href="#i-check" /></svg>现状截图已实拍对照</span>
+  </div>
+</section>
+
+<div class="sec-head">
+  <div class="sec-num">01</div>
+  <h2>三个方向</h2>
+  <p>同一套信息架构，三种视觉语言。点开任一方向看完整设计稿。</p>
+</div>
+
+<div class="cards">
+  <a class="dcard" href="direction-1-warm.html">
+    <div class="swatch">
+      <i style="background:#14161a"></i><i style="background:#191c21"></i><i style="background:#1f232a"></i>
+      <i style="background:#c4a574"></i><i style="background:#d8bd91"></i><i style="background:#eae6df"></i>
+    </div>
+    <div class="in">
+      <h3>方向一 · 墨金 Warm Editorial</h3>
+      <div class="tagline">在你现在的气质上做减法，风险最低</div>
+      <p>保留暖金与暗色，去掉大范围玻璃模糊和极光动效；把画布从冷蓝改回暖石墨 + 金色连线。写作时背景终于安静下来。</p>
+      <ul>
+        <li>侧栏可拖宽 · 缩进 10px/级 · 面包屑补偿</li>
+        <li>顶栏收敛为 面包屑 + ⌘K + 账号</li>
+        <li>24 个线性 SVG 图标替换全部 emoji</li>
+      </ul>
+      <div class="go">查看设计稿 <svg class="i i-14"><use href="#i-arrow-right" /></svg></div>
+    </div>
+  </a>
+
+  <a class="dcard" href="direction-2-paper.html">
+    <div class="swatch">
+      <i style="background:#f4f1ea"></i><i style="background:#fbf9f4"></i><i style="background:#ffffff"></i>
+      <i style="background:#a8442a"></i><i style="background:#1b1a17"></i><i style="background:#ddd6c6"></i>
+    </div>
+    <div class="in">
+      <h3>方向二 · 纸墨 Ink &amp; Paper</h3>
+      <div class="tagline">翻成浅色纸感，差异最大</div>
+      <p>纸白底 + 墨黑字 + 朱砂点色，层级靠细分割线和留白而不是卡片阴影。适合白天长时间写文档，暗色留作夜间模式。</p>
+      <ul>
+        <li>阅读与写作对比度最好</li>
+        <li>画布改为"网格纸 + 墨线"表达</li>
+        <li>代价：不再是"暗黑高级"观感</li>
+      </ul>
+      <div class="go">查看设计稿 <svg class="i i-14"><use href="#i-arrow-right" /></svg></div>
+    </div>
+  </a>
+
+  <a class="dcard" href="direction-3-blueprint.html">
+    <div class="swatch">
+      <i style="background:#0e1114"></i><i style="background:#13171c"></i><i style="background:#171c22"></i>
+      <i style="background:#35d0ba"></i><i style="background:#dfe5ea"></i><i style="background:#232a32"></i>
+    </div>
+    <div class="in">
+      <h3>方向三 · 蓝图 Blueprint</h3>
+      <div class="tagline">技术舱：网格、等宽、精密对齐</div>
+      <p>冷石墨底 + 青色强调（青色这次是<b>全局</b>主色，不再只是画布私用）。元数据用等宽字体，高信息密度但强对齐。</p>
+      <ul>
+        <li>面向"技术文档 + 知识图谱"的场景</li>
+        <li>8px 基线网格，所有面板同一套仪器排版</li>
+        <li>与方向一共用 80% 组件结构</li>
+      </ul>
+      <div class="go">查看设计稿 <svg class="i i-14"><use href="#i-arrow-right" /></svg></div>
+    </div>
+  </a>
+</div>
+
+<div class="note">
+  <h4>怎么选（一句话版）</h4>
+  <ul>
+    <li><b>想稳</b>：方向一。你会觉得"还是 WebBook，但终于安静了"。</li>
+    <li><b>想变</b>：方向二。白天写文档体验最好，但要接受整体变浅。</li>
+    <li><b>想贴工程</b>：方向三。你现在的目录（渲染 / Gameplay / 工具链）很适合蓝图语言。</li>
+    <li><b>混搭也行</b>：最省事的组合是 <b>方向一的外壳 + 方向三的画布</b> —— 告诉我取哪几块即可。</li>
+  </ul>
+</div>
+
+<div class="sec-head">
+  <div class="sec-num">02</div>
+  <h2>现状：实拍证据</h2>
+  <p>headless Chrome 实拍，取自你本机 localhost:5173 与线上站。全部原图在 <code>_before/</code>。</p>
+</div>
+
+<div class="cards" style="padding:0 var(--sp-9);max-width:var(--content-max);margin:0 auto">
+  <div class="issue" style="grid-column: span 2">
+    <div class="ba">
+      <figure>
+        <img src="_before/08-local-app.png" alt="笔记本现状" loading="lazy" />
+        <figcaption>08-local-app.png · /app 游客态：整屏只有两行灰字，没有"写第一句话"的入口</figcaption>
+      </figure>
+      <figure>
+        <img src="_before/10-app-1000.png" alt="笔记本 1000px 宽" loading="lazy" />
+        <figcaption>10-app-1000.png · 1000px：侧栏吃掉 30%，顶栏换行风险开始出现</figcaption>
+      </figure>
+      <figure>
+        <img src="_before/11-app-mobile.png" alt="移动端现状" loading="lazy" />
+        <figcaption>11-app-mobile.png · 390px：顶栏只剩「社区」，登录/任务/我的全部消失，也没有底部导航</figcaption>
+      </figure>
+      <figure>
+        <img src="_before/09-local-blog.png" alt="博客广场现状" loading="lazy" />
+        <figcaption>09-local-blog.png · 博客广场：标题/导航/tab 全挤在 560px 列里，右侧 2/3 空着</figcaption>
+      </figure>
+      <figure>
+        <img src="_before/06-admin.png" alt="后台非管理员" loading="lazy" />
+        <figcaption>06-admin.png · 游客点「后台」的空转页 —— 这个入口本不该出现</figcaption>
+      </figure>
+      <figure>
+        <img src="_before/04-user-blog.png" alt="个人主页" loading="lazy" />
+        <figcaption>04-user-blog.png · 个人主页是第六代首页：纯黑 + 蓝，与笔记本的暖金是两套语言</figcaption>
+      </figure>
+    </div>
+  </div>
+</div>
+
+<div class="sec-head">
+  <div class="sec-num">03</div>
+  <h2>关键数字（审计摘要）</h2>
+  <p>这是"看起来像两个 App"的量化原因。完整证据见 <a href="../UI-REFRESH-AUDIT.md">UI-REFRESH-AUDIT.md</a>。</p>
+</div>
+
+<div class="issues">
+  <div class="issue">
+    <span class="kpi">0 / 188</span>
+    <div class="n">TOKEN LEAK</div>
+    <h4><code>--fs-*</code> 用了 0 次，字号硬编码 188 处</h4>
+    <p>11 种 px 字号里，<code>12px</code> 出现 58 次、<code>13px</code> 46 次、<code>11px</code> 30 次 —— 三个角色没有名字。改一次要动几十处。</p>
+  </div>
+  <div class="issue">
+    <span class="kpi">33</span>
+    <div class="n">SILENT FALLBACK</div>
+    <h4><code>var(--token, #hex)</code> 兜底会把画布变蓝</h4>
+    <p>画布/图谱层用 <code>#38bdf8</code> 冷蓝 + <code>#334155</code> slate 写在兜底值里，且 <code>--muted</code> 是拼错的 token 名（真名 <code>--text-muted</code>），所以 <code>#94a3b8</code> 永远生效。</p>
+  </div>
+  <div class="issue">
+    <span class="kpi">7 级</span>
+    <div class="n">SIDEBAR DEPTH</div>
+    <h4>300px 侧栏遇上 7 级缩进</h4>
+    <p>从你运行中的 <code>/app</code> 读到真实目录最深 7 级（缩进 8 + depth×14 = 106px），只剩 190px 放文字和 5 个工具按钮。</p>
+  </div>
+  <div class="issue">
+    <span class="kpi">48</span>
+    <div class="n">EMOJI AS ICONS</div>
+    <h4>emoji / 字符当图标</h4>
+    <p><code>📁📄 ＋❏☑✎🗑 ☰ ⠿ ✕ 🤖 🛠 ⟳</code>… <code>blockFactory.ts</code> 甚至把中文词「立方」当图标。跨平台字形不同、不能跟随主题色。</p>
+  </div>
+  <div class="issue">
+    <span class="kpi">1 / 8</span>
+    <div class="n">NAV COVERAGE</div>
+    <h4>只有 <code>/app</code> 有外壳</h4>
+    <p><code>AppShell</code> 只被 <code>UserApp.tsx</code> 使用 —— <code>/blog</code>、<code>/blog/u/*</code>、<code>/app/circles</code>、<code>/admin</code> 都没有侧栏、顶栏和 ⌘K。</p>
+  </div>
+  <div class="issue">
+    <span class="kpi">~19%</span>
+    <div class="n">DEAD CSS</div>
+    <h4>首页背了六代，约 500 行死代码</h4>
+    <p>v4 / v5 霓虹 / io-* / blog-home-v2 / io-site / Swiss 全在同一个文件里。改"卡片样式"改第一处定义<b>不会生效</b>（<code>.io-card</code>、<code>.btn-sm</code> 都定义了两遍）。</p>
+  </div>
+</div>
+
+<div class="sec-head">
+  <div class="sec-num">04</div>
+  <h2>三个方向都要修的（不依赖选择）</h2>
+</div>
+<div class="note" style="margin-bottom:var(--sp-11)">
+  <ul class="fixlist">
+    <li><b>补全并接入 token</b>：<code>--fs-*</code> 补 11/12/13px 三档，<code>--space-*</code> 补 6/10/14/18px，加 <code>--radius-pill</code>、<code>--stage-bg</code>、<code>--on-media</code>、<code>--handle</code>，把写了 7 遍的 <code>0 4px 14px rgba(0,0,0,.35)</code> 收成 <code>--shadow-md</code>。</li>
+    <li><b>删掉 33 处 <code>var(--token, #hex)</code> 兜底</b>，并把 <code>--muted</code> 改名 <code>--text-muted</code>。这是"画布不会某天突然变蓝"的保险。</li>
+    <li><b>统一图标</b>：24 个 inline SVG，全部 <code>aria-hidden</code> + 父级 <code>aria-label</code>。</li>
+    <li><b>导航收口</b>：让 <code>/blog</code>、<code>/app/circles</code>、<code>/admin</code> 共用顶栏 + ⌘K；顶栏加 active 态；「后台」只对 admin 显示。</li>
+    <li><b>移动端补底部导航</b>（笔记 / 任务 / 社区 / 我的）+ 悬浮「＋新建」。</li>
+    <li><b>侧栏可读性</b>：宽度可拖（默认 280px 存 localStorage）、缩进 14→10px、当前路径自动展开、hover-only 工具条改为"常驻低对比"（修键盘不可达）。</li>
+  </ul>
+</div>
+
+<!-- ── 图标 sprite（24 个线性图标，替换现有全部 emoji）──────────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 9h18l-2.2 8.4A2 2 0 0 1 16.9 19H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-square" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-square" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></symbol>
+    <symbol id="i-command" viewBox="0 0 24 24"><path d="M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3z"/></symbol>
+    <symbol id="i-list-tree" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 4v14a2 2 0 0 0 2 2h1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H2.9a2 2 0 1 1 0-4H3a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M21 16l-5-5-6 6-3-3-4 4"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-3-7z"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="15" cy="18" r="1.4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v5M12 17.2v.2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M18 20a6.6 6.6 0 0 0-1.6-4.3"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H6M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></symbol>
+    <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6M11 8.5v5M8.5 11h5"/></symbol>
+    <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6M8.5 11h5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-13.7-5.2L3 9"/><path d="M3 4v5h5"/><path d="M4 13a8 8 0 0 0 13.7 5.2L21 15"/><path d="M21 20v-5h-5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="i-quote" viewBox="0 0 24 24"><path d="M9 6a4 4 0 0 0-4 4v8h6v-6H7.5A1.5 1.5 0 0 1 9 10.5z"/><path d="M19 6a4 4 0 0 0-4 4v8h6v-6h-3.5A1.5 1.5 0 0 1 19 10.5z"/></symbol>
+  </defs>
+</svg>
+
+</body>
+</html>

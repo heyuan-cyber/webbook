@@ -154,6 +154,76 @@ export async function putFile(
   await enqueueWrite(r, () => putContentWithRetry(env, r, path, b64encode(content), message, 'put'));
 }
 
+/** 读取文件当前 sha（不存在返回 null）——用于把 revision 交给客户端做乐观锁 */
+export async function getFileSha(
+  env: Env,
+  path: string,
+  repo?: string,
+): Promise<string | null> {
+  const sha = await getSha(env, path, resolveRepo(env, repo));
+  return sha ?? null;
+}
+
+/** 乐观锁写入的冲突信号：写入者持有的 revision 已过期。绝不重试。 */
+export class FileConflictError extends Error {
+  constructor(
+    readonly path: string,
+    readonly expectedSha: string | null,
+    readonly actualSha: string | null,
+  ) {
+    super(`file conflict: ${path}`);
+    this.name = 'FileConflictError';
+  }
+}
+
+/**
+ * 条件写入（compare-and-swap）：仅当文件当前 sha 等于 expectedSha 时才落盘。
+ *
+ * 与 putFile 的关键差别：**不做重试**。putContentWithRetry 会把 409 当网络抖动重试，
+ * 那是为了掩盖瞬时冲突；而这里的冲突是必须暴露给调用方的信号，重试等于静默覆盖别人的写入。
+ *
+ * 走同一把 repo 写锁，因此同一 isolate 内的"读 sha → 写"是不可分割的。
+ *
+ * @param expectedSha 客户端读到的 revision；null 表示"文件应当还不存在"；undefined 表示不做校验
+ * @returns 写入后的新 sha
+ * @throws FileConflictError 当实际 sha 与 expectedSha 不符
+ */
+export async function putFileConditional(
+  env: Env,
+  path: string,
+  content: string,
+  message: string,
+  expectedSha: string | null | undefined,
+  repo?: string,
+): Promise<string> {
+  const r = resolveRepo(env, repo);
+  return enqueueWrite(r, async () => {
+    const actualSha = (await getSha(env, path, r)) ?? null;
+    if (expectedSha !== undefined && actualSha !== expectedSha) {
+      throw new FileConflictError(path, expectedSha, actualSha);
+    }
+    const res = await fetch(`${API}/repos/${r}/contents/${path}`, {
+      method: 'PUT',
+      headers: { ...headers(env), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        content: b64encode(content),
+        branch: env.GITHUB_BRANCH,
+        ...(actualSha ? { sha: actualSha } : {}),
+      }),
+    });
+    if (!res.ok) {
+      // 落盘瞬间被别的进程抢先：同样是冲突，交给调用方决定，不重试
+      if (isRetryableWriteStatus(res.status)) {
+        throw new FileConflictError(path, expectedSha ?? null, await getFileSha(env, path, r));
+      }
+      throw new Error(`GitHub put ${r}:${path}: ${res.status}`);
+    }
+    const data = (await res.json()) as { content?: { sha?: string } };
+    return data.content?.sha ?? (await getFileSha(env, path, r)) ?? '';
+  });
+}
+
 export async function deleteFile(
   env: Env,
   path: string,

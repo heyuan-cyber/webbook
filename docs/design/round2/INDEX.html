@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 二阶段「一体外壳」· 入口</title>
+<link rel="stylesheet" href="r2.css">
+<style>
+  .doc { max-width: 1240px; }
+  .lead { display: grid; grid-template-columns: 1.15fr 1fr; gap: 34px; align-items: start; margin: 26px 0 8px; }
+  @media (max-width: 900px) { .lead { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid var(--border-subtle); border-radius: var(--r-lg); background: var(--bg-elev); padding: 18px 20px; }
+  .panel h3 { margin: 0 0 10px; font-size: var(--fs-md); font-family: var(--font-sans); font-weight: 650; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 14px; }
+  .shot { border: 1px solid var(--border-subtle); border-radius: var(--r-md); overflow: hidden; background: var(--bg-elev); }
+  .shot img { display: block; width: 100%; height: 168px; object-fit: cover; object-position: top left; }
+  .shot figcaption { padding: 8px 11px; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.6; }
+  .shot figcaption b { color: var(--text); display: block; font-size: var(--fs-sm); margin-bottom: 2px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; margin: 18px 0 8px; }
+  .navcard { display: block; border: 1px solid var(--border-subtle); border-radius: var(--r-lg); background: var(--bg-elev); padding: 18px 20px 16px; transition: border-color var(--dur-base) var(--ease), transform var(--dur-base) var(--ease-out); }
+  .navcard:hover { border-color: var(--accent-line); transform: translateY(-2px); }
+  .navcard .n { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--accent); }
+  .navcard h3 { font-size: var(--fs-xl); margin: 6px 0 6px; }
+  .navcard p { color: var(--text-dim); font-size: var(--fs-sm); line-height: 1.7; }
+  .navcard .tags { margin-top: 11px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .ask { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; margin: 18px 0; }
+  .ask h3 { font-family: var(--font-sans); font-size: var(--fs-md); font-weight: 650; margin: 0 0 4px; }
+  .ask p { color: var(--text-dim); font-size: var(--fs-sm); }
+  .ask .opts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+  .opt { border: 1px solid var(--border); border-radius: var(--r-pill); padding: 4px 13px; font-size: var(--fs-xs); color: var(--text-dim); background: var(--bg-elev-1); }
+  .opt.rec { border-color: var(--accent-line); color: var(--accent); background: var(--accent-soft); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="kicker">设计稿 · 二阶段 · 待你确认</div>
+  <h1 class="doc-h1">一体外壳：把五个小应用收成一个产品</h1>
+  <p class="doc-sub">
+    上一轮（方向一 · 墨金）已经把<strong style="color:var(--text)">皮肤</strong>统一了：一套 token、三套皮肤、53 个线性图标、画布去掉了冷蓝。
+    这一轮解决剩下的<strong style="color:var(--text)">结构</strong>问题 —— 导航、首屏、留白节奏、零件一致性。
+    <strong style="color:var(--text)">不新增颜色，不改数据模型。</strong>
+  </p>
+
+  <div class="lead">
+    <div>
+      <h2 style="margin-top:0">一句话诊断</h2>
+      <p>WebBook 现在是<strong style="color:var(--text)">五个各带自己顶栏的小应用</strong>拼在一起：笔记本、博客广场、个人主页、圈子、后台。
+      它们共享了颜色，但没有共享<strong style="color:var(--text)">导航</strong> —— 14 个路由里只有 2 个走进 <code>&lt;AppShell&gt;</code>。
+      游客进「圈子」直接撞上登录页；顶栏 7 个平级按钮没有当前页高亮；手机端顶栏被挤空、首屏文字横向溢出被裁掉。</p>
+      <p>同时，第一次打开笔记本看到的是一片死灰色 —— 全屏 90% 是空的，只有两行提示字。写作工具最该做好的那一眼，现在是空白。</p>
+      <div class="ask">
+        <h3>所以这一稿只做三件事</h3>
+        <p>
+          <b style="color:var(--text)">1. 一个外壳</b>　左轨道（去处）+ 侧栏（内容）+ 情境顶栏，14 个路由全部走进来。<br>
+          <b style="color:var(--text)">2. 一个首屏</b>　把「欢迎使用 WebBook」换成真正的第一屏。<br>
+          <b style="color:var(--text)">3. 一套零件</b>　Dialog / Tabs / Skeleton / Empty / Toast 各一个，替掉 8+4+6 套实现。
+        </p>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>确认后可以怎么落地</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75;margin:0 0 12px">
+        这份设计稿<strong style="color:var(--text)">不是</strong>产品代码。确认后按这个顺序切，每步都能单独验收：
+      </p>
+      <table class="tbl" style="margin-top:0">
+        <tr><td style="width:34px"><strong>P0</strong></td><td><strong>外壳骨架</strong><br><span style="font-size:12px">新建 <code>AppShell</code> 的 rail + 顶栏变体，把 /blog、/app/circles、/admin 接进来</span></td></tr>
+        <tr><td><strong>P1</strong></td><td><strong>首屏 + 空态 + 加载态</strong><br><span style="font-size:12px">替换 15+ 处裸「加载中…」，统一 EmptyState</span></td></tr>
+        <tr><td><strong>P2</strong></td><td><strong>移动端</strong><br><span style="font-size:12px">底部导航 + 悬浮新建（PRD <code>U-03</code>）+ 空态限宽</span></td></tr>
+        <tr><td><strong>P3</strong></td><td><strong>零件收口</strong><br><span style="font-size:12px">Dialog 替 6 处 confirm；Tabs 4→1；清 <code>🎨</code>/<code>✓</code></span></td></tr>
+        <tr><td><strong>P4</strong></td><td><strong>样式表瘦身</strong><br><span style="font-size:12px">删掉 4 代首页残留（约 700–900 行死 CSS）</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h2>现状实拍（这一稿的靶子）</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">全部来自你本机 <code>localhost:5188</code> 的 headless Chrome 实拍，非示意图。原图在 <code>_before/</code>。</p>
+  <div class="shots">
+    <figure class="shot" style="margin:0"><img src="_before/01-app-desktop.png" alt="笔记本桌面端"><figcaption><b>笔记本 · 首屏</b>正中央两行灰字，其余全是空的；顶栏 7 个平级按钮，游客也能看到「后台」</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/02-blog-desktop.png" alt="博客广场"><figcaption><b>博客广场</b>内容挤在 760px 一列里，1600px 屏幕右边 40% 全空；没有外壳</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/04-app-mobile.png" alt="移动端"><figcaption><b>手机端</b>顶栏只剩「游客模式 / 社区」；首屏说明文字横向溢出被裁掉</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/08-circles-guest.png" alt="游客进圈子"><figcaption><b>游客进 /app/circles</b>迎面一个登录页（与 /login 逐字节相同），没有任何「圈子是什么」的解释</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/07-admin-guest.png" alt="后台"><figcaption><b>后台</b>自带一套 .admin-top/.admin-nav；游客点进来只得到一张权限卡片</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/12-article.png" alt="文章页"><figcaption><b>文章页</b>底部读取良好；但长路径在 &lt;li&gt; 里溢出，出现页内横向滚动条</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/10-site-real-desktop.png" alt="个人主页"><figcaption><b>个人主页</b>顶部直接显示 UUID；作者明明有公开文，却渲染「还没有文章」</figcaption></figure>
+    <figure class="shot" style="margin:0"><img src="_before/03-login.png" alt="登录页"><figcaption><b>登录页</b>卡片对比度过低，底部说明与链接全挤在 13px 一档</figcaption></figure>
+  </div>
+
+  <h2>五份设计稿</h2>
+  <div class="cards">
+    <a class="navcard" href="screen-01-notebook.html">
+      <div class="n">01</div><h3>笔记本 · 一体外壳</h3>
+      <p>左轨道 + 内容侧栏 + 情境顶栏；首屏（第一次打开）与笔记态两屏对照。</p>
+      <div class="tags"><span class="pill gold">左轨道</span><span class="pill gold">首屏</span><span class="pill dim">面包屑</span><span class="pill dim">层级差</span></div>
+    </a>
+    <a class="navcard" href="screen-02-public.html">
+      <div class="n">02</div><h3>公开面 · 博客 / 个人主页 / 文章</h3>
+      <p>共用外壳，内容从 760px 铺到 1180px；卡片自动封面；文章长路径不再溢出。</p>
+      <div class="tags"><span class="pill gold">自动封面</span><span class="pill gold">1180px</span><span class="pill dim">等宽元信息</span></div>
+    </a>
+    <a class="navcard" href="screen-03-circles-admin.html">
+      <div class="n">03</div><h3>圈子与后台 · 同一外壳</h3>
+      <p>去掉两套自造顶栏；游客不再撞登录墙；原生 confirm 换成设计系统 Dialog。</p>
+      <div class="tags"><span class="pill gold">游客可读</span><span class="pill gold">Dialog</span><span class="pill dim">侧栏子导航</span></div>
+    </a>
+    <a class="navcard" href="screen-04-mobile.html">
+      <div class="n">04</div><h3>移动端 · 底部导航 + 悬浮新建</h3>
+      <p>四屏：首屏 / 列表 / 悬浮新建展开 / 社区。修掉空态横向溢出。</p>
+      <div class="tags"><span class="pill gold">底部导航</span><span class="pill gold">FAB</span><span class="pill dim">U-03</span></div>
+    </a>
+    <a class="navcard" href="screen-05-parts.html">
+      <div class="n">05</div><h3>零件收口</h3>
+      <p>按钮 / 状态 / Dialog / Tabs / Skeleton / Empty / Toast —— 批准用的零件清单。</p>
+      <div class="tags"><span class="pill gold">Dialog 8→1</span><span class="pill gold">Tabs 4→1</span><span class="pill dim">骨架 3 种</span></div>
+    </a>
+  </div>
+
+  <h2>需要你拍板的四件事</h2>
+
+  <div class="ask">
+    <h3>Q1 · 导航放在哪儿？</h3>
+    <p>现在是顶栏 7 个平级按钮。设计稿的方案是抽出一条 68px 左轨道，把「去处」和「内容」分开。</p>
+    <div class="opts">
+      <span class="opt rec">A. 左轨道 + 内容侧栏（推荐）</span>
+      <span class="opt">B. 保留侧栏，顶栏改成下拉菜单</span>
+      <span class="opt">C. 顶栏 tab 化 + 高亮当前页</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">A 多占 68px 横向空间，换来 14 个路由一致的导航与明确的 active 态。B/C 更省空间，但「博客 / 圈子 / 后台」仍然藏在二级入口里。</p>
+  </div>
+
+  <div class="ask">
+    <h3>Q2 · 首屏做成什么样？</h3>
+    <p>现在是居中的两行灰字。设计稿给的是「标题 + 可直接聚焦的书写条 + 3 个动作 + 右侧快速开始」。</p>
+    <div class="opts">
+      <span class="opt rec">A. 书写条优先（推荐，点了就写）</span>
+      <span class="opt">B. 动作按钮优先（三个大按钮）</span>
+      <span class="opt">C. 保留简洁，但换成更好的空态插图 + 一个主按钮</span>
+    </div>
+  </div>
+
+  <div class="ask">
+    <h3>Q3 · 卡片要不要自动封面？</h3>
+    <p>现在没有 <code>cover</code> 的笔记卡片只有文字，列表看起来是一片灰。</p>
+    <div class="opts">
+      <span class="opt rec">A. 按笔记 id 派生确定性渐变封面（推荐，零数据改动）</span>
+      <span class="opt">B. 用标题首字做字型封面</span>
+      <span class="opt">C. 不加，保持纯文字列表</span>
+    </div>
+  </div>
+
+  <div class="ask">
+    <h3>Q4 · 落地节奏</h3>
+    <p>P0 外壳是其余全部的前置 —— 它一动，五个页面同时换脸。</p>
+    <div class="opts">
+      <span class="opt rec">A. 按 P0→P4 顺序，每步单独验收（推荐）</span>
+      <span class="opt">B. 只做 P0 + P2（外壳 + 移动端），零件先不动</span>
+      <span class="opt">C. 先做一块样板（只改博客面），看过再决定其余</span>
+    </div>
+  </div>
+
+  <h2>顺带发现、但不属于美化范围</h2>
+  <table class="tbl">
+    <tr><th style="width:210px">发现</th><th>证据</th><th style="width:150px">建议</th></tr>
+    <tr>
+      <td><strong>个人主页读不到自己的公开文</strong></td>
+      <td><code>GET /api/public/users/ac061a21…/feed</code> 返回 <code>{"posts":[]}</code>，而 <code>GET /api/public/feed</code> 里同一 <code>ownerId</code> 有 1 篇；且返回的 <code>ownerEmail</code> 等于 userId</td>
+      <td>单独开 issue 定位（后端）</td>
+    </tr>
+    <tr>
+      <td><strong>舞台初始相机偏移</strong></td>
+      <td>上一轮审计已记录：未拖动过的新笔记打开后正文偏到视口右侧之外，只看到半截</td>
+      <td>优先级高于本轮美化</td>
+    </tr>
+    <tr>
+      <td><strong>样式表 4 代首页残留</strong></td>
+      <td><code>layout.css</code> 5,675 行；<code>domain-*</code> / <code>spotlight-*</code> / <code>marquee</code> / <code>masonry</code> / <code>io-hero-*</code> / <code>io-spot-*</code> / <code>io-home-*</code> / <code>io-discipline*</code> 在 TSX 里零引用</td>
+      <td>P4 删除前先 grep 复核</td>
+    </tr>
+    <tr>
+      <td><strong>孤儿页面</strong></td>
+      <td><code>pages/BlogPage.tsx</code>（63 行）没有任何路由或组件引用它</td>
+      <td>随 P4 一起删</td>
+    </tr>
+  </table>
+
+  <h2>这一稿明确不动的</h2>
+  <table class="tbl">
+    <tr><th style="width:180px">不动</th><th>原因</th></tr>
+    <tr><td><strong>配色</strong></td><td>墨金 / 纸墨 / 蓝图三套皮肤已经是确认过的方向，这一稿只把表面层级的<strong style="color:var(--text)">差值</strong>拉开（相邻档 +6/255），色相一个不动</td></tr>
+    <tr><td><strong>画布与连线</strong></td><td>上一轮已从冷蓝改暖金，本轮只加自动封面与元信息排版</td></tr>
+    <tr><td><strong>块编辑器内核</strong></td><td>块 / 连线 / 相机 / 手势的数据模型与交互不改</td></tr>
+    <tr><td><strong>数据与 API</strong></td><td>零 schema 改动、零 Worker 部署；自动封面是从已有 <code>note.id</code> 派生的 CSS，不是新字段</td></tr>
+    <tr><td><strong>权限与可见性</strong></td><td>private 仍然返回 404。游客看到圈子列表是<strong style="color:var(--text)">公开圈子</strong>，与现有 <code>/api/public</code> 能力一致</td></tr>
+  </table>
+</div>
+</body>
+</html>
