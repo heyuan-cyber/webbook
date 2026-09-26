@@ -22,6 +22,7 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const treeLoading = useNotesStore((s) => s.treeLoading);
   const noteLoading = useNotesStore((s) => s.noteLoading);
   const selectNote = useNotesStore((s) => s.selectNote);
+  // 标题输入框在顶栏（NoteTitleTop），这里仍要它来支持历史回滚
   const setActiveTitle = useNotesStore((s) => s.setActiveTitle);
   const updateActiveBlocks = useNotesStore((s) => s.updateActiveBlocks);
   const updateActiveEdges = useNotesStore((s) => s.updateActiveEdges);
@@ -143,21 +144,8 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
     <main
       className={`editor editor-with-ai editor-workbench ${showPreview ? 'editor-preview' : ''}`}
     >
-      <div className="editor-head">
-        {showPreview ? (
-          <h1 className="note-title">{activeNote.title}</h1>
-        ) : (
-          <input
-            className="note-title-input"
-            value={activeNote.title}
-            onChange={(e) => setActiveTitle(e.target.value)}
-            placeholder="笔记标题"
-            aria-label="笔记标题"
-          />
-        )}
-      </div>
-      {/* 元信息（保存态 / 可见性 / 预览 / 更多）已上移到顶栏的 NoteMetaBar ——
-          笔记头只保留标题，正文竖向空间从 ~68% 提到 ~78%。
+      {/* 标题与元信息都已在顶栏（NoteTitleTop / NoteMetaBar）——
+          正文从这里直接开始，竖向空间不再被笔记头吃掉。
           版本历史面板仍渲染在这里（顶栏按钮只负责开关）。 */}
       {!readOnly && (
         <NoteHistoryPanel

@@ -40,6 +40,45 @@ const VISIBILITY_LABEL: Record<NoteVisibility, string> = {
  *      盖不过顶栏之下的内容。
  */
 
+/**
+ * 顶栏里的笔记标题（取代 `.editor-head` 那一行）。
+ *
+ * 背景：元信息搬到顶栏后，笔记头只剩标题却仍独占一行（56px 行高 + 24px 外边距），
+ * 在正文里白占 80px。这里把标题也收进顶栏左侧 —— 正文从"标题下方"开始，
+ * `/app` 的竖向空间再涨约 12%。
+ *
+ * 只替换面包屑，不新增横向占用：面包屑末级本来就是当前笔记标题，
+ * 但不可编辑；换成输入框后同一块地方既能看又能改，信息没丢。
+ * 面包屑在 /blog、/admin、圈子等页面照旧。
+ */
+export function NoteTitleTop() {
+  const activeNote = useNotesStore((s) => s.activeNote);
+  const setActiveTitle = useNotesStore((s) => s.setActiveTitle);
+  const preview = useEditorUiStore((s) => s.preview);
+
+  if (!activeNote) return null;
+
+  // 博客预览态是只读渲染，标题不该可改
+  if (preview) {
+    return (
+      <span className="note-title-top is-static" title={activeNote.title}>
+        {activeNote.title || '未命名笔记'}
+      </span>
+    );
+  }
+
+  return (
+    <input
+      className="note-title-top"
+      value={activeNote.title}
+      onChange={(e) => setActiveTitle(e.target.value)}
+      placeholder="笔记标题"
+      aria-label="笔记标题"
+      spellCheck={false}
+    />
+  );
+}
+
 /** 笔记元信息条：只在 /app 有打开笔记时渲染 */
 function NoteMetaBar() {
   const activeNote = useNotesStore((s) => s.activeNote);

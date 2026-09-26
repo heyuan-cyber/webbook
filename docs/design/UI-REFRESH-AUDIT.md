@@ -294,6 +294,67 @@ blog-home-v2（45 行）、io-site 多标签（525 行）、Swiss 纯黑（515 �
 > **环境教训（第三次踩到）**：验证布局务必用**游客态**。种 mock session 会让
 > `authed=true` 去云端取空树、覆盖本地种子，导致笔记打不开；
 > 而已登录态又无法脚本化（真认证实例种 mock session 无效）。
+>
+> #### 标题继续上移顶栏 + 本地调试连本地 Worker · 验收记录
+>
+> **起因**：接手方案 B 后又发现两处 —— ① 笔记头只剩标题却仍独占一行；
+> ② 本地调试一直挂「本地模式」提示条。
+>
+> **① 标题进顶栏**（`NoteTitleTop`）
+>
+> 元信息搬走后，`.editor-head` 里只剩标题，但仍是「56px 行高 + 24px 外边距」。
+> 这次把标题也收进顶栏左侧，**直接替换面包屑**而不是新增横向占用 ——
+> 面包屑末级本来就是当前笔记标题、只是不可编辑，换成输入框后
+> 同一块地方既能看又能改，信息没丢。`/blog`、`/admin`、圈子页的面包屑照旧。
+>
+> | 文件 | 改动 |
+> |---|---|
+> | `ShellTopBar.tsx` | 新增导出 `NoteTitleTop`（含预览态只读分支） |
+> | `AppShell.tsx` | `activeNoteId` 存在时渲染标题、隐藏面包屑 |
+> | `NoteEditor.tsx` | 删除 `.editor-head` 整块 |
+> | `layout.css` | 新增 `.note-title-top`（宽度夹 180–420px）；删除 `.editor-head` / `.editor-meta` 共 5 处死规则 |
+>
+> **实测**（Chromium，真实认证实例，笔记「战损贴花使用指南」）
+>
+> | 指标 | 改前 | 改后 |
+> |---|---|---|
+> | 顶栏高度 | 56px | 56px（不变） |
+> | 笔记头元素 | 标题独占一行 | **已删除**（`editorHead: false`） |
+> | 正文起点 | 189px | **56px**（= 顶栏高度，正文紧贴顶栏） |
+> | 舞台高度 @871px 视口 | 650px / 72% | **696px / 80%** |
+> | 舞台高度 @1271px 视口 | — | **1096px / 86%** |
+> | 标题宽度 | — | 420px（180–420px 夹取，16px/600） |
+> | 面包屑 | 显示（与标题重复） | 笔记态隐藏；`/app` 无笔记时仍显示「笔记本」 |
+>
+> 横向空间：1584px 视口下 `left 612 + meta 330 + right 306`，无溢出、无换行。
+> 标题可编辑（`setActiveTitle` 写回 store 并触发保存态）已实测；预览态切换为只读 `<span>`。
+>
+> **回归**：`tsc` + `build` 通过；`/blog`（WebBook / 博客广场）、`/admin`（/ 管理后台）、
+> `/app/circles`（/ 笔记圈子）面包屑均正常渲染 128px；`/app` 无笔记态显示「笔记本」；
+> 4 路由无 `.editor-head`、无 `.note-meta-bar` 误渲染、无横向溢出。
+>
+> **② 本地模式提示条**
+>
+> 不是样式问题，是**真的降级了**：`apps/web/.env` 把 `VITE_API_BASE_URL` 指向
+> `http://localhost:8787`（本地 wrangler dev），而 8787 没有进程在跑 →
+> `/api/tree` 取不到 → `localOnly = true`。已用后台任务把 `wrangler dev` 跑起来。
+>
+> 排查中还发现一个**容易误判的点**：`wrangler dev` 默认用 Miniflare 本地存储，
+> 未带 token 请求 `/api/tree` 会走「公开投影」分支（`if (!user)`，源码里明确
+> 注释该分支不提供 `_rev`），返回的是已发布博客而非用户目录树 —— 所以
+> **不能靠 `curl http://127.0.0.1:8787/api/tree` 判断本地 Worker 是否正常**，
+> 必须带真实 token。
+>
+> 带真实 token 实测（浏览器内 `fetch`）：
+>
+> | 后端 | HTTP | `_rev` | 节点数 |
+> |---|---|---|---|
+> | `http://127.0.0.1:8787`（本地 dev） | 200 | true（`b2d43ce7…`） | 68 |
+> | `https://webbook-api.…workers.dev` | 200 | true（`b2d43ce7…`） | 68 |
+>
+> 两个后端完全一致，`.tree-sync-notice` 已不再渲染（`bannerCount: 0`）。
+> 本地 Worker 通过 `.dev.vars` 读同一个 GitHub 数据仓，因此本地调试能拿到真实目录树。
+>
 >> #### 顶栏收敛（第 1 项）· 验收记录
 >
 > **改动**：`AppShell.tsx` 重写顶栏；新增 `components/AccountMenu.tsx`；

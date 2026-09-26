@@ -12,7 +12,7 @@ import { TreeSyncNotice } from './TreeSyncNotice';
 import { TreeHistoryPanel } from './TreeHistoryPanel';
 import { Icon } from './Icon';
 import { MobileNav } from './MobileNav';
-import { ShellTopBar } from './ShellTopBar';
+import { ShellTopBar, NoteTitleTop } from './ShellTopBar';
 import { useThemeSync } from '@/lib/theme';
 
 /** 从目录树里找出某个节点到根的路径（用于面包屑） */
@@ -122,27 +122,32 @@ export function AppShell({
               >
                 <Icon name="list-tree" size={18} />
               </button>
-              <nav className="crumb" aria-label="当前位置">
-                {crumbs.length > 0 ? (
-                  crumbs.map((c, i) => {
-                    const last = i === crumbs.length - 1;
-                    return (
-                      <span key={c.id} className="crumb-part">
-                        {i > 0 && (
-                          <span className="crumb-sep" aria-hidden="true">
-                            /
+              {/* 打开笔记时，标题接管这里 —— 面包屑末级本来就是笔记标题，
+                  换成可编辑输入框后同一块地方信息不丢，还省掉正文里的一整行。 */}
+              <NoteTitleTop />
+              {!activeNoteId && (
+                <nav className="crumb topbar-crumb" aria-label="当前位置">
+                  {crumbs.length > 0 ? (
+                    crumbs.map((c, i) => {
+                      const last = i === crumbs.length - 1;
+                      return (
+                        <span key={c.id} className="crumb-part">
+                          {i > 0 && (
+                            <span className="crumb-sep" aria-hidden="true">
+                              /
+                            </span>
+                          )}
+                          <span className={last ? 'crumb-here' : 'crumb-link'} title={c.title}>
+                            {c.title}
                           </span>
-                        )}
-                        <span className={last ? 'crumb-here' : 'crumb-link'} title={c.title}>
-                          {c.title}
                         </span>
-                      </span>
-                    );
-                  })
-                ) : (
-                  <span className="crumb-here">{crumbLabel}</span>
-                )}
-              </nav>
+                      );
+                    })
+                  ) : (
+                    <span className="crumb-here">{crumbLabel}</span>
+                  )}
+                </nav>
+              )}
             </div>
           }
         />

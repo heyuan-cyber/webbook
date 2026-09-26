@@ -115,6 +115,61 @@
   font-weight: 550;
 }
 
+/* ── 顶栏里的笔记标题 ──────────────────────────────────────────
+   取代原先正文里的 `.editor-head`：标题不再自占一行（56px + 24px 外边距），
+   而是顶替面包屑的位置 —— 面包屑末级本就是当前笔记标题，只是不可编辑。
+   宽度夹在 180–420px：够宽能看全多数标题，又不会在宽屏无限膨胀把面包屑挤没。 */
+.topbar-left .note-title-top {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 420px;
+  height: 28px;
+  padding: 0 2px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  outline: none;
+  text-overflow: ellipsis;
+  transition: border-color var(--dur-base) var(--ease);
+}
+.topbar-left .note-title-top:hover {
+  border-bottom-color: var(--border);
+}
+.topbar-left .note-title-top:focus {
+  border-bottom-color: var(--accent);
+}
+.topbar-left .note-title-top::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+/* 预览态：只读展示，不给出可编辑的视觉暗示 */
+.topbar-left .note-title-top.is-static {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-bottom-color: transparent;
+  /* padding 与输入态对齐，切换预览时文字不跳动 */
+  padding: 5px 2px 0;
+  height: auto;
+  cursor: default;
+}
+/* 窄屏优先保证标题可读：面包屑（当前笔记名与标题重复）让位 */
+@media (max-width: 1180px) {
+  .topbar-left .crumb {
+    display: none;
+  }
+  .topbar-left .note-title-top {
+    max-width: none;
+  }
+}
+
 /* ── 命令栏：把 ⌘K 从隐藏快捷键变成可见入口 ─────────────────── */
 .cmdbar {
   display: inline-flex;
@@ -765,10 +820,6 @@
   flex-shrink: 0;
   margin-bottom: var(--sp-6);
 }
-.editor-workbench .editor-head {
-  flex-shrink: 0;
-  margin-bottom: var(--sp-6);
-}
 .editor-workbench .editor-body {
   flex: 1;
   min-height: 0;
@@ -819,19 +870,11 @@
   font-size: 1.5rem;
 }
 /*
- * 笔记头：只留标题。
- *   方案 B 把元信息（保存态 / 可见性 / 预览 / 历史 / 导出）整体上移到顶栏的
- *   `.note-meta-bar`，所以这里不再是两行 —— 正文竖向空间从约 68% 提到约 78%。
- *   （历史：曾把 8 个控件挤在一行，后来拆两层，现在改为"标题留在正文、元信息上移"。）
+ * 笔记标题（`.note-title-input` / `.note-title`）。
+ *   `/app` 的标题已移到顶栏（见上方 `.note-title-top`），这两条现在服务于
+ *   圈子笔记页（`CircleNotesTab`）—— 那里的标题仍在正文内。
+ *   元素级规则保留，避免圈子页样式跟着塌掉。
  */
-.editor-head {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--sp-4);
-  margin-bottom: var(--sp-6);
-}
 .note-title-input {
   width: 100%;
   background: transparent;
@@ -851,20 +894,6 @@
   font-weight: 700;
   margin: 0;
   line-height: var(--leading-tight);
-}
-/* 元信息行：保存态 / 可见性 / 操作按钮 */
-.editor-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  flex-wrap: wrap;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  min-height: 30px;
-}
-.editor-meta .spacer {
-  flex: 1;
-  min-width: 0;
 }
 .save-state {
   font-size: var(--fs-xs);
@@ -914,11 +943,6 @@
   border-radius: var(--r-xs);
   font-size: 0.88em;
 }
-.editor-head .btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .history-panel {
   position: absolute;
   top: 100%;
@@ -3375,27 +3399,11 @@
   .editor {
     padding: 16px 14px 80px;
   }
-  /* Compact wrapping toolbar: title on its own line, controls flow in rows
-     (previously a stretched full-width vertical stack with scrambled order). */
-  .editor-head {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: var(--sp-3);
+  /* 标题已移入顶栏，正文不再有笔记头行；窄屏下标题仍要能读 */
+  .topbar-left .note-title-top {
+    max-width: none;
+    font-size: var(--fs-md);
   }
-  .editor-head .note-title-input,
-  .editor-head .note-title {
-    flex: 1 1 100%;
-    min-width: 0;
-    font-size: var(--fs-xl);
-  }
-  .editor-head .btn,
-  .editor-head .visibility-toggle,
-  .editor-head .save-state {
-    flex: 0 0 auto;
-  }
-  .editor-head .save-state,
   .visibility-toggle {
     order: 0;
   }
