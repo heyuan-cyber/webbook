@@ -1,33 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import type { Block, NoteVisibility } from '@webbook/shared';
+import type { Block } from '@webbook/shared';
 import { DEFAULT_NOTE_STAGE, isAbsoluteBlock } from '@webbook/shared';
-import { useAuth } from '@/auth/AuthContext';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useNotesStore } from '@/store/useNotesStore';
+import { useEditorUiStore } from '@/store/useEditorUiStore';
 import { BlockEditor } from './editor/BlockEditor';
 import { BlogArticleView } from './blog/BlogArticleView';
 import { OutlinePanel } from './editor/OutlinePanel';
 import { centerStageOn } from './editor/StageViewport';
 import { AiChatPanel } from './AiChatPanel';
 import { NoteHistoryPanel } from './NoteHistoryPanel';
-import { FeishuZipActions } from './FeishuZipActions';
-import { FeishuExportButton } from './FeishuExportButton';
 import { toast } from '@/store/useToastStore';
 import { outlineCollapseState, layoutUiState } from '@/lib/storage';
-import { Icon, type IconName } from '@/components/Icon';
-
-/** 可见性 → 图标（原先是写进 <option> 文本里的 🔒 / 👥 / 🌐） */
-const VISIBILITY_ICON: Record<NoteVisibility, IconName> = {
-  private: 'lock',
-  circle: 'users',
-  public: 'globe',
-};
 
 export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const { id } = useParams();
-  const { session, isGuest } = useAuth();
   const isMobile = useIsMobile();
   const activeNote = useNotesStore((s) => s.activeNote);
   const treeReady = useNotesStore((s) => s.treeReady);
@@ -35,13 +23,14 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
   const noteLoading = useNotesStore((s) => s.noteLoading);
   const selectNote = useNotesStore((s) => s.selectNote);
   const setActiveTitle = useNotesStore((s) => s.setActiveTitle);
-  const setActiveVisibility = useNotesStore((s) => s.setActiveVisibility);
   const updateActiveBlocks = useNotesStore((s) => s.updateActiveBlocks);
   const updateActiveEdges = useNotesStore((s) => s.updateActiveEdges);
   const updateActiveStage = useNotesStore((s) => s.updateActiveStage);
-  const saving = useNotesStore((s) => s.saving);
-  const saveError = useNotesStore((s) => s.saveError);
-  const [preview, setPreview] = useState(false);
+  // 预览开关与历史面板开关提升到 store：顶栏（NoteMetaBar）也要读写
+  const preview = useEditorUiStore((s) => s.preview);
+  const resetEditorUi = useEditorUiStore((s) => s.resetForNote);
+  const historyOpen = useEditorUiStore((s) => s.historyOpen);
+  const setHistoryOpen = useEditorUiStore((s) => s.setHistoryOpen);
   const [outlineCollapsed, setOutlineCollapsed] = useState<Record<string, boolean>>({});
   const [outlinePanelCollapsed, setOutlinePanelCollapsed] = useState(
     () => layoutUiState.load().outlineCollapsed,
@@ -97,9 +86,10 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
     void selectNote(id);
   }, [id, treeReady, selectNote]);
 
+  // 切换笔记时复位界面开关（预览 / 历史 / 更多），避免上一篇的状态串到这一篇
   useEffect(() => {
-    setPreview(false);
-  }, [id]);
+    resetEditorUi();
+  }, [id, resetEditorUi]);
 
   if (!id) {
     return (
@@ -165,82 +155,23 @@ export function NoteEditor({ readOnly = false }: { readOnly?: boolean }) {
             aria-label="笔记标题"
           />
         )}
-        {/* 元信息行：保存态 / 可见性 / 操作。原来这 8 个控件与标题同处一行 */}
-        <div className="editor-meta">
-          <span
-            className={`save-state ${saveError ? 'save-err' : ''}`}
-            title={saveError ? '云端同步失败，内容已保存在本机' : '已同步到云端'}
-          >
-            <Icon name={saveError ? 'alert' : 'check'} size={12} />
-            {saving ? '保存中…' : saveError ? '本地已存 · 未同步' : '已保存'}
-          </span>
-          {!readOnly && !isGuest && (
-            <label className="visibility-toggle">
-              <Icon name={VISIBILITY_ICON[activeNote.visibility]} size={12} />
-              <select
-                value={activeNote.visibility}
-                aria-label="笔记可见性"
-                onChange={(e) =>
-                  setActiveVisibility(e.target.value as NoteVisibility)
-                }
-              >
-                <option value="private">仅自己</option>
-                <option value="circle">圈子可见</option>
-                <option value="public">完全公开</option>
-              </select>
-            </label>
-          )}
-          {(activeNote.visibility === 'public' || activeNote.visibility === 'circle') &&
-            !readOnly &&
-            !isGuest && (
-              <span className="muted">
-                {activeNote.visibility === 'public' ? '已公开' : '圈子成员可读'}
-              </span>
-            )}
-          <span className="spacer" />
-          {!readOnly && !isGuest && (
-            <button
-              type="button"
-              className={`btn btn-ghost ${preview ? 'active' : ''}`}
-              aria-pressed={preview}
-              onClick={() => setPreview((p) => !p)}
-            >
-              <Icon name="eye" size={14} />
-              {preview ? '编辑' : '预览'}
-            </button>
-          )}
-          {activeNote.visibility === 'public' && (
-            <Link
-              className="btn btn-ghost"
-              to={
-                session?.userId
-                  ? `/blog/${session.userId}/${activeNote.id}`
-                  : `/blog/${activeNote.id}`
-              }
-              target="_blank"
-            >
-              <Icon name="external" size={14} />
-              博客预览
-            </Link>
-          )}
-          {!readOnly && (
-            <NoteHistoryPanel
-              noteId={activeNote.id}
-              onRestore={(note) => {
-                setActiveTitle(note.title);
-                updateActiveBlocks(note.blocks);
-                updateActiveEdges(note.edges ?? []);
-              }}
-            />
-          )}
-          {!readOnly && (
-            <>
-              <FeishuZipActions compact />
-              <FeishuExportButton />
-            </>
-          )}
-        </div>
       </div>
+      {/* 元信息（保存态 / 可见性 / 预览 / 更多）已上移到顶栏的 NoteMetaBar ——
+          笔记头只保留标题，正文竖向空间从 ~68% 提到 ~78%。
+          版本历史面板仍渲染在这里（顶栏按钮只负责开关）。 */}
+      {!readOnly && (
+        <NoteHistoryPanel
+          noteId={activeNote.id}
+          compact
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          onRestore={(note) => {
+            setActiveTitle(note.title);
+            updateActiveBlocks(note.blocks);
+            updateActiveEdges(note.edges ?? []);
+          }}
+        />
+      )}
       {activeNote.summary && (
         <div className="ai-summary">
           <strong>AI 摘要：</strong> {activeNote.summary}

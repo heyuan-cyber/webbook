@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { apiClient } from '@/lib/api';
 import { BlockEditor } from './editor/BlockEditor';
 import { toast } from '@/store/useToastStore';
+import { Icon } from '@/components/Icon';
 
 interface Commit {
   sha: string;
@@ -11,15 +12,34 @@ interface Commit {
   date: string;
 }
 
+/**
+ * 版本历史。
+ *
+ * `compact`：图标按钮形态，供顶栏元信息条使用（空间紧张）；
+ * 默认是带文字的「历史」按钮。`open`/`onOpenChange` 可选，
+ * 传入即由外部控制展开状态（顶栏按钮与面板分处两棵子树时用）。
+ */
 export function NoteHistoryPanel({
   noteId,
   onRestore,
+  compact = false,
+  open: openProp,
+  onOpenChange,
 }: {
   noteId: string;
   onRestore: (note: Note) => void;
+  compact?: boolean;
+  open?: boolean;
+  onOpenChange?: (next: boolean) => void;
 }) {
   const { session, isGuest } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openState;
+  function setOpen(next: boolean) {
+    if (!controlled) setOpenState(next);
+    onOpenChange?.(next);
+  }
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<Note | null>(null);
@@ -69,9 +89,22 @@ export function NoteHistoryPanel({
 
   return (
     <>
-      <button type="button" className="btn btn-ghost" onClick={() => setOpen((v) => !v)}>
-        历史
-      </button>
+      {compact ? (
+        <button
+          type="button"
+          className="btn btn-ghost btn-icon"
+          aria-label="版本历史"
+          title="版本历史"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <Icon name="clock" size={14} />
+        </button>
+      ) : (
+        <button type="button" className="btn btn-ghost" onClick={() => setOpen(!open)}>
+          历史
+        </button>
+      )}
       {open && (
         <div className="history-panel">
           <div className="history-head">

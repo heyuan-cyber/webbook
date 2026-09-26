@@ -14,7 +14,6 @@ export function HomeTab({
   onExplore?: () => void;
 }) {
   const nameLabel = name?.trim() || '无名';
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   void onExplore;
   const marqueeItems = [
     'CREATIVE DEVELOPER',

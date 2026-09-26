@@ -178,17 +178,98 @@
   color: var(--accent);
 }
 .acct-menu {
+  /* portal 到 body 后用 fixed 贴合触发按钮（位置由 JS 算），
+     从而脱离 .topbar 的层叠上下文（backdrop-filter 会强制产生一个）。 */
+  position: fixed;
+  z-index: var(--z-modal);
+  min-width: 248px;
+  padding: var(--sp-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* ── 顶栏里的笔记元信息条（方案 B：从笔记头上移）───────────────────
+   原先笔记头是两行（标题 + 元信息），在 900px 视口里吃掉 172px、正文只剩 68%。
+   现在元信息整体搬到顶栏这一行，笔记头只留标题。 */
+.note-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: none;
+  min-width: 0;
+}
+.note-meta-bar .save-state {
+  white-space: nowrap;
+}
+.note-meta-bar .visibility-toggle select {
+  height: 26px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--bg-elev-1);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: var(--fs-xs);
+}
+/* 「更多」菜单：历史 / 飞书导入导出等低频动作，避免顶栏被挤爆 */
+.more-menu {
+  position: relative;
+}
+.more-menu-pop {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: var(--z-panel);
-  min-width: 248px;
+  z-index: var(--z-modal);
+  min-width: 230px;
   padding: var(--sp-3);
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   backdrop-filter: var(--glass-blur);
+}
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  padding: var(--sp-4) var(--sp-5);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.more-menu-item:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.more-menu-sep {
+  height: 1px;
+  margin: var(--sp-3) var(--sp-2);
+  background: var(--border-subtle);
+}
+.more-menu-block {
+  padding: var(--sp-2) var(--sp-5) var(--sp-4);
+}
+.more-menu-label {
+  display: block;
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.more-menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
 }
 .acct-head {
   display: flex;
@@ -379,6 +460,35 @@
   }
   .acct-menu {
     min-width: 220px;
+  }
+  /* 元信息条在手机上压缩：面包屑让位，只留保存态图标 + 可见性图标 + 更多 */
+  .note-meta-bar {
+    gap: var(--sp-2);
+  }
+  .note-meta-bar .save-state {
+    font-size: 0;
+    gap: 0;
+  }
+  .note-meta-bar .save-state .i {
+    width: 14px;
+    height: 14px;
+  }
+  .topbar-left {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* 中等宽度：收紧面包屑，给元信息条留位（避免与标题抢空间而换行） */
+@media (min-width: 721px) and (max-width: 1180px) {
+  .crumb-link {
+    max-width: 11ch;
+  }
+  .crumb-here {
+    max-width: 20ch;
+  }
+  .note-meta-bar .visibility-toggle select {
+    max-width: 7.5em;
   }
 }
 .content {
@@ -709,11 +819,10 @@
   font-size: 1.5rem;
 }
 /*
- * 笔记头拆两层（openspec 方向一）：
- *   原来是「标题 + 保存态 + 预览 + 可见性 + 提示 + 博客链接 + 历史 + 飞书导出」
- *   共 8 个控件挤在同一个 flex-wrap 行里，窄屏换行顺序不可预期，
- *   标题（2rem 衬线）与 13px ghost 按钮争抢视觉重量。
- *   现在：第一行标题独占，第二行放元信息 + 操作，权重清晰、换行可控。
+ * 笔记头：只留标题。
+ *   方案 B 把元信息（保存态 / 可见性 / 预览 / 历史 / 导出）整体上移到顶栏的
+ *   `.note-meta-bar`，所以这里不再是两行 —— 正文竖向空间从约 68% 提到约 78%。
+ *   （历史：曾把 8 个控件挤在一行，后来拆两层，现在改为"标题留在正文、元信息上移"。）
  */
 .editor-head {
   position: relative;
@@ -721,7 +830,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--sp-4);
-  margin-bottom: var(--sp-8);
+  margin-bottom: var(--sp-6);
 }
 .note-title-input {
   width: 100%;
