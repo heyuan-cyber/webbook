@@ -21,6 +21,8 @@
     "android:init": "node scripts/android-init.mjs",
     "android:apk": "node scripts/android-apk.mjs",
     "android:fingerprint": "node scripts/android-fingerprint.mjs",
+    "android:companion": "node scripts/android-cap-apk.mjs",
+    "android:companion:probe": "node scripts/android-cap-apk.mjs --probe",
     "deploy:user-pages": "node scripts/deploy-user-pages.mjs",
     "smoke": "node scripts/smoke-test.mjs"
   },

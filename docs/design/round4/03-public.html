@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 03 公开面（去双层头 + 铺满宽度）</title>
+<link rel="stylesheet" href="r4.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-checksq"><path d="M9 11.5l2.5 2.5L20 8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-settings"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><path d="M15 5v4M9 15v4"/></g>
+<g id="i-logout"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></g>
+<g id="i-hash"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></g>
+<g id="i-refresh"><path d="M20 11a8 8 0 1 0-1.6 5.6"/><path d="M20 5v6h-6"/></g>
+<g id="i-al"><path d="M20 12H5M11 18l-6-6 6-6"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+<g id="i-lock"><path d="M6 11h12v9H6z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-download"><path d="M12 4v11M7 11l5 5 5-5M4 20h16"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 四阶段 · 03 / 04</div>
+  <h1 class="doc-h1">公开面：共享顶栏已经接上了，但页面自己的头还留着</h1>
+  <p class="doc-sub">
+    <code>93a9f61</code> 给 <code>/blog</code> 接上了 <code>ShellTopBar</code> —— 这是对的一步。
+    但 <code>BlogHubPage.tsx:174</code> 的 <code>&lt;header class="blog-header"&gt;</code> 还在渲染，
+    于是出现了<strong style="color:var(--text)">两层头</strong>，而且「登录」「皮肤」各出现两次。
+  </p>
+
+  <div class="shots">
+    <figure><img src="_now/02-blog-desktop.png" alt="博客现状"><figcaption><b>现状 · /blog（1600×1000）</b>顶栏是新的；下面还压着 <code>blog-header</code>：博客标题 / 进入笔记本 · 登录 · 墨金 / 博客广场 tab —— 而「登录」顶栏已有一个</figcaption></figure>
+    <figure><img src="_now/06-circles.png" alt="圈子游客"><figcaption><b>现状 · /app/circles（游客）</b>虽然 <code>CircleListPage</code> 已引入 <code>ShellTopBar</code>，但游客守卫先把它重定向到了登录页 —— 圈子的解释一个字都没有</figcaption></figure>
+  </div>
+
+  <h2>现状的三处具体问题</h2>
+  <table class="tbl">
+    <tr><th style="width:170px">问题</th><th>证据</th></tr>
+    <tr><td><strong>双层头部</strong></td><td><code>BlogHubPage.tsx:160</code> 渲染 <code>&lt;ShellTopBar /&gt;</code>，<code>:174</code> 紧接着渲染 <code>&lt;header class="blog-header"&gt;</code>。后者里还有 <code>进入笔记本 / 登录 / 墨金</code> 一行 —— 与顶栏的账号入口、账号菜单里的皮肤重复</td></tr>
+    <tr><td><strong>右侧 40% 空着</strong></td><td>1600px 下头部与列表都在 x=215→785 的 570px 列里，785→1600 什么都没有</td></tr>
+    <tr><td><strong>卡片是空灰盒子</strong></td><td>没有 <code>cover</code> 的笔记，卡片上半部是一块 120px 的深灰空区</td></tr>
+  </table>
+
+  <h2>设计稿：一个头、铺满、卡片有颜色</h2>
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / blog — 博客广场</span></div>
+    <div class="frame-body">
+      <div class="app">
+        <div class="shell-main">
+          <header class="topbar">
+            <div class="topbar-left" style="gap:14px">
+              <nav class="nav">
+                <button class="nav-item"><svg class="i i-14"><use href="#i-book"/></svg>笔记</button>
+                <button class="nav-item on"><svg class="i i-14"><use href="#i-globe"/></svg>博客</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-users"/></svg>圈子</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-user"/></svg>我</button>
+              </nav>
+              <span class="nav-sep"></span>
+              <nav class="crumb"><span class="crumb-here">博客广场</span></nav>
+            </div>
+            <div class="topbar-right">
+              <button class="cmdbar"><svg class="i i-14"><use href="#i-search"/></svg><span class="cmdbar-text">搜索公开文章…</span><span class="cmdbar-k"><kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd></span></button>
+              <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-refresh"/></svg></button>
+              <div class="acct"><button class="acct-trigger" aria-expanded="false" data-acct-trigger><span class="acct-avatar">H</span></button>
+                <div class="acct-menu" data-acct-menu hidden>
+                  <div class="acct-head"><span class="acct-avatar">H</span><div><strong style="font-size:var(--fs-sm);display:block">1060707057@qq.com</strong><span class="meta" style="margin:0">管理员</span></div></div>
+                  <div class="acct-sep"></div>
+                  <a class="acct-item"><svg class="i i-14"><use href="#i-settings"/></svg>管理后台</a>
+                  <div class="acct-sep"></div>
+                  <button class="acct-item acct-item-danger"><svg class="i i-14"><use href="#i-logout"/></svg>退出登录</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div style="flex:1;overflow:auto">
+            <div class="wrap" style="padding-top:26px;padding-bottom:60px">
+              <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+                <div class="tabs">
+                  <button>我的博客</button><button class="on">博客广场</button><button>圈子动态</button>
+                </div>
+                <div style="flex:1"></div>
+                <span class="meta" style="margin:0">12 篇 · 3 位作者</span>
+              </div>
+              <div class="kicker" style="margin-bottom:11px">博主</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:30px">
+                <span class="pill gold" style="padding:7px 14px 7px 8px;gap:9px"><span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--bg-elev-3);font-size:11px;font-weight:700">何</span>何源 · 7 篇</span>
+                <span class="pill dim" style="padding:7px 14px 7px 8px;gap:9px"><span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--bg-elev-3);font-size:11px;font-weight:700">N</span>n17852326702 · 2 篇</span>
+                <span class="pill dim" style="padding:7px 14px 7px 8px;gap:9px"><span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--bg-elev-3);font-size:11px;font-weight:700">L</span>liu · 3 篇</span>
+              </div>
+              <div class="grid-3">
+                <article class="card"><div class="cover c1"><div class="cover-ico"><svg class="i i-24"><use href="#i-file"/></svg></div></div>
+                  <div style="padding:13px 15px 15px">
+                    <div class="pill gold" style="margin-bottom:9px"><svg class="i i-12"><use href="#i-hash"/></svg>战斗演出</div>
+                    <h3 style="font-size:var(--fs-xl);margin-bottom:6px">战斗演出编辑器架构设计</h3>
+                    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.65">时间轴 + 事件驱动，编辑器只描述意图。</p>
+                    <div class="meta" style="margin-top:11px"><span>何源</span><span class="dot"></span><span class="mono">2026-09-24</span></div>
+                  </div></article>
+                <article class="card"><div class="cover c2"><div class="cover-ico"><svg class="i i-24"><use href="#i-file"/></svg></div></div>
+                  <div style="padding:13px 15px 15px">
+                    <div class="pill gold" style="margin-bottom:9px"><svg class="i i-12"><use href="#i-hash"/></svg>贴花 / 材质</div>
+                    <h3 style="font-size:var(--fs-xl);margin-bottom:6px">战损贴花使用指南</h3>
+                    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.65">换装流程、datatable 配置、贴图尺寸。</p>
+                    <div class="meta" style="margin-top:11px"><span>何源</span><span class="dot"></span><span class="mono">2026-09-10</span></div>
+                  </div></article>
+                <article class="card"><div class="cover c3"><div class="cover-ico"><svg class="i i-24"><use href="#i-file"/></svg></div></div>
+                  <div style="padding:13px 15px 15px">
+                    <div class="pill gold" style="margin-bottom:9px"><svg class="i i-12"><use href="#i-hash"/></svg>性能</div>
+                    <h3 style="font-size:var(--fs-xl);margin-bottom:6px">GS 性能分析：Profiler 实录</h3>
+                    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.65">一次掉帧的完整排查过程。</p>
+                    <div class="meta" style="margin-top:11px"><span>n17852326702</span><span class="dot"></span><span class="mono">2026-09-18</span></div>
+                  </div></article>
+                <article class="card"><div class="cover c4"><div class="cover-ico"><svg class="i i-24"><use href="#i-file"/></svg></div></div>
+                  <div style="padding:13px 15px 15px">
+                    <div class="pill gold" style="margin-bottom:9px"><svg class="i i-12"><use href="#i-hash"/></svg>工具链</div>
+                    <h3 style="font-size:var(--fs-xl);margin-bottom:6px">新笔记</h3>
+                    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.65">（还没有摘要。）</p>
+                    <div class="meta" style="margin-top:11px"><span>liu</span><span class="dot"></span><span class="mono">2026-09-26</span></div>
+                  </div></article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note">
+    <span class="callout">改动</span>
+    删掉 <code>blog-header</code> 里的标题块与「进入笔记本 / 登录 / 墨金」一行（顶栏与账号菜单已覆盖）；
+    只保留 <code>blog-tabs</code> 三个标签，作为顶栏下的第二层。
+    内容从 570px 铺到 1180px。卡片用按 <code>note.id</code> 派生的确定性渐变封面。
+  </p>
+
+  <h2>文章页与圈子：补上最后两处</h2>
+  <div class="two-col">
+    <div class="panel">
+      <h3>文章页 <code>/blog/:ownerId/:noteId</code></h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        现在只有 <code>blog-header</code>（<code>BlogPostPage.tsx:93</code>），<strong style="color:var(--text)">没有共享顶栏</strong> ——
+        读到一半想回笔记，只能按浏览器后退。
+      </p>
+      <div style="margin-top:12px;border:1px solid var(--border-subtle);border-radius:var(--r-md);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--glass-bg-strong);border-bottom:1px solid var(--border-subtle)">
+          <nav class="nav" style="transform:scale(.86);transform-origin:left center">
+            <button class="nav-item"><svg class="i i-14"><use href="#i-book"/></svg>笔记</button>
+            <button class="nav-item on"><svg class="i i-14"><use href="#i-globe"/></svg>博客</button>
+          </nav>
+          <div style="flex:1"></div>
+          <button class="btn btn-sm"><svg class="i i-12"><use href="#i-send"/></svg>分享</button>
+        </div>
+        <div style="padding:14px 16px">
+          <div class="meta" style="margin:0 0 8px"><span class="pill dim">何源</span><span class="mono">2026-09-10</span></div>
+          <div style="font-family:var(--font-serif);font-size:var(--fs-2xl)">战损贴花使用指南</div>
+        </div>
+      </div>
+      <p style="font-size:var(--fs-xs);color:var(--text-muted);margin-top:10px">补 <code>&lt;ShellTopBar left={面包屑} /&gt;</code>，删掉 <code>blog-header</code>。</p>
+    </div>
+    <div class="panel">
+      <h3>圈子 <code>/app/circles</code>（游客）</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        游客现在被守卫直接重定向到登录页（截图与 <code>/login</code> 逐字节相同）。
+        <strong style="color:var(--text)">公开圈子本来是可以匿名看的</strong>，先给一个能读的页面 + 一条登录提示，转化率比一堵墙好。
+      </p>
+      <div style="margin-top:12px;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--accent-line);background:var(--accent-softer);display:flex;gap:10px">
+        <svg class="i i-18" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+        <div>
+          <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:3px">你正在以游客身份浏览</div>
+          <p style="color:var(--text-dim);font-size:var(--fs-xs);line-height:1.7">公开圈子可以直接看。要创建圈子、接受邀请或写协作笔记，登录即可（本地草稿不会丢）。</p>
+          <div style="margin-top:9px;display:flex;gap:7px"><span class="btn btn-primary btn-sm">登录</span><span class="btn btn-sm">先逛逛公开圈子</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>这一页改了什么</h2>
+  <table class="tbl">
+    <tr><th style="width:170px">项</th><th>改动</th><th style="width:190px">收益</th></tr>
+    <tr><td><strong>双层头</strong></td><td>删 <code>blog-header</code> 的标题块与导航行，保留 tabs</td><td>「登录」「皮肤」不再重复出现</td></tr>
+    <tr><td><strong>内容宽度</strong></td><td>570px → 1180px（<code>.wrap</code>）</td><td>右侧 40% 不再空着</td></tr>
+    <tr><td><strong>卡片封面</strong></td><td>按 <code>note.id</code> 派生 4 套确定性渐变 + 居中文件图标</td><td>零数据改动，列表立刻有颜色</td></tr>
+    <tr><td><strong>文章页</strong></td><td>补 <code>ShellTopBar</code></td><td>读到一半能直接回笔记 / 圈子</td></tr>
+    <tr><td><strong>圈子游客态</strong></td><td>登录墙 → 可读的圈子列表 + 一条登录提示</td><td>不再「点进去什么都没有」</td></tr>
+  </table>
+
+  <p style="margin-top:26px"><a href="02-app.html">← 看笔记本</a>　·　<a href="04-mobile.html">看移动端 →</a></p>
+</div>
+<script src="r4.js"></script>
+</body>
+</html>

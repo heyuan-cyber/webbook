@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 版三「沉浸」Cinematic Stage</title>
+<link rel="stylesheet" href="r3.css">
+<style>
+  /* 版三专属：光标跟随光晕（CSS 变量由 JS 写） */
+  .glow { position:absolute; width:420px; height:420px; border-radius:50%; pointer-events:none; z-index:1;
+    background:radial-gradient(circle, rgba(196,165,116,.10) 0%, transparent 62%);
+    left:var(--gx, 50%); top:var(--gy, 50%); transform:translate(-50%,-50%);
+    transition:left 260ms cubic-bezier(.22,1,.36,1), top 260ms cubic-bezier(.22,1,.36,1), opacity 200ms linear; }
+  .cam-world { position:absolute; inset:0; transform-origin:50% 50%;
+    transition:transform 480ms cubic-bezier(.22,1,.36,1); }
+  .wire { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .mini { position:absolute; right:14px; bottom:14px; z-index:26; display:flex; flex-direction:column; gap:6px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+<g id="i-type"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+<g id="i-layers"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-zi"><path d="M12 5v14M5 12h14"/><path d="M4 4h16v16H4z" opacity=".35"/></g>
+<g id="i-zo"><path d="M5 12h14"/><path d="M4 4h16v16H4z" opacity=".35"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 三阶段 · 版三 / 四</div>
+  <h1 class="doc-h1">「沉浸」Cinematic Stage</h1>
+  <p class="doc-sub">把<strong style="color:var(--text)">画布当主角</strong>，导航和面板变成浮在上面的玻璃片。动效的核心是<strong style="color:var(--text)">镜头</strong>：点一个块，视野飞过去；按「适应」，退回全景。连线是画出来的，不是画出来的 —— 它有一段生长过程。</p>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row" style="flex-wrap:wrap;gap:22px">
+      <div><div class="kicker">气质</div><p style="color:var(--text)">空间感、镜头语言、玻璃</p></div>
+      <div><div class="kicker">动效预算</div><p style="color:var(--text)"><code>--dur-5</code> (480ms) 镜头 + <code>--ease-stage</code></p></div>
+      <div><div class="kicker">参照</div><p style="color:var(--text)">Figma / tldraw / Miro</p></div>
+      <div><div class="kicker">适合</div><p style="color:var(--text)">用连线组织知识、把笔记当白板的人</p></div>
+    </div>
+  </div>
+
+  <h2>样例屏：舞台（点块试镜头）</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">点任意一个块 → 镜头飞过去；点右下「适应」→ 退回全景。鼠标在画布上移动会有一层很淡的光晕跟着（<code>radial-gradient</code> + 260ms 跟随，不是实时跟手）。</p>
+
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / app / note · 版三「沉浸」</span></div>
+    <div class="frame-body" data-v="stage">
+      <div class="app" id="stageApp">
+        <div class="stage" style="padding-top:0">
+          <div class="stage-grid"></div>
+          <div class="glow"></div>
+          <div class="cam-world">
+            <svg class="wire" viewBox="0 0 1440 820" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M300 250 C 400 250, 420 190, 520 190" stroke="var(--accent)" stroke-width="1.6" fill="none" opacity=".85"/>
+              <path d="M300 280 C 400 300, 430 400, 520 420" stroke="var(--accent)" stroke-width="1.6" fill="none" opacity=".85"/>
+              <path d="M760 200 C 860 200, 880 300, 980 300" stroke="var(--accent)" stroke-width="1.6" fill="none" opacity=".85"/>
+            </svg>
+            <div class="node" data-node style="left:180px;top:228px;width:120px">目标</div>
+            <div class="node" data-node style="left:520px;top:168px;width:240px">
+              <strong style="display:block;margin-bottom:4px">时间轴 + 事件驱动</strong>
+              <span style="color:var(--text-muted);font-size:var(--fs-xs)">编辑器只描述意图</span>
+            </div>
+            <div class="node" data-node style="left:520px;top:396px;width:240px">
+              <strong style="display:block;margin-bottom:4px">轨道层 / 求值层 / 表现层</strong>
+              <span style="color:var(--text-muted);font-size:var(--fs-xs)">三层解耦，只有轨道进 git</span>
+            </div>
+            <div class="node" data-node style="left:980px;top:276px;width:220px">
+              <strong style="display:block;margin-bottom:4px">插值曲线随轨道保存</strong>
+              <span style="color:var(--text-muted);font-size:var(--fs-xs)">1/60 秒精度</span>
+            </div>
+            <div class="node" data-node style="left:180px;top:520px;width:200px">
+              <span style="color:var(--text-muted);font-size:var(--fs-xs)">双击空白处插入新块</span>
+            </div>
+          </div>
+
+          <header class="tb">
+            <div class="crumb" style="padding-left:8px"><b>战斗演出编辑器架构设计</b><span class="sep">/</span><span>2 条连线</span></div>
+            <div class="tb-spacer"></div>
+            <span class="pill ok" style="position:relative;z-index:1"><svg class="i i-12"><use href="#i-check"/></svg>已同步</span>
+            <button class="btn btn-ghost btn-icon" style="position:relative;z-index:1"><svg class="i i-14"><use href="#i-layers"/></svg></button>
+            <button class="btn btn-ghost btn-icon" style="position:relative;z-index:1"><svg class="i i-14"><use href="#i-sparkles"/></svg></button>
+          </header>
+
+          <aside class="sb">
+            <div class="sb-head"><span class="sb-title">目录</span></div>
+            <div class="sb-search"><input class="input" placeholder="搜索…"></div>
+            <div class="sb-body">
+              <div class="tree-row" style="--d:0"><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>基础游戏开发</div>
+              <div class="tree-row" style="--d:1"><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>渲染开发</div>
+              <div class="tree-row on" style="--d:2"><svg class="i i-14" style="color:var(--accent)"><use href="#i-file"/></svg><span class="tl">战斗演出编辑器架构设计</span></div>
+              <div class="tree-row" style="--d:2"><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-file"/></svg>光照管线笔记</div>
+            </div>
+          </aside>
+
+          <div class="floating" style="left:calc(248px + 28px);bottom:14px;display:flex;gap:4px;padding:5px">
+            <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-type"/></svg></button>
+            <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-image"/></svg></button>
+            <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-layers"/></svg></button>
+            <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-sparkles"/></svg></button>
+          </div>
+
+          <div class="mini">
+            <button class="btn btn-sm" id="camFit"><svg class="i i-12"><use href="#i-zo"/></svg>适应</button>
+            <div class="floating" style="position:static;padding:5px 9px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">100%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">核心差别</span> 没有左轨道；侧栏是一块浮在画布上的玻璃；顶栏无边框、用自下而上的渐变兜住文字；网格更密更亮（44px）；工具条也是一块玻璃</p>
+
+  <h2>这一版的动效：空间与进度</h2>
+  <div class="grid-2">
+    <div class="demo" data-anim="camera" data-auto data-mode="toggle">
+      <div class="demo-stage" style="overflow:hidden">
+        <div class="cam-world" style="position:absolute;inset:0">
+          <div style="position:absolute;left:26px;top:34px;padding:6px 10px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:11px">目标</div>
+          <div style="position:absolute;left:126px;top:62px;padding:6px 10px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--accent-line);font-size:11px">时间轴</div>
+          <div style="position:absolute;left:210px;top:96px;padding:6px 10px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:11px">插值</div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">① 镜头飞行</span><span class="play" data-play>点我推进 / 拉回</span></div>
+      <p class="demo-desc">480ms、<code>--ease-stage</code>（几乎不过冲 —— 镜头过冲会晕）。<strong style="color:var(--text)">关键：镜头的时长必须和位移量脱钩</strong>，无论飞多远都是 480ms，让人感觉是「推拉」而不是「等」。</p>
+    </div>
+
+    <div class="demo" data-anim="wire" data-auto>
+      <div class="demo-stage">
+        <svg viewBox="0 0 320 120" style="width:100%;height:120px">
+          <path class="wire-path" style="--len:250" d="M60 60 C 110 60, 120 24, 168 24" stroke="var(--accent)" stroke-width="1.8" fill="none"/>
+          <path class="wire-path" style="--len:250;animation-delay:120ms" d="M60 60 C 110 60, 120 96, 168 96" stroke="var(--accent)" stroke-width="1.8" fill="none" opacity=".7"/>
+        </svg>
+        <div class="wire-node" style="position:absolute;left:22px;top:44px;padding:7px 11px;border-radius:9px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:11px">轨道层</div>
+        <div class="wire-node" style="position:absolute;left:206px;top:8px;padding:7px 11px;border-radius:9px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:11px">求值层</div>
+        <div class="wire-node" style="position:absolute;left:206px;top:80px;padding:7px 11px;border-radius:9px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:11px">表现层</div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">② 连线生长</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">用 <code>stroke-dasharray</code> + <code>dashoffset</code> 从起点画到终点，480ms。两条连线错峰 120ms，读出「先到求值层、再到表现层」的因果。目标块在连线到达时点亮。</p>
+    </div>
+
+    <div class="demo" data-anim="breathe" data-mode="toggle">
+      <div class="demo-stage" style="padding:18px;align-items:stretch">
+        <div class="br-node" style="border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--bg-elev-1)">
+          <div class="row" style="gap:8px;margin-bottom:12px">
+            <span class="br-dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+            <span style="font-size:var(--fs-sm);color:var(--accent)">AI 正在生成…</span>
+          </div>
+          <span class="br-line" style="width:92%"></span>
+          <span class="br-line" style="width:78%"></span>
+          <span class="br-line" style="width:56%;margin-bottom:0"></span>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">③ 生成中的呼吸</span><span class="play" data-play>点我开始 / 停止</span></div>
+      <p class="demo-desc">呼吸周期 <strong style="color:var(--text)">1.15s</strong>（不是 1s —— 整秒会让人不自觉地数节拍）。节点边框同时缓入金色，告诉用户「这个块正在被改写」。</p>
+    </div>
+
+    <div class="demo" data-anim="skeleton" data-auto>
+      <div class="demo-stage" style="padding:16px;flex-direction:column;align-items:stretch">
+        <div style="position:relative;height:74px">
+          <div class="skl-bone" style="position:absolute;inset:0">
+            <div style="height:11px;width:40%;border-radius:5px;background:var(--bg-elev-2);margin-bottom:8px"></div>
+            <div style="height:9px;width:90%;border-radius:5px;background:var(--bg-elev-2);margin-bottom:6px"></div>
+            <div style="height:9px;width:70%;border-radius:5px;background:var(--bg-elev-2)"></div>
+          </div>
+          <div class="skl-real" style="position:absolute;inset:0">
+            <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">时间轴 + 事件驱动</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-muted);line-height:1.7">编辑器只描述演出意图，运行时负责插值。</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">④ 块内容回填</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">AI 生成完的瞬间，块内容不是「跳」出来的：骨架淡出、真内容淡入，<strong style="color:var(--text)">同时进行 200ms</strong>。块的尺寸变化走 300ms <code>--ease-out</code>，让周围块跟着挪。</p>
+    </div>
+  </div>
+
+  <h2>代价与风险</h2>
+  <table class="tbl">
+    <tr><th style="width:180px">项</th><th>说明</th></tr>
+    <tr><td><strong>现在最缺的一条</strong></td><td>没有「镜头飞行」这个概念。<code>StageViewport</code> 里 <code>.stage-world</code> 只有一条写死的 <code>transition: transform .14s</code> —— 平移和缩放共用同一个时长。<strong style="color:var(--text)">14ms 的差别在这里很致命</strong>：小幅微调显得拖沓，全图适应显得突兀</td></tr>
+    <tr><td><strong>要做的事</strong></td><td>把镜头时长做成变量：手动平移/缩放 <code>140ms</code>，程序化飞行（适应视图、聚焦到块）<code>480ms</code>，并区分缓动（手动用 <code>--ease-out</code>，飞行用 <code>--ease-stage</code>）</td></tr>
+    <tr><td><strong>风险 1</strong></td><td>玻璃面板 + 网格 + 光晕 = 合成层多。低端机 / 移动端要关掉光晕与 <code>backdrop-filter</code></td></tr>
+    <tr><td><strong>风险 2</strong></td><td>这一版<strong style="color:var(--text)">删掉了左轨道</strong>，等于同时改了 Q1 导航问题的答案。它需要「⌘K 是主入口」成立 —— 如果你不常用 ⌘K，这一版会不好用</td></tr>
+    <tr><td><strong>与其他版的兼容</strong></td><td>镜头动效<strong style="color:var(--text)">可以单独摘出来</strong>放进版一/版二，不必整版采用</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:22px">
+    <div class="row" style="flex-wrap:wrap;gap:14px">
+      <button class="btn" data-reduce-toggle aria-pressed="false"><svg class="i i-14"><use href="#i-eye"/></svg><span data-reduce-label>正常动效</span></button>
+      <button class="btn btn-ghost" data-play-all><svg class="i i-14"><use href="#i-sparkles"/></svg>全部重播</button>
+      <span style="font-size:var(--fs-xs);color:var(--text-muted)" data-env-reduced>系统当前：正常</span>
+    </div>
+    <p class="demo-desc" style="margin-top:10px">关掉动效后镜头会<strong style="color:var(--text)">瞬间到位</strong> —— 这是正确的降级：用户仍然能到那个位置，只是没有过程。连线会直接画完。</p>
+  </div>
+
+  <p style="margin-top:26px"><a href="v2-flow.html">← 看版二「流」</a>　·　<a href="v4-editorial.html">看版四「报刊」→</a></p>
+</div>
+<script src="r3.js"></script>
+<script>
+/* 版三：镜头 + 光标光晕（设计稿里的演示逻辑，约 30 行） */
+(function () {
+  var app = document.getElementById('stageApp');
+  if (!app) return;
+  var world = app.querySelector('.cam-world');
+  var glow = app.querySelector('.glow');
+  var node = app.querySelector('[data-node]');
+  var on = false;
+  function set(on) {
+    world.style.transform = on ? 'scale(1.9) translate(-230px, -120px)' : 'none';
+    app.querySelectorAll('.node').forEach(function (n) { n.classList.toggle('sel', on); });
+  }
+  app.addEventListener('click', function (e) {
+    if (e.target.closest('#camFit') || e.target.closest('.sb') || e.target.closest('.floating') || e.target.closest('.tb')) {
+      if (e.target.closest('#camFit')) { on = false; set(false); }
+      return;
+    }
+    if (e.target.closest('.node')) { on = true; set(true); }
+  });
+  app.addEventListener('pointermove', function (e) {
+    var r = app.getBoundingClientRect();
+    glow.style.setProperty('--gx', (e.clientX - r.left) + 'px');
+    glow.style.setProperty('--gy', (e.clientY - r.top) + 'px');
+  });
+  app.addEventListener('pointerleave', function () { glow.style.opacity = '0'; });
+  app.addEventListener('pointerenter', function () { glow.style.opacity = '1'; });
+})();
+</script>
+</body>
+</html>

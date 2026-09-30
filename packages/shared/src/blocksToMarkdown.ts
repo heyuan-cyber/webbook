@@ -79,7 +79,7 @@ function pushMedia(
 }
 
 function escapeLinkLabel(label: string): string {
-  return escapeFeishuAlt(label.replace(/[\[\]]/g, ''));
+  return escapeFeishuAlt(label.replace(/[[\]]/g, ''));
 }
 
 /**
@@ -143,7 +143,7 @@ export function noteToFeishuMarkdown(note: Pick<Note, 'title' | 'blocks'>): Feis
       }
       case 'image': {
         const href = pushMedia(media, usedNames, b.src, 'image', 'image', '.png');
-        const rawAlt = (b.alt || b.caption || 'image.png').replace(/[\[\]]/g, '');
+        const rawAlt = (b.alt || b.caption || 'image.png').replace(/[[\]]/g, '');
         lines.push(`![${escapeFeishuAlt(rawAlt)}](${href})`, '');
         break;
       }

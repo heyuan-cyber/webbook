@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 宠物行为实验室</title>
+<link rel="stylesheet" href="r5.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-play"><path d="M8 5l11 7-11 7z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></g>
+<g id="i-alert"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></g>
+</defs></svg>
+
+<!-- ═══ 四个物种的内联 SVG 在下方实验台的 .pet 里（不用 <use>，见那里的注释）═══ -->
+
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 五阶段 · 装置 ①</div>
+  <h1 class="doc-h1">宠物行为实验室</h1>
+  <p class="doc-sub">
+    右下角一只小家伙。这一页的重点<strong style="color:var(--text)">不是它长什么样，是它什么时候动</strong> ——
+    同样的美术，行为设计差一点就从「这站有意思」变成「这站好烦」。下面每一格都能点。
+  </p>
+
+  <div class="lab" data-lab style="margin-top:22px">
+    <div>
+      <div class="lab-stage" data-pet-stage>
+        <div class="lab-grid"></div>
+        <!-- 宠物：四套 SVG 叠在一起，切物种时只换显示的那一套。
+             刻意**内联**而不是 <use href="#id">：<use> 会建 shadow tree，
+             文档样式表里的 `.pet .p-soft` 这类后代选择器跨不过 shadow 边界，
+             结果就是填充/描边全部丢失（渲染成黑剪影）。 -->
+        <div class="pet" data-pet data-say="我在的。" data-look="center" data-awake="true">
+          <span class="pet-ring"></span>
+          <svg data-pet-svg="fox" viewBox="0 0 96 96">
+            <path class="p-soft p-tail" d="M34 77 C 21 75, 14 62, 22 53 C 29 46, 36 52, 31 59 C 28 64, 30 72, 36 74"/>
+            <ellipse class="p-soft" cx="50" cy="70" rx="19" ry="17"/>
+            <path class="p p-arm" style="--ax:-9px" d="M43 71 v9"/>
+            <path class="p p-arm" style="--ax:9px" d="M57 71 v9"/>
+            <g class="p-head">
+              <path class="p-soft p-ear" d="M36 33 L 33 13 L 48 28 Z"/>
+              <path class="p-soft p-ear r" d="M64 33 L 67 13 L 52 28 Z"/>
+              <ellipse class="p-soft" cx="50" cy="44" rx="18" ry="15.5"/>
+              <path class="p" d="M50 50 l-5.5 5 h11 z"/>
+              <path class="p p-mouth" d="M47 57 q3 2.5 6 0"/>
+              <ellipse class="p-eye" cx="43" cy="42" rx="2.7" ry="3"/>
+              <ellipse class="p-eye" cx="57" cy="42" rx="2.7" ry="3"/>
+            </g>
+            <text class="p p-zzz" x="70" y="30" font-size="13">z</text>
+          </svg>
+          <svg data-pet-svg="owl" viewBox="0 0 96 96" hidden>
+            <path class="p-soft p-tail" d="M42 86 l6 7 l6 -7 z"/>
+            <ellipse class="p-soft" cx="48" cy="66" rx="20" ry="21"/>
+            <path class="p p-arm" style="--ax:-5px" d="M30 60 q-5 9 1 15"/>
+            <path class="p p-arm" style="--ax:5px" d="M66 60 q5 9 -1 15"/>
+            <g class="p-head">
+              <path class="p-soft p-ear" d="M33 28 L 29 11 L 45 23 Z"/>
+              <path class="p-soft p-ear r" d="M63 28 L 67 11 L 51 23 Z"/>
+              <ellipse class="p-soft" cx="48" cy="40" rx="20" ry="18"/>
+              <ellipse class="p" cx="40" cy="40" rx="6.2" ry="6.8"/>
+              <ellipse class="p" cx="56" cy="40" rx="6.2" ry="6.8"/>
+              <ellipse class="p-eye" cx="40" cy="40" rx="2.8" ry="3.4"/>
+              <ellipse class="p-eye" cx="56" cy="40" rx="2.8" ry="3.4"/>
+              <path class="p p-mouth" d="M48 47 l-3.5 3.5 l3.5 2.5 l3.5 -2.5 z"/>
+            </g>
+            <text class="p p-zzz" x="70" y="28" font-size="13">z</text>
+          </svg>
+          <svg data-pet-svg="penguin" viewBox="0 0 96 96" hidden>
+            <path class="p-soft p-tail" d="M38 86 l-9 6 l10 3"/>
+            <ellipse class="p-soft" cx="48" cy="65" rx="21" ry="24"/>
+            <path class="p p-arm" style="--ax:-7px" d="M28 56 q-7 9 -4 18"/>
+            <path class="p p-arm" style="--ax:7px" d="M68 56 q7 9 4 18"/>
+            <g class="p-head">
+              <ellipse class="p-soft" cx="48" cy="37" rx="17" ry="16"/>
+              <path class="p" d="M48 41 l-7 4.5 l7 3.5 l7 -3.5 z"/>
+              <path class="p p-mouth" d="M44 46 q4 2 8 0"/>
+              <ellipse class="p-eye" cx="41" cy="35" rx="2.6" ry="3"/>
+              <ellipse class="p-eye" cx="55" cy="35" rx="2.6" ry="3"/>
+            </g>
+            <text class="p p-zzz" x="70" y="28" font-size="13">z</text>
+          </svg>
+          <svg data-pet-svg="otter" viewBox="0 0 96 96" hidden>
+            <path class="p-soft p-tail" d="M32 78 C 14 80, 5 68, 11 58 C 16 50, 27 55, 28 64"/>
+            <ellipse class="p-soft" cx="50" cy="70" rx="19" ry="17"/>
+            <path class="p p-arm" style="--ax:-9px" d="M43 71 v9"/>
+            <path class="p p-arm" style="--ax:9px" d="M57 71 v9"/>
+            <g class="p-head">
+              <ellipse class="p-soft p-ear" cx="35" cy="30" rx="4.2" ry="4.2"/>
+              <ellipse class="p-soft p-ear r" cx="65" cy="30" rx="4.2" ry="4.2"/>
+              <ellipse class="p-soft" cx="50" cy="44" rx="18" ry="16"/>
+              <ellipse class="p" cx="50" cy="50" rx="7" ry="5"/>
+              <path class="p p-mouth" d="M47 54 q3 2 6 0"/>
+              <ellipse class="p-eye" cx="43" cy="42" rx="2.7" ry="3"/>
+              <ellipse class="p-eye" cx="57" cy="42" rx="2.7" ry="3"/>
+              <path class="p" d="M41 50 l-7 -3 M41 54 l-7 3"/>
+            </g>
+            <text class="p p-zzz" x="70" y="30" font-size="13">z</text>
+          </svg>
+        </div>
+        <div class="pet-bubble" data-pet-bubble></div>
+        <div class="lab-hint">把鼠标移到它附近 → 它转头看你（但不会跟过来）　·　点它 → 说句话</div>
+      </div>
+
+      <div class="lab-box" style="margin-top:14px">
+        <h4>28 秒行为脚本（真实场景对应约 90 秒）</h4>
+        <div class="tl">
+          <div class="tl-track">
+            <span class="tl-ev" style="left:14.3%" title="sniff · 4.0s"></span>
+            <span class="tl-ev" style="left:33.9%" title="alert · 9.5s"></span>
+            <span class="tl-ev" style="left:57.1%" title="yawn · 16.0s"></span>
+            <span class="tl-ev" style="left:82.1%" title="stretch · 23.0s"></span>
+          </div>
+          <div class="tl-play" style="left:0"></div>
+        </div>
+        <div class="tl-legend"><span>0s</span><span>7s</span><span>14s</span><span>21s</span><span>28s</span></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn btn-primary btn-sm" data-lab-play><svg class="ic ic-12"><use href="#i-play"/></svg>播放 28 秒</button>
+          <button class="btn btn-sm" data-reduce-toggle aria-pressed="false"><svg class="ic ic-12"><use href="#i-moon"/></svg><span data-reduce-label>正常动效</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lab-side">
+      <div class="lab-box">
+        <h4>物种（只换 SVG，行为不变）</h4>
+        <div class="species">
+          <button data-species="fox" data-label="狐狸" class="on">
+            <svg viewBox="0 0 96 96"><path d="M36 33 L33 13 L48 28 Z"/><path d="M64 33 L67 13 L52 28 Z"/><ellipse cx="50" cy="46" rx="18" ry="15.5"/><ellipse cx="43" cy="44" rx="2.4" ry="3" fill="currentColor"/><ellipse cx="57" cy="44" rx="2.4" ry="3" fill="currentColor"/></svg>
+            狐狸</button>
+          <button data-species="owl" data-label="猫头鹰">
+            <svg viewBox="0 0 96 96"><path d="M33 28 L29 11 L45 23 Z"/><path d="M63 28 L67 11 L51 23 Z"/><ellipse cx="48" cy="42" rx="20" ry="18"/><circle cx="40" cy="42" r="5.5"/><circle cx="56" cy="42" r="5.5"/><circle cx="40" cy="42" r="2.4" fill="currentColor"/><circle cx="56" cy="42" r="2.4" fill="currentColor"/></svg>
+            猫头鹰</button>
+          <button data-species="penguin" data-label="企鹅">
+            <svg viewBox="0 0 96 96"><ellipse cx="48" cy="62" rx="20" ry="23"/><ellipse cx="48" cy="38" rx="16" ry="15"/><path d="M48 42 l-6.5 4 l6.5 3 l6.5 -3 z"/><circle cx="41" cy="36" r="2.4" fill="currentColor"/><circle cx="55" cy="36" r="2.4" fill="currentColor"/></svg>
+            企鹅</button>
+          <button data-species="otter" data-label="水獭">
+            <svg viewBox="0 0 96 96"><circle cx="35" cy="31" r="4"/><circle cx="65" cy="31" r="4"/><ellipse cx="50" cy="46" rx="18" ry="16"/><ellipse cx="50" cy="52" rx="7" ry="5"/><circle cx="43" cy="44" r="2.4" fill="currentColor"/><circle cx="57" cy="44" r="2.4" fill="currentColor"/></svg>
+            水獭</button>
+        </div>
+        <p style="font-size:var(--fs-2xs);color:var(--text-muted);margin-top:10px;line-height:1.7">
+          这 4 个之外，直接复用已有的 <code>guestPersona.ts</code> 里的另外 6 个：
+          鲸鱼 / 熊猫 / 海豚 / 考拉 / 小鹿 / 云雀。
+        </p>
+      </div>
+
+      <div class="lab-box">
+        <h4>行为开关</h4>
+        <div class="beh">
+          <label><input type="checkbox" data-beh="breathe" data-label="呼吸" checked><span>呼吸（2.4s 循环）</span><small>always</small></label>
+          <label><input type="checkbox" data-beh="react" data-label="转头看" checked><span>转头看你</span><small>260px</small></label>
+          <label><input type="checkbox" data-beh="show" data-label="显示宠物" checked><span>显示宠物</span><small>≥1100px</small></label>
+          <label><input type="checkbox" data-beh="quiet" data-label="让它睡去"><span>静音（让它睡去）</span><small>localStorage</small></label>
+          <label style="color:var(--danger)"><input type="checkbox" data-beh="follow" data-label="跟随光标"><span>跟随光标 —— 反面对照</span><small>别做</small></label>
+        </div>
+      </div>
+
+      <div class="lab-box">
+        <h4>它在干什么（事件日志）</h4>
+        <div class="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>行为预算：为什么是这几条</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    一个宠物能做的动作有几十种。选哪几条，决定它是「有生命的邻居」还是「屏保 / 玩具」。下面三列是判断依据。
+  </p>
+  <table class="tbl">
+    <tr><th style="width:130px">行为</th><th style="width:74px">做不做</th><th>为什么</th></tr>
+    <tr><td><strong>呼吸</strong></td><td class="yes">做</td><td>唯一的<strong style="color:var(--text)">持续</strong>信号。没有它，宠物就是一张图；有了它，静止时也「活着」。周期 2.4s —— 比人的静息呼吸略慢，读起来像安静的小动物</td></tr>
+    <tr><td><strong>眨眼</strong></td><td class="yes">做</td><td>每 4.2–7.6s <strong style="color:var(--text)">随机</strong>（每个实例不同）。固定周期会被人脑识别成机械循环，随机才有生命感</td></tr>
+    <tr><td><strong>转头看你</strong></td><td class="yes">做</td><td>指针进入 260px 领地才反应，而且是<strong style="color:var(--text)">转头</strong>不是移动。这一条提供了「它知道你在」的全部价值</td></tr>
+    <tr><td><strong>闻一闻</strong></td><td class="yes">做</td><td>只在<strong style="color:var(--text)">第一次来的访客</strong>面前触发一次。给回访者一个"它认识我"的暗示，成本是 localStorage 一个 key</td></tr>
+    <tr><td><strong>打哈欠</strong></td><td class="yes">做</td><td>读者在同一段停留 >20s 才触发。它的信息是「这段挺长，我不催你」—— 把沉默变成陪伴</td></tr>
+    <tr><td><strong>伸懒腰</strong></td><td class="yes">做</td><td>滚到底部触发一次，给阅读一个收尾。也是唯一"庆祝"性质的动效</td></tr>
+    <tr><td><strong>跟随光标</strong></td><td class="no">不做</td><td><strong style="color:var(--text)">打开上面的开关感受一下</strong>：它立刻从"住在这里的小家伙"变成"黏着你的光标挂件"。而且它每一帧都在动 → 持续占用合成层、持续索取注意力。这是宠物设计里最贵的一个诱惑</td></tr>
+    <tr><td><strong>自动走动 / 随机跑位</strong></td><td class="no">不做</td><td>会撞到文字。个人主页的首要任务是让人读文章</td></tr>
+    <tr><td><strong>发声 / 弹出提醒</strong></td><td class="no">不做</td><td>Duolingo 的猫头鹰是这件事的反面教材 —— 一个会催你的吉祥物最终会被讨厌</td></tr>
+  </table>
+
+  <h2>它站在哪：位置与遮挡</h2>
+  <div class="grid-3" style="margin-top:14px">
+    <div class="panel">
+      <h3>桌面 ≥1100px</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">右下角 <code>right:26px; bottom:26px</code>，尺寸 104×104。<br>
+      个人主页是满屏 hero + 单列滚动的版式，右下角<strong style="color:var(--text)">没有常驻控件</strong>（回顶按钮只在文章页），所以不打架。</p>
+    </div>
+    <div class="panel">
+      <h3>窄屏 &lt;1100px</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">直接<strong style="color:var(--text)">隐藏</strong>。理由不是省事：手机上右下角是拇指区，而且要跟浏览器自己的工具栏抢位置。个人主页在手机上本来就不该有常驻浮层。</p>
+    </div>
+    <div class="panel">
+      <h3>和「回顶」的关系</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">文章页已有 <code>back-to-top</code>。两处都在右下时，宠物<strong style="color:var(--text)">让位</strong>：贴在同一角落，但回顶按钮出现时宠物上移到它上方 64px。</p>
+    </div>
+  </div>
+
+  <h2>降级与关闭</h2>
+  <table class="tbl">
+    <tr><th style="width:190px">情形</th><th>行为</th></tr>
+    <tr><td><strong>prefers-reduced-motion</strong></td><td>呼吸、眨眼、尾巴、耳朵全部停止；宠物变成<strong style="color:var(--text)">静态立绘</strong>。转头看保留（它是 200ms 的状态切换，不是循环动画）。点它仍然会说句话。可以用上面的按钮预览</td></tr>
+    <tr><td><strong>访客手动静音</strong></td><td>点宠物旁的小图标 → 它睡去，记在 <code>localStorage</code>。下次来直接是睡着的，不打扰</td></tr>
+    <tr><td><strong>站主不想要</strong></td><td><code>SiteConfig.pet = null</code> → 整个装置不渲染</td></tr>
+    <tr><td><strong>无 JS / 首屏未水合</strong></td><td>宠物默认 <code>hidden</code>，由 JS 显式打开。所以最坏情况是「没有宠物」，而不是「一只卡住的宠物」</td></tr>
+    <tr><td><strong>无障碍</strong></td><td>整个浮层 <code>aria-hidden="true"</code>；它不承载任何必须的信息。关闭按钮有 <code>aria-label</code></td></tr>
+  </table>
+
+  <h2>成本</h2>
+  <table class="tbl">
+    <tr><th style="width:170px">项</th><th>估算</th></tr>
+    <tr><td><strong>体积</strong></td><td>单物种 SVG ≈ 2–4KB（未压缩），<strong style="color:var(--text)">按需只加载站主那一个</strong>。10 个全量 ≈ 30KB，仍远小于一个 Lottie 文件</td></tr>
+    <tr><td><strong>运行时</strong></td><td>全部走 CSS <code>transform</code> / <code>opacity</code>，不触发重排。只有指针进入 260px 领地时才挂 <code>pointermove</code>，离开即停；不做常驻 rAF</td></tr>
+    <tr><td><strong>数据</strong></td><td><code>SiteConfig</code> 加一个可选字段 <code>pet?: { species, name?, quiet? }</code>。缺省时从 <code>userId</code> 哈希<strong style="color:var(--text)">派生</strong>一个物种 —— 所以每个站主天生就有一只，不用先配置</td></tr>
+    <tr><td><strong>后端</strong></td><td>零 Worker 改动、零新接口。宠物配置跟着已有的 <code>POST /api/profile/site</code> 走</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:22px;display:flex;gap:12px;align-items:flex-start">
+    <svg class="ic ic-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.8;margin:0">
+      这一页只讲<strong style="color:var(--text)">宠物</strong>。个人主页上另外 6 个「有意思的东西」在
+      <a href="INDEX.html">INDEX</a> 里，整页效果在 <a href="site.html">site.html</a>。
+    </p>
+  </div>
+
+  <p style="margin-top:26px"><a href="INDEX.html">← 回总览</a>　·　<a href="site.html">看整页设计稿 →</a></p>
+</div>
+<script src="r5.js"></script>
+</body>
+</html>

@@ -107,5 +107,7 @@ export function suggestMediaFilename(src: string, fallbackPrefix: string, ext: s
 }
 
 function sanitizeFilename(name: string): string {
+  // 控制字符是刻意要剔除的目标，不是笔误
+  // eslint-disable-next-line no-control-regex
   return name.replace(/[<>:"|?*\x00-\x1f]/g, '_').slice(0, 180) || 'file.bin';
 }

@@ -1,0 +1,22 @@
+{
+  "name": "@webbook/android-cap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebBook Android 宿主（Capacitor）：承载现有网页前端，并提供使用统计 / 通知监听 / 本地提醒三个原生能力面",
+  "type": "module",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "add:android": "cap add android",
+    "apk": "node ../../scripts/android-cap-apk.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "typescript": "^5.9.3"
+  }
+}

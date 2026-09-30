@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 四阶段 · 基于当前界面</title>
+<link rel="stylesheet" href="r4.css">
+<style>
+  .vcard { display:block; border:1px solid var(--border-subtle); border-radius:var(--r-lg); background:var(--bg-elev); padding:19px 21px 17px; transition:border-color var(--dur-2) var(--ease-io), transform var(--dur-3) var(--ease-out); }
+  .vcard:hover { border-color:var(--accent-line); transform:translateY(-3px); }
+  .vcard .vn { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--accent); }
+  .vcard h3 { font-size:var(--fs-2xl); margin:6px 0 6px; }
+  .vcard p { color:var(--text-dim); font-size:var(--fs-sm); line-height:1.7; }
+  .vcard .tags { margin-top:12px; display:flex; gap:6px; flex-wrap:wrap; }
+  .ask { border-left:3px solid var(--accent); padding:2px 0 2px 16px; margin:18px 0; }
+  .ask h3 { font-family:var(--font-sans); font-size:var(--fs-md); font-weight:650; margin:0 0 4px; }
+  .ask p { color:var(--text-dim); font-size:var(--fs-sm); }
+  .opts { display:flex; gap:8px; flex-wrap:wrap; margin-top:9px; }
+  .opt { border:1px solid var(--border); border-radius:var(--r-pill); padding:4px 13px; font-size:var(--fs-xs); color:var(--text-dim); background:var(--bg-elev-1); }
+  .opt.rec { border-color:var(--accent-line); color:var(--accent); background:var(--accent-soft); }
+  .timeline { border-left:2px solid var(--border); padding-left:18px; margin:16px 0; }
+  .timeline div { position:relative; padding:7px 0; font-size:var(--fs-sm); color:var(--text-dim); }
+  .timeline div::before { content:''; position:absolute; left:-24px; top:14px; width:9px; height:9px; border-radius:50%; background:var(--border-strong); border:2px solid var(--bg); }
+  .timeline div.hi::before { background:var(--accent); box-shadow:0 0 10px var(--accent-glow); }
+  .timeline b { color:var(--text); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-alert"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></g>
+</defs></svg>
+
+<div class="doc">
+  <div class="kicker">设计稿 · 四阶段 · 基于当前界面</div>
+  <h1 class="doc-h1">接着你已经做出来的东西往下走</h1>
+  <p class="doc-sub">
+    我在做前两轮探索的时候，你提交了 <code>93a9f61 墨金视觉体系重构 + 信息架构收敛</code>（18:37）。
+    所以这一轮先把<strong style="color:var(--text)">当前真实界面</strong>重新拍了一遍，
+    对着它给设计稿 —— 而不是对着我脑子里的旧版本。
+  </p>
+
+  <div class="timeline">
+    <div>我第一轮探索 · 审计六代首页 / token 体系 / 侧栏深度</div>
+    <div>我第二轮设计稿 · 一体外壳（左轨道 + 首屏 + 移动端）</div>
+    <div class="hi"><b>18:37 · 你提交 93a9f61</b> —— 顶栏收敛为面包屑 + ⌘K + 账号菜单；新增 ShellTopBar / MobileNav / AccountMenu；侧栏可拖拽调宽</div>
+    <div>我第三轮设计稿 · 四版气质 + 动效层（基于提交前的界面）</div>
+    <div class="hi"><b>本轮 · 对着提交后的界面重新出稿</b></div>
+  </div>
+
+  <h2>当前界面实拍（这一稿的起点）</h2>
+  <div class="shots">
+    <figure><img src="_now/01-app-desktop.png" alt="当前 /app"><figcaption><b>/app · 1600×1000</b>顶栏已经收敛好了：面包屑 + ⌘K + 任务 + 登录。内容区还是老的居中灰字</figcaption></figure>
+    <figure><img src="_now/02-blog-desktop.png" alt="当前 /blog"><figcaption><b>/blog · 1600×1000</b>共享顶栏接上了 ✓，但页面自己的 <code>blog-header</code> 还在 → <strong>两层头</strong>，「登录」出现两次</figcaption></figure>
+    <figure><img src="_now/08-app-mobile-2x.png" alt="当前移动端"><figcaption><b>/app · 390px</b>底栏 + FAB 有了 ✓，但第 4 项「我的」在屏外；首屏说明文字被右侧裁掉</figcaption></figure>
+    <figure><img src="_now/06-circles.png" alt="当前圈子游客"><figcaption><b>/app/circles · 游客</b><code>CircleListPage</code> 已引入 <code>ShellTopBar</code>，但游客守卫先重定向到登录页 —— 圈子的解释一个字都没有</figcaption></figure>
+  </div>
+
+  <h2>93a9f61 修好了什么（对照我第二轮提的问题）</h2>
+  <table class="tbl">
+    <tr><th style="width:250px">我第二轮提的</th><th style="width:90px">状态</th><th>现在长什么样</th></tr>
+    <tr><td>顶栏 7 个平级按钮，没有主次</td><td class="done">✓ 已修</td><td>收敛成 面包屑 + ⌘K 命令栏 + 任务 + 账号菜单（<code>ShellTopBar.tsx</code>）</td></tr>
+    <tr><td>没有 active 态，看不出自己在哪</td><td class="done">✓ 部分</td><td>面包屑回答了「我在哪」（末 3 段，过长截断）</td></tr>
+    <tr><td>「后台」对游客也显示，点进去只有权限卡片</td><td class="done">✓ 已修</td><td>后台只对 <code>isAdmin</code> 出现在账号菜单；游客只看到「登录」</td></tr>
+    <tr><td><code>/blog</code>、<code>/admin</code>、<code>/app/circles</code> 没有外壳</td><td class="done">✓ 大部分</td><td>四处都引入了 <code>ShellTopBar</code>（文章页还没接）</td></tr>
+    <tr><td>移动端没有底部导航</td><td class="done">✓ 已修</td><td><code>MobileNav</code>：笔记 / 任务 / 社区 / 我的 + 悬浮新建</td></tr>
+    <tr><td>手机端「快速新建笔记」（PRD U-03）</td><td class="done">✓ 已修</td><td>FAB 一键新建并跳转</td></tr>
+    <tr><td>侧栏固定 300px，深层级撑爆</td><td class="done">✓ 已修</td><td><code>sidebarWidth</code> 可拖拽 + 持久化，默认 280px</td></tr>
+  </table>
+  <p class="doc-sub" style="font-size:var(--fs-sm);margin-top:10px">这一批做得比我第二轮的设计稿更贴合现有代码 —— 尤其是把 <code>ShellTopBar</code> 连同 ⌘K 一起抽出来，任何页面挂上就自动获得命令面板，比我的「左轨道」方案改动面小得多。</p>
+
+  <h2>还没解决的五件事</h2>
+  <table class="tbl">
+    <tr><th style="width:56px">#</th><th style="width:210px">问题</th><th>证据</th></tr>
+    <tr><td><strong>1</strong></td><td><strong>桌面没有任何「去处」导航</strong></td><td>5 个目的地（个人主页 / 社区 / 圈子 / 后台 / 皮肤）全在头像菜单里；桌面<strong style="color:var(--text)">没有一个可见的当前页高亮</strong>。而手机底栏明摆着 4 个 —— <strong style="color:var(--text)">桌面的导航比手机弱</strong></td></tr>
+    <tr><td><strong>2</strong></td><td><strong>两套导航的目的地集合不同</strong></td><td>账号菜单 6 项 vs 底栏 4 项，交集只有「社区」。手机<strong style="color:var(--text)">没有圈子的常驻入口</strong>；桌面没有「笔记」入口</td></tr>
+    <tr><td><strong>3</strong></td><td><strong>首屏仍是死灰色</strong></td><td><code>/app</code> 正中央两行灰字，1600×1000 里 90% 空白</td></tr>
+    <tr><td><strong>4</strong></td><td><strong>/blog 双层头部</strong></td><td><code>BlogHubPage.tsx:160</code> 渲染 <code>ShellTopBar</code>，<code>:174</code> 又渲染 <code>blog-header</code>；登录 / 皮肤各出现两次；内容仍挤在 570px，右侧 40% 空</td></tr>
+    <tr><td><strong>5</strong></td><td><strong>移动端两个确定的缺陷</strong></td><td>底栏一行需要约 480px → <strong style="color:var(--text)">≤470px 时第 4 项「我的」在屏外</strong>（430/460/390 三个宽度实测都是 3 项）；首屏说明文字横向溢出被裁</td></tr>
+  </table>
+
+  <h2>四份设计稿</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <a class="vcard" href="01-nav.html">
+      <div class="vn">01</div><h3>导航模型 · 三种并排</h3>
+      <p>现状 / 方案 A（顶栏 4 个去处） / 方案 B（左轨道），同一块屏幕可点切换。</p>
+      <div class="tags"><span class="pill gold">推荐 A</span><span class="pill dim">一个数据源两种布局</span></div>
+    </a>
+    <a class="vcard" href="02-app.html">
+      <div class="vn">02</div><h3>笔记本 · 首屏与笔记态</h3>
+      <p>把居中灰字换成真正的第一屏；把侧栏 / 顶栏 / 内容三层表面分开。</p>
+      <div class="tags"><span class="pill gold">首屏</span><span class="pill dim">层级</span></div>
+    </a>
+    <a class="vcard" href="03-public.html">
+      <div class="vn">03</div><h3>公开面 · 去双层头</h3>
+      <p>删掉页面自己的 blog-header；内容 570 → 1180px；卡片自动封面；文章页补顶栏；圈子给游客可读态。</p>
+      <div class="tags"><span class="pill gold">去重复</span><span class="pill gold">自动封面</span><span class="pill dim">1180px</span></div>
+    </a>
+    <a class="vcard" href="04-mobile.html">
+      <div class="vn">04</div><h3>移动端 · 两个缺陷</h3>
+      <p>底栏放得下 4 项；空态限宽不溢出；FAB 不压导航；圈子进底栏。</p>
+      <div class="tags"><span class="pill gold">390px 实测</span><span class="pill dim">U-03 收尾</span></div>
+    </a>
+  </div>
+
+  <h2>核心主张：一份 nav 数据，两种布局</h2>
+  <div class="panel" style="margin-top:14px">
+    <p style="color:var(--text-dim);font-size:var(--fs-md);line-height:1.85;margin:0 0 12px">
+      现在的问题不是「顶栏不好看」，是<strong style="color:var(--text)">桌面和手机各自维护了一份导航</strong>：
+      桌面把入口塞进账号菜单，手机在底栏摆了 4 个，两份集合还不一样。
+      解法不是再加一层导航，而是<strong style="color:var(--text)">把去处抽成一份数据</strong>：
+    </p>
+    <pre style="margin:0;padding:14px 16px;border-radius:var(--r-md);background:var(--bg-deep);border:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:12.5px;color:var(--text-dim);overflow-x:auto">const PLACES = [
+  { key: 'notes',     label: '笔记', icon: 'book',        to: '/app' },
+  { key: 'blog',      label: '博客', icon: 'globe',       to: '/blog' },
+  { key: 'circles',   label: '圈子', icon: 'users',       to: '/app/circles' },
+  { key: 'me',        label: '我',   icon: 'user',        to: '/blog/u/:me' },
+];
+
+// 桌面：&lt;nav class="nav"&gt; 横向排（≤1080px 只留图标）
+// 手机：&lt;nav class="m-nav"&gt; 底栏竖排（当前 MobileNav）
+// 账号菜单：只剩 后台 / 皮肤 / 退出</pre>
+  </div>
+
+  <h2>要你拍板的两件事</h2>
+
+  <div class="ask">
+    <h3>Q1 · 导航模型选哪个？</h3>
+    <p>桌面现在没有任何可见的去处，全靠账号菜单。三种模型在 <a href="01-nav.html">01-nav.html</a> 里可点切换对比。</p>
+    <div class="opts">
+      <span class="opt rec">A. 顶栏 4 个去处 = 移动底栏同一组（推荐）</span>
+      <span class="opt">B. 左轨道 68px</span>
+      <span class="opt">C. 保持现状，只把账号菜单补上高亮</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">A 改动集中在一个组件加一份 nav 数据；B 与已提交的顶栏路线分叉；C 等于接受「桌面导航比手机弱」。</p>
+  </div>
+
+  <div class="ask">
+    <h3>Q2 · 这一轮做到哪一步？</h3>
+    <p>五件事彼此独立，可以只挑一部分。</p>
+    <div class="opts">
+      <span class="opt rec">P0 导航统一（01）—— 其余都依赖它</span>
+      <span class="opt">P1 首屏 + 层级（02）</span>
+      <span class="opt">P2 公开面去重 + 铺满（03）</span>
+      <span class="opt">P3 移动端两个缺陷（04）</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">
+      我的建议：<strong style="color:var(--text)">P0 + P3 先做</strong>。P0 是结构性的（后面所有页面都受益），
+      P3 是两个确定的 bug（390px 实测可复现），加起来改动面很小。
+      P1 / P2 是观感提升，可以随后。
+    </p>
+  </div>
+
+  <h2>三件顺带发现、但不属于设计范围</h2>
+  <table class="tbl">
+    <tr><th style="width:200px">发现</th><th>证据</th><th style="width:150px">建议</th></tr>
+    <tr>
+      <td><strong>圈子的游客守卫</strong></td>
+      <td>游客访问 <code>/app/circles</code> 被重定向到登录页（截图与 <code>/login</code> 逐字节相同）。但 <code>CircleListPage</code> 已经引入了 <code>ShellTopBar</code> —— 代码准备了外壳，守卫没让它渲染</td>
+      <td>看是否有公开圈子可匿名读的接口；有的话放开</td>
+    </tr>
+    <tr>
+      <td><strong>侧栏玻璃没有东西可透</strong></td>
+      <td><code>.sidebar</code> 用 <code>--glass-bg</code>(62% 不透明)、<code>.topbar</code> 用 <code>--glass-bg-strong</code>(82%)，但底下是同色背景 → 只降低了对比度，没有制造深度</td>
+      <td>二选一：改实色，或给背景加真实内容（网格/渐变）</td>
+    </tr>
+    <tr>
+      <td><strong>个人主页 feed 返回空</strong></td>
+      <td>上一轮已记录：<code>/api/public/users/:id/feed</code> 对一位有公开文章的作者返回 <code>{"posts":[]}</code>，且 <code>ownerEmail</code> 等于 userId</td>
+      <td>单独开 issue 定位（后端）</td>
+    </tr>
+  </table>
+
+  <h2>这一轮没有改的东西</h2>
+  <table class="tbl">
+    <tr><th style="width:180px">不动</th><th>原因</th></tr>
+    <tr><td><strong>配色与 token</strong></td><td>墨金体系刚重构完，这一轮一个色值都不改</td></tr>
+    <tr><td><strong>舞台与块编辑器</strong></td><td>块 / 连线 / 相机 / 手势的数据模型不碰</td></tr>
+    <tr><td><strong>数据与 API</strong></td><td>零 schema 改动、零 Worker 部署。自动封面是从已有 <code>note.id</code> 派生的 CSS</td></tr>
+    <tr><td><strong>93a9f61 的成果</strong></td><td>ShellTopBar / MobileNav / AccountMenu / 面包屑 / 可拖拽侧栏全部保留，只在其上做增量</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:22px;display:flex;gap:12px;align-items:flex-start">
+    <svg class="i i-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.8;margin:0">
+      这一轮同样<strong style="color:var(--text)">没有改任何产品代码</strong>。
+      所有产物在 <code>docs/design/round4/</code>，现状实拍在 <code>docs/design/round4/_now/</code>。
+      前两轮的设计稿（<code>round2/</code> 一体外壳、<code>round3/</code> 四版气质 + 动效层）保留原样，
+      其中不少主张已经被 <code>93a9f61</code> 以更贴合代码的方式实现了。
+    </p>
+  </div>
+</div>
+<script src="r4.js"></script>
+</body>
+</html>

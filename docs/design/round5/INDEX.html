@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 五阶段 · 个人主页有意思的东西</title>
+<link rel="stylesheet" href="r5.css">
+<style>
+  .vcard{display:block;border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-elev);padding:19px 21px 17px;transition:border-color var(--dur-2) var(--ease-io),transform var(--dur-3) var(--ease-out)}
+  .vcard:hover{border-color:var(--accent-line);transform:translateY(-3px)}
+  .vcard h3{font-size:var(--fs-2xl);margin:4px 0 6px}
+  .vcard p{color:var(--text-dim);font-size:var(--fs-sm);line-height:1.7}
+  .vcard .tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+  .ask{border-left:3px solid var(--accent);padding:2px 0 2px 16px;margin:18px 0}
+  .ask h3{font-family:var(--font-sans);font-size:var(--fs-md);font-weight:650;margin:0 0 4px}
+  .ask p{color:var(--text-dim);font-size:var(--fs-sm)}
+  .opts{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .opt{border:1px solid var(--border);border-radius:var(--r-pill);padding:4px 13px;font-size:var(--fs-xs);color:var(--text-dim);background:var(--bg-elev-1)}
+  .opt.rec{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+  .dev-row{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border-subtle)}
+  .dev-row:last-child{border-bottom:none}
+  .dev-row .n{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;margin-top:2px}
+  .dev-row b{color:var(--text);font-weight:600;font-size:var(--fs-md)}
+  .dev-row p{font-size:var(--fs-sm);color:var(--text-dim);line-height:1.7;margin-top:2px}
+  .dev-row .cost{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);flex:none;margin-top:5px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-alert"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 五阶段 · 个人主页</div>
+  <h1 class="doc-h1">让个人主页像有人住</h1>
+  <p class="doc-sub">
+    你要的「宠物」我做了，而且做成了可交互的行为实验室。
+    但我先把诊断说清楚：<strong style="color:var(--text)">这个页面最大的问题不是「不够花」，是「没有人」</strong>。
+    宠物是解决这件事最显眼的装置，不是唯一的。
+  </p>
+
+  <h2>现状实拍</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">线上 <code>heyuan-cyber.github.io/webbook/blog/u/…</code> 实拍。这位作者有 2 篇公开文、没有配过 site config。</p>
+  <div class="shots">
+    <figure><img src="_now/05-deployed-tall.png" alt="现状整页"><figcaption><b>整页</b>满屏 Swiss 海报。词标是邮箱前缀 <code>N17852326702</code> —— 页面上最大的一个字，却是个手机号段</figcaption></figure>
+    <figure><img src="_now/04-deployed-site.png" alt="现状首屏"><figcaption><b>首屏</b>上面 1/3 全空；marquee 与「Scroll」之间还有约 100px 空档</figcaption></figure>
+    <figure><img src="_now/02-site-mobile.png" alt="移动端"><figcaption><b>移动端 390px</b>顶部品牌 + 三个 tab 挤在一行；内容区大量留白</figcaption></figure>
+  </div>
+
+  <h2>诊断：三件事，宠物只解决第三件</h2>
+  <table class="tbl">
+    <tr><th style="width:170px">缺什么</th><th>证据</th><th style="width:180px">本轮怎么补</th></tr>
+    <tr>
+      <td><strong>不知道这是谁</strong></td>
+      <td>词标 <code>nameFromEmail(ownerEmail)</code> → <code>N17852326702</code>。全页没有一处真名、头像、在做什么</td>
+      <td>② 活的词标 + ④「现在在折腾」</td>
+    </tr>
+    <tr>
+      <td><strong>不知道还在不在更新</strong></td>
+      <td>没有任何时间信号。唯一能判断的方式是逐个点开文章看日期</td>
+      <td>③ 站点脉搏（60 天方格）</td>
+    </tr>
+    <tr>
+      <td><strong>没有人味</strong></td>
+      <td>整页是「作品集说明书」的语气：hero 是一句通用文案「用代码造作品，也把背后的思考写下来」，marquee 是六个英文词，footer 是「一起做点东西。」</td>
+      <td>① 宠物 + ⑤ 彩蛋 + ⑥ 领路 + ⑦ 访客留痕</td>
+    </tr>
+  </table>
+
+  <h2>七 个装置</h2>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="panel" style="grid-column:1/-1">
+      <div class="dev-row" style="border-top:1px solid var(--border-subtle)">
+        <span class="n">1</span>
+        <div style="flex:1">
+          <b>驻站宠物</b> —— 右下角一只小家伙。呼吸(2.4s) / 眨眼(随机 4.2–7.6s) / 转头看你(260px 领地) / 闻一闻(首次到访) / 打哈欠(停留 &gt;20s) / 伸懒腰(滚到底)。
+          <p><strong style="color:var(--text)">刻意不做：跟随光标、自动走动、发声提醒。</strong> 想感受区别，去实验室把「跟随光标」打开。</p>
+        </div>
+        <span class="cost">中</span>
+      </div>
+      <div class="dev-row">
+        <span class="n">2</span>
+        <div style="flex:1"><b>活的词标</b> —— 逐字错峰上浮（一次性 760ms，不循环）+ 单字悬停抬起。同时修掉「词标是邮箱前缀」这件事（新增可选 <code>displayName</code>）。</div>
+        <span class="cost">低</span>
+      </div>
+      <div class="dev-row">
+        <span class="n">3</span>
+        <div style="flex:1"><b>站点脉搏</b> —— hero 下方 60 个小方格，有更新的日子亮起来，悬停显示当天写了什么。<strong style="color:var(--text)">数据直接来自已有的 <code>posts[].updatedAt</code>，零新字段。</strong></div>
+        <span class="cost">低</span>
+      </div>
+      <div class="dev-row">
+        <span class="n">4</span>
+        <div style="flex:1"><b>现在在折腾</b> —— hero 顶部一行状态胶囊，站主一句话（新增可选 <code>now</code>）。空着就不渲染。</div>
+        <span class="cost">低</span>
+      </div>
+      <div class="dev-row">
+        <span class="n">5</span>
+        <div style="flex:1"><b>彩蛋</b> —— 深夜访问：overline 变成「这么晚还没睡」，宠物在角落睡死；滚到底：footer 出一行随机结束语。纯前端，无请求。</div>
+        <span class="cost">低</span>
+      </div>
+      <div class="dev-row">
+        <span class="n">6</span>
+        <div style="flex:1"><b>领路</b> —— 点宠物，它跑到下一个区块标题旁再跑回来。<strong style="color:var(--text)">这是宠物的唯一「功能」</strong>，顺便替掉 hero 里那个基本没人点的 Scroll 提示。</div>
+        <span class="cost">低</span>
+      </div>
+      <div class="dev-row">
+        <span class="n">7</span>
+        <div style="flex:1"><b>访客留痕</b> —— 第一次来它「闻一闻」，第二次来它先看你。<strong style="color:var(--text)">只用 localStorage</strong>，不发请求、不存服务端。</div>
+        <span class="cost">低</span>
+      </div>
+    </div>
+  </div>
+
+  <h2>两份设计稿</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <a class="vcard" href="pet-lab.html">
+      <div class="kicker">装置 ① 深挖</div>
+      <h3>宠物行为实验室</h3>
+      <p>可切换 4 个物种、逐条开关行为、播放 28 秒行为脚本、看事件日志。
+      里面专门放了一个 <strong style="color:var(--text)">「跟随光标」的反面对照开关</strong> —— 打开就知道为什么不该做。</p>
+      <div class="tags"><span class="pill gold">可交互</span><span class="pill gold">反面对照</span><span class="pill dim">行为预算表</span></div>
+    </a>
+    <a class="vcard" href="site.html">
+      <div class="kicker">整页</div>
+      <h3>个人主页 · 七个装置</h3>
+      <p>把七个装置放进真实版式（满屏 hero + 单列滚动 + 区块卡片），宠物贴在右下角，鼠标移过去它会看你。</p>
+      <div class="tags"><span class="pill gold">整页</span><span class="pill dim">数据改动</span><span class="pill dim">为什么不用 emoji / Lottie</span></div>
+    </a>
+  </div>
+
+  <h2>参考了什么</h2>
+  <table class="tbl">
+    <tr><th style="width:190px">来源</th><th>拿走了什么</th><th style="width:180px">丢掉了什么</th></tr>
+    <tr>
+      <td><a href="https://github.com/nilbuild/page-mascot">page-mascot</a><br><span style="font-size:11px;color:var(--text-muted)">「看着光标、戳一下会眨眼」</span></td>
+      <td>「看着你」这个核心动作 —— 但改成<strong style="color:var(--text)">只在领地内转头</strong>，不是全程跟随</td>
+      <td>它的实现是持续跟随光标，这正是我认为最该克制的部分</td>
+    </tr>
+    <tr>
+      <td><a href="https://monkeytype.readthedocs.io/en/v18.8.0/index.html">Monkeytype 的猫</a></td>
+      <td>「陪伴但不索取」的调性：它跟着你的节奏动，但从不拦你</td>
+      <td>它绑定打字节奏，个人主页没有这个输入源</td>
+    </tr>
+    <tr>
+      <td><a href="https://duckduckgo.com/?q=duolingo+owl+scary">Duolingo 的猫头鹰</a><br><span style="font-size:11px;color:var(--text-muted)">公认的反面教材</span></td>
+      <td>反面对照：证明了「会催你的吉祥物最终会被讨厌」</td>
+      <td>所有通知 / 提醒 / 情绪绑架式的机制，一条都不抄</td>
+    </tr>
+    <tr>
+      <td><a href="https://blog.pljzy.top/posts/%E5%8D%9A%E5%AE%A2%E7%AF%87%E7%BB%99%E5%8D%9A%E5%AE%A2%E5%8A%A0%E4%B8%8A%E6%A1%8C%E9%9D%A2%E5%AE%A0%E7%89%A9/">博客桌面宠物</a><br><span style="font-size:11px;color:var(--text-muted)">中文博客圈的常见做法</span></td>
+      <td>「宠物是站主性格的一部分」这个定位；物种可选的思路</td>
+      <td>常见的实现是加载 Live2D / 大体积模型 —— 与项目的体积约束冲突</td>
+    </tr>
+    <tr>
+      <td><strong>项目自己</strong>：<code>guestPersona.ts</code></td>
+      <td>早就内置了 10 个动物（企鹅 / 鲸鱼 / 狐狸 / 熊猫 / 海豚 / 猫头鹰 / 考拉 / 小鹿 / 水獭 / 云雀）+ 10 个形容词。<strong style="color:var(--text)">宠物的物种词汇表不用新造，直接复用</strong></td>
+      <td>它是「访客」的身份而不是「站主」的 —— 这一点不要混（见下面的待拍板）</td>
+    </tr>
+  </table>
+
+  <h2>要你拍板的三件事</h2>
+
+  <div class="ask">
+    <h3>Q1 · 宠物是谁的？</h3>
+    <p>这决定它出现在哪些页面、以及配置写在哪。</p>
+    <div class="opts">
+      <span class="opt rec">A. 站主的（推荐）—— 每个个人主页一只，物种从 userId 派生，站主可改</span>
+      <span class="opt">B. 访客自己的 —— 复用 guestPersona，走到哪都是自己那只</span>
+      <span class="opt">C. 两个都要 —— 站主的常驻，访客的在特定时刻串场</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">A 最省事也最合直觉；B 有意思但会让人分不清「这是谁的宠物」；C 最丰富但这一轮先不做。</p>
+  </div>
+
+  <div class="ask">
+    <h3>Q2 · 做到哪一档？</h3>
+    <p>七个装置成本不同，可以只挑一部分。</p>
+    <div class="opts">
+      <span class="opt rec">L1 先做 ①②③（词标 + 脉搏 + 宠物基础行为）</span>
+      <span class="opt">L2 = L1 + ④⑤⑥（状态 + 彩蛋 + 领路）</span>
+      <span class="opt">L3 = L2 + ⑦（访客留痕）</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">我的建议：<strong style="color:var(--text)">L1 起步</strong>。②③ 成本极低、立刻解决「这是谁 / 还在更新吗」，① 是你要的那个亮点。L2/L3 作为第二轮。</p>
+  </div>
+
+  <div class="ask">
+    <h3>Q3 · 宠物要不要也出现在笔记本里？</h3>
+    <p>个人主页是「给别人看的地方」，笔记本是「自己干活的地方」—— 两处对宠物的容忍度完全不同。</p>
+    <div class="opts">
+      <span class="opt rec">A. 只在个人主页（推荐）</span>
+      <span class="opt">B. 两处都有，笔记本里默认睡着</span>
+      <span class="opt">C. 做成全局开关，站主自己决定</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">我倾向 A：写作时需要绝对安静，这一条在第二轮「静」那版里已经论证过。</p>
+  </div>
+
+  <div class="panel" style="margin-top:22px;display:flex;gap:12px;align-items:flex-start">
+    <svg class="ic ic-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.8;margin:0">
+      这一轮同样<strong style="color:var(--text)">没有改任何产品代码</strong>。产物在 <code>docs/design/round5/</code>，现状实拍在 <code>_now/</code>。<br>
+      顺带记录：个人主页的<b>词标用邮箱前缀</b>、以及 <b>一位作者的 feed 返回空</b>（前两轮已记录，仍未修）—— 详见 <a href="site.html">site.html</a> 末尾。
+    </p>
+  </div>
+</div>
+<script src="r5.js"></script>
+</body>
+</html>

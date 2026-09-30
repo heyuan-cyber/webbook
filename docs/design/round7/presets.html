@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 三档预设的同一页</title>
+<link rel="stylesheet" href="r7.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-chev"><path d="M6 9l6 6 6-6"/></g>
+<g id="i-arrow"><path d="M4 12h15M13 6l6 6-6 6"/></g>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+</defs></svg>
+
+<nav class="nav">
+  <span class="brand">WebBook</span>
+  <span style="font-size:var(--fs-xs);color:var(--text-muted);margin-right:6px">交互层设计稿</span>
+  <a class="lk on" href="presets.html">三档预设</a>
+  <a class="lk" href="settings.html">站主配置 / 访客开关</a>
+  <a class="lk" href="spec.html">参数规范</a>
+  <span style="flex:1"></span>
+  <button class="btn btn-sm" data-fx-toggle><svg class="ic ic-12"><use href="#i-x"/></svg><span data-fx-label>装饰型：开启</span></button>
+  <button class="btn btn-sm" data-reduce-toggle><svg class="ic ic-12"><use href="#i-moon"/></svg><span data-reduce-label>减少动态：关闭</span></button>
+</nav>
+
+<div class="doc doc-wide" data-preset-scope>
+  <div class="kicker">设计稿 · 七阶段 · 01 / 03</div>
+  <h1 class="doc-h1">同一页，三档预设</h1>
+  <p class="doc-sub">
+    六阶段定了框架（触发器 × 效果 × 约束），这一页把框架画成<strong style="color:var(--text)">站主实际会看到的样子</strong>：
+    <strong style="color:var(--text)">同一份 DOM、同一套 CSS</strong>，只改 <code>[data-preset]</code> 一个属性。
+    三档之间不是三套代码，是三份 <code>Interaction[]</code>。
+  </p>
+
+  <div class="preset-bar">
+    <button class="preset-card" data-set-preset="quiet">
+      <span class="pn">安静 <span class="pill dim">默认</span></span>
+      <span class="pd">只有功能性交互 + 区块入场。没有视差、没有倾斜、没有光晕、没有宠物。</span>
+      <span class="pc">rise · stagger · morph · heatmap · reveal</span>
+    </button>
+    <button class="preset-card on" data-set-preset="lively">
+      <span class="pn">有活力</span>
+      <span class="pd">加上空间层：hero 视差、卡片倾斜、光标光晕、词标乱码。</span>
+      <span class="pc">quiet + parallax · tilt · spotlight · scramble</span>
+    </button>
+    <button class="preset-card" data-set-preset="playful">
+      <span class="pn">玩心</span>
+      <span class="pd">加上角色与时间层：右下角宠物、CTA 磁吸、卡片涟漪。</span>
+      <span class="pc">lively + character · magnetic · ripple</span>
+    </button>
+  </div>
+
+  <div class="site-frame">
+    <div class="site-bar"><span class="site-dot"></span><span class="site-dot"></span><span class="site-dot"></span>
+      <span class="site-url" id="presetUrl">webbook / blog / u / 何源　·　preset = lively</span></div>
+
+    <div class="site-body" data-preset="lively" data-spotlight data-parallax>
+      <header class="site-header">
+        <div class="site-brand"><span class="site-avatar">何</span><span class="site-name">何源</span></div>
+        <nav class="site-nav">
+          <button class="site-tab on">首页</button><button class="site-tab">项目示例</button><button class="site-tab">博客</button>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-grid" data-par-depth="0.4"></div>
+        <div class="hero-glow"></div>
+        <div class="hero-inner" data-par-depth="0.85">
+          <span class="now"><span class="dot"></span>现在在折腾 <b>战斗演出编辑器的时间轴重构</b></span>
+          <span class="hero-overline">游戏开发 · 渲染 · 工具链</span>
+          <h1 class="hero-word" data-scramble="何源"><span>何</span><span>源</span></h1>
+          <p class="hero-sub">用代码造作品，也把背后的思考写下来 —— 游戏开发 · 案例 · 系统 · 计算机基础 · 独立游戏设计。</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" data-magnetic>查看项目示例</button>
+            <a class="btn btn-ghost" href="#blog">浏览博客</a>
+          </div>
+          <div class="pulse" aria-label="最近 60 天的更新">
+            <i></i><i></i><i class="l1"></i><i></i><i></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i>
+            <i></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i></i><i></i>
+            <i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i></i><i class="l3"></i><i></i><i></i><i class="l1"></i>
+            <i></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i><i></i><i></i><i class="l2"></i><i></i>
+            <i></i><i></i><i class="l1"></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i>
+            <i></i><i class="l2"></i><i></i><i class="l1"></i><i></i><i></i><i></i><i class="l3"></i><i></i><i></i>
+          </div>
+          <div class="pulse-legend">最近 60 天 · 有更新的日子亮起来</div>
+        </div>
+        <div class="marquee" data-par-depth="1.6">
+          <div class="marquee-track">
+            <span class="mq-i">Creative Developer</span><span class="mq-i">基于线上</span><span class="mq-i">Design</span>
+            <span class="mq-i">Code</span><span class="mq-i">Build</span><span class="mq-i">Ship</span>
+            <span class="mq-i">Creative Developer</span><span class="mq-i">基于线上</span><span class="mq-i">Design</span>
+            <span class="mq-i">Code</span><span class="mq-i">Build</span><span class="mq-i">Ship</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-head"><span class="sec-num">01</span><div><h2>项目示例</h2><p class="sec-lede">挑出来的几件，能看出怎么做出来的。</p></div></div>
+        <div class="cards">
+          <article class="card"><div class="card-cover c1"></div><div class="card-pad">
+            <h3 class="card-title">战斗演出编辑器</h3><p class="card-sum">时间轴 + 事件驱动，编辑器只描述演出意图。</p>
+            <div style="margin-top:9px;font-size:var(--fs-xs);color:var(--accent);display:flex;align-items:center;gap:5px">查看项目 <svg class="ic ic-12"><use href="#i-arrow"/></svg></div></div></article>
+          <article class="card"><div class="card-cover c2"></div><div class="card-pad">
+            <h3 class="card-title">战损贴花系统</h3><p class="card-sum">运行时生成划痕，配置进 datatable。</p>
+            <div style="margin-top:9px;font-size:var(--fs-xs);color:var(--accent);display:flex;align-items:center;gap:5px">查看项目 <svg class="ic ic-12"><use href="#i-arrow"/></svg></div></div></article>
+          <article class="card"><div class="card-cover c3"></div><div class="card-pad">
+            <h3 class="card-title">GS 性能排查工具</h3><p class="card-sum">一次掉帧从 capture 到定位的完整链路。</p>
+            <div style="margin-top:9px;font-size:var(--fs-xs);color:var(--accent);display:flex;align-items:center;gap:5px">查看项目 <svg class="ic ic-12"><use href="#i-arrow"/></svg></div></div></article>
+        </div>
+      </section>
+
+      <section class="sec" id="blog">
+        <div class="sec-head"><span class="sec-num">02</span><div><h2>博客</h2><p class="sec-lede">按栏目分组，最近更新的排前面。</p></div></div>
+        <div class="cards">
+          <article class="card"><div class="card-cover c1"></div><div class="card-pad">
+            <h3 class="card-title">战斗演出编辑器架构设计</h3><p class="card-sum">三层解耦，只有轨道进 git。</p>
+            <div style="margin-top:9px;font-size:var(--fs-2xs);color:var(--text-muted)" class="mono">2026-09-24 · 约 6 分钟</div></div></article>
+          <article class="card"><div class="card-cover c2"></div><div class="card-pad">
+            <h3 class="card-title">战损贴花使用指南</h3><p class="card-sum">换装流程、datatable 配置、贴图尺寸。</p>
+            <div style="margin-top:9px;font-size:var(--fs-2xs);color:var(--text-muted)">2026-09-10 · 约 3 分钟</div></div></article>
+          <article class="card"><div class="card-cover c3"></div><div class="card-pad">
+            <h3 class="card-title">光照管线笔记</h3><p class="card-sum">从烘焙到实时 GI 的取舍。</p>
+            <div style="margin-top:9px;font-size:var(--fs-2xs);color:var(--text-muted)">2026-09-02 · 约 8 分钟</div></div></article>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <span class="kicker">Let's Talk</span>
+        <h2>一起做点东西。</h2>
+        <p style="color:var(--text-dim)">何源的个人主页 —— 用代码造作品，也把背后的思考写下来。</p>
+        <div><a class="quiet-link"><svg class="ic ic-12"><use href="#i-eye"/></svg>让这个页面安静下来</a></div>
+      </footer>
+
+      <!-- 宠物：仅玩心档 -->
+      <div class="pet-dock fx-playful">
+        <div class="pet" data-pet data-look="center">
+          <svg viewBox="0 0 96 96">
+            <g class="p-body">
+              <path class="p-soft p-tail" d="M34 77 C 21 75, 14 62, 22 53 C 29 46, 36 52, 31 59 C 28 64, 30 72, 36 74"/>
+              <ellipse class="p-soft" cx="50" cy="70" rx="19" ry="17"/>
+              <path class="p" d="M43 71 v9"/><path class="p" d="M57 71 v9"/>
+              <g class="p-head">
+                <path class="p-soft" d="M36 33 L 33 13 L 48 28 Z"/>
+                <path class="p-soft" d="M64 33 L 67 13 L 52 28 Z"/>
+                <ellipse class="p-soft" cx="50" cy="44" rx="18" ry="15.5"/>
+                <path class="p" d="M50 50 l-5.5 5 h11 z"/>
+                <ellipse class="p-eye" cx="43" cy="42" rx="2.7" ry="3"/>
+                <ellipse class="p-eye" cx="57" cy="42" rx="2.7" ry="3"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>三档到底差在哪</h2>
+  <div data-preset-note="quiet" hidden>
+    <div class="panel">
+      <h3>安静（默认）—— 站主不选时的样子</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.8">
+        页面上<strong style="color:var(--text)">没有任何装饰型交互</strong>。剩下的是：顶栏滚动 morph、阅读进度、站点脉搏、条件显示。
+        这些是<strong style="color:var(--text)">功能型</strong> —— 关掉会丢信息，所以它们在所有档位里都在。
+      </p>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.8;margin-top:10px">
+        选它的理由：个人主页第一任务是让人读文章。<code>prefers-reduced-motion</code> 用户看到的就是这一档，所以它必须是<strong style="color:var(--text)">能独立成立的</strong>，而不是"别档砍掉动效后的残骸"。
+      </p>
+    </div>
+  </div>
+  <div data-preset-note="lively">
+    <div class="panel">
+      <h3>有活力 —— 加上空间层 <span class="pill gold">你正在看这一档</span></h3>
+      <table class="tbl" style="margin-top:6px">
+        <tr><th style="width:170px">新增</th><th>现在可以去试</th></tr>
+        <tr><td><strong>hero 视差</strong></td><td>在预览区里滚动 —— 网格 / 内容 / marquee 三层不同速率（0.4× / 0.85× / 1.6×）</td></tr>
+        <tr><td><strong>光标光晕</strong></td><td>鼠标在 hero 上移动，一圈柔光跟着走（260ms 缓动，不是实时跟手）</td></tr>
+        <tr><td><strong>卡片倾斜</strong></td><td>悬停卡片，最大倾斜 6°</td></tr>
+        <tr><td><strong>词标乱码</strong></td><td>鼠标移到「何源」上，字符短暂重排再归位</td></tr>
+      </table>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.8;margin-top:12px">
+        <strong style="color:var(--text)">这一档的边界</strong>：全部是「光标在哪里 / 滚到哪里」的即时反馈，
+        没有一个元素会自己动。所以它不会在你读文章时分心。
+      </p>
+    </div>
+  </div>
+  <div data-preset-note="playful" hidden>
+    <div class="panel">
+      <h3>玩心 —— 加上角色与时间层</h3>
+      <table class="tbl" style="margin-top:6px">
+        <tr><th style="width:170px">新增</th><th>现在可以去试</th></tr>
+        <tr><td><strong>驻站宠物</strong></td><td>右下角那只。鼠标靠近它会转头看你（不跟随）；整页滚动它一直待在那儿</td></tr>
+        <tr><td><strong>CTA 磁吸</strong></td><td>鼠标靠近「查看项目示例」，按钮被吸过去（上限 8px，点击热区不动）</td></tr>
+        <tr><td><strong>卡片涟漪</strong></td><td>按下任意卡片，从按点扩散一圈</td></tr>
+      </table>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.8;margin-top:12px">
+        <strong style="color:var(--text)">这一档开始有「自己会动的东西」</strong>（宠物），所以才需要访客关闭开关 ——
+        见 <a href="settings.html">settings.html</a> 里那个页脚链接的设计。
+      </p>
+    </div>
+  </div>
+
+  <h2>三档的成本与风险</h2>
+  <table class="tbl">
+    <tr><th style="width:120px">档位</th><th style="width:210px">合成层与监听</th><th style="width:170px">低端机 / 移动端</th><th>最怕的用法</th></tr>
+    <tr>
+      <td><strong>安静</strong></td>
+      <td>无新增合成层；只有滚动监听</td>
+      <td class="yes">无风险</td>
+      <td>站主觉得"太素"，跑去手写一堆动效 —— 那就绕过了整个约束体系</td>
+    </tr>
+    <tr>
+      <td><strong>有活力</strong></td>
+      <td>视差 3 层 + 光晕 1 层；指针监听 3 处，均 rAF 节流</td>
+      <td class="mid">≤720px 全部不挂载</td>
+      <td>视差速率差开到 2× 以上，页面会显得"散架"</td>
+    </tr>
+    <tr>
+      <td><strong>玩心</strong></td>
+      <td>再加宠物（CSS 动画 1 层）+ 涟漪（点击时临时节点）</td>
+      <td class="mid">宠物 ≤1100px 不显示</td>
+      <td>把宠物做成"会催人的吉祥物" —— 五阶段已经论证过这条是反面教材</td>
+    </tr>
+  </table>
+
+  <h2>同一份 DOM 是怎么做到的</h2>
+  <pre class="code">&lt;!-- 只改这一个属性 --&gt;
+&lt;div class="site-body" data-preset="lively"&gt;
+
+&lt;!-- 元素自己声明"我属于哪一档" --&gt;
+&lt;div class="hero-grid"  data-par-depth="0.4"&gt;&lt;/div&gt;          &lt;!-- 只在 lively+ 生效 --&gt;
+&lt;div class="pet-dock fx-playful"&gt; … &lt;/div&gt;                    &lt;!-- 只在 playful 显示 --&gt;
+&lt;h1 class="hero-word fx-lively"&gt;…&lt;/h1&gt;                       &lt;!-- 同上 --&gt;
+
+/* CSS 门控 —— 三行搞定 */
+[data-preset="quiet"]  .fx-lively,
+[data-preset="quiet"]  .fx-playful,
+[data-preset="lively"] .fx-playful { display:none !important }
+
+/* JS 里每次触发都实时读 preset，不缓存 */
+function presetOf(el){ return el.closest('[data-preset]').dataset.preset }</pre>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    <strong style="color:var(--text)">关键点：JS 在挂监听前要判断两件事</strong> ——
+    元素是不是被门控掉了（<code>offsetParent === null</code>），以及当前档位是否需要它。
+    六阶段的约束③「关闭时根本不注册监听」在这里落地成：<code>decoOff() || presetOf(el) === 'quiet'</code> 直接 return。
+  </p>
+
+  <p style="margin-top:26px"><a href="settings.html">看站主怎么配 →</a>　·　<a href="spec.html">看参数规范 →</a></p>
+</div>
+<script src="r7.js"></script>
+<script>
+/* 让 URL 条跟着预设走（纯展示） */
+(function(){
+  var url = document.getElementById('presetUrl');
+  document.querySelectorAll('[data-set-preset]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var k = b.getAttribute('data-set-preset');
+      var f = document.querySelector('.site-body[data-preset]');
+      if (f) f.setAttribute('data-preset', k);
+      if (url) url.textContent = 'webbook / blog / u / 何源　·　preset = ' + k;
+    });
+  });
+})();
+</script>
+</body>
+</html>

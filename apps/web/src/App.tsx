@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence, motion, MOTION, useMotionSafe } from './lib/motion';
 import { AuthProviderComponent, useAuth } from './auth/AuthContext';
 import { useNotesStore } from './store/useNotesStore';
+import { useNativeHostStore } from './store/useNativeHostStore';
+import { installBackButtonHandler } from './lib/backButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastHost } from './components/Toast';
 
@@ -26,12 +28,44 @@ const CircleListPage = lazy(() =>
 const CircleDetailPage = lazy(() =>
   import('./pages/CircleDetailPage').then((m) => ({ default: m.CircleDetailPage })),
 );
+const UsagePage = lazy(() => import('./pages/UsagePage').then((m) => ({ default: m.UsagePage })));
+const ExpensePage = lazy(() =>
+  import('./pages/ExpensePage').then((m) => ({ default: m.ExpensePage })),
+);
+const NotifyPage = lazy(() =>
+  import('./pages/NotifyPage').then((m) => ({ default: m.NotifyPage })),
+);
 
 function Routed() {
   const { session, loading } = useAuth();
   const init = useNotesStore((s) => s.init);
+  const probeHost = useNativeHostStore((s) => s.probe);
   const location = useLocation();
   const reduced = useMotionSafe();
+
+  // 宿主能力探测只做一次：它包含一次原生往返，不该每个页面各做一遍。
+  // 在浏览器里访问时探测是安全的——probeNativeBridge 保证不抛异常，只返回"不可用"。
+  useEffect(() => {
+    void probeHost();
+  }, [probeHost]);
+
+  // Android 返回键 / 侧滑：不接管的话 Capacitor 会直接退出应用，
+  // 表现为"打开子页面后一滑就退出，回不去"。
+  useEffect(() => {
+    let handle: { dispose: () => void } | null = null;
+    let cancelled = false;
+    void installBackButtonHandler().then((h) => {
+      if (cancelled) {
+        h?.dispose();
+        return;
+      }
+      handle = h;
+    });
+    return () => {
+      cancelled = true;
+      handle?.dispose();
+    };
+  }, []);
 
   useEffect(() => {
     if (!loading) init(session);
@@ -54,6 +88,9 @@ function Routed() {
         <Route path="/blog" element={<BlogHubPage />} />
         <Route path="/app" element={<UserApp />} />
         <Route path="/app/note/:id" element={<UserApp />} />
+        <Route path="/app/usage" element={<UsagePage />} />
+        <Route path="/app/expense" element={<ExpensePage />} />
+        <Route path="/app/notify" element={<NotifyPage />} />
         <Route path="/app/circles" element={<CircleListPage />} />
         <Route path="/app/circles/:id" element={<CircleDetailPage />} />
         <Route path="/admin" element={<AdminPanel />} />

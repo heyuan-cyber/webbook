@@ -22,9 +22,19 @@ export function MobileNav() {
   const selectNote = useNotesStore((s) => s.selectNote);
   const openPlanner = usePlanStore((s) => s.openPlanner);
 
-  /** 当前位置归类到四个 tab 之一 */
+  /**
+   * 当前位置归类到四个 tab 之一。
+   *
+   * 手机伴侣三页（/app/usage、/app/expense、/app/notify）**不属于任何 tab**：
+   * 它们从账户菜单进入，底栏没有对应项。若不排除，`startsWith('/app')` 会把它们
+   * 误判成「笔记」页，导致底栏高亮错误——用户会以为自己还在笔记区。
+   */
   const path = location.pathname;
-  const onNotes = path.startsWith('/app') && !path.startsWith('/app/circles');
+  const onCompanion =
+    path.startsWith('/app/usage') ||
+    path.startsWith('/app/expense') ||
+    path.startsWith('/app/notify');
+  const onNotes = path.startsWith('/app') && !path.startsWith('/app/circles') && !onCompanion;
   const onCommunity = path.startsWith('/app/circles');
   const tab = onNotes ? 'notes' : onCommunity ? 'community' : null;
 

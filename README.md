@@ -22,15 +22,18 @@
 - 🤖 **AI** — 底栏助手（DeepSeek）+ 节点内嵌生成条（生文 / 生图；视频等可扩展）
 - ☑️ **任务规划** — 每个笔记 / 栏目一棵嵌套任务树，父栏目自动汇聚子级；TODO / 已完成 / 信息统计三栏，顶栏全局任务中心
 - 🛠 **管理后台** — 目录管理、AI 策略、用户管理、公开内容审核
-- 📱 **PWA / TWA** — 添加到主屏幕、侧载 APK
+- 📱 **PWA / TWA / Capacitor 宿主** — 添加到主屏幕、侧载 APK
+- 🧭 **手机伴侣**（Capacitor 宿主独占）— 到点提醒、手机使用统计、微信/支付宝自动记账
 
 ## 目录结构
 
 ```
 WebBook/
 ├── apps/web/          # 前端 (Vite + React + TS, PWA)
-├── workers/api/       # Cloudflare Workers API (GitHub 同步 + AI 代理)
-├── packages/shared/   # 共享类型 (Note / Block / TreeNode / AIStrategy)
+├── apps/android-cap/  # Capacitor 宿主（自有进程 + 原生插件：提醒 / 使用统计 / 通知监听）
+├── apps/android-twa/  # 旧 TWA APK 工程（保留可用，作为回退）
+├── workers/api/       # Cloudflare Workers API (GitHub 同步 + AI 代理 + 采集数据)
+├── packages/shared/   # 共享类型 (Note / Block / TreeNode / AIStrategy / Usage / Expense / Notify)
 ├── user-pages/        # 入口站 + 域名根 assetlinks → heyuan-cyber.github.io 仓
 └── .github/workflows/ # GitHub Pages 部署（应用 + user-pages）
 ```
@@ -166,7 +169,10 @@ Worker 侧还需 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`（secret / `.dev.v
 - **前端 → GitHub Pages**：推送到 `main` 触发 `.github/workflows/deploy.yml`
   - 在仓库 Settings → Pages 选择 GitHub Actions
   - 构建变量见 `deploy.yml`（含 `VITE_API_BASE_URL`、`VITE_ADMIN_EMAIL`）
-- **Android APK（侧载）**：`npm run android:init` → `npm run android:apk`（见 `apps/android-twa/README.md`）
+- **Android APK（侧载）**：
+  - **Capacitor 宿主（推荐）**：`npm run android:companion` — 自带网页 + 原生插件（提醒 / 使用统计 / 自动记账）。排查原生能力用 `npm run android:companion:probe`
+  - 旧 TWA 壳：`npm run android:init` → `npm run android:apk`（见 `apps/android-twa/README.md`）
+  - ⚠️ 改完 `workers/api/**` 记得 `npm run deploy:api`，否则线上仍是旧版本（新路由会返回 404）
 - **冒烟检查**：`VITE_API_BASE_URL=... npm run smoke`
 
 ## 私密性升级路径
@@ -185,4 +191,5 @@ Worker 侧还需 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`（secret / `.dev.v
 - P1 舞台编辑器 ✅ 大纲、连线、Markdown 预览/源码、图片手势
 - P2 博客 / 圈子 ✅ 公开 feed、线性文章流、圈子协作
 - P5 节点 AI ✅ providers / generate；精品模型可继续接密钥
-- 待办示例：账单模块、流式输出、生视频适配器等
+- **手机伴侣 ✅** 到点提醒、使用统计、微信/支付宝自动记账（见 `openspec/changes/native-android-companion/`）
+- 待办：周期后台同步（WorkManager）、月度 AI 消费报告、流式输出、生视频适配器

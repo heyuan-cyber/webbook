@@ -1,0 +1,31 @@
+schema: spec-driven
+
+# Project context — shown to AI when creating artifacts. Grounds propose/design.
+context: |
+  Domain: WebBook — a personal knowledge base. A block-editor note app (tree sidebar + a canvas "unified stage" of absolutely-positioned blocks with directed edges), a public blog hub, private circles, and an admin console. Chinese UI.
+  Stack: React 18 + TypeScript + Vite PWA (apps/web); Cloudflare Worker as the BFF / back end (workers/api, all business logic + JWT auth); Supabase Auth only (no DB); data persisted as JSON files in a GitHub private repo via the Contents API (one file per note / tree / config); node AI via DeepSeek / OpenAI / CF Workers adapters (text, image, video, 3D).
+  Workspaces: packages/shared (data model + data-repo path helpers), apps/web (frontend), workers/api (Worker), apps/android-twa (TWA APK), user-pages (entry site), scripts (maintenance/deploy tooling).
+  Conventions: notes are JSON files with a `schemaVersion` and `visibility` (private | circle | public); migrate into the latest schema on read. Multi-user isolation = data/users/{userId}/…; circles = data/circles/{circleId}/…; admin is VITE_ADMIN_EMAIL / ADMIN_EMAIL. Editor is a "stage" of blocks + edges + camera. New capability paths mirror `openspec/specs/**`; kebab-case names; specs are written as deltas.
+  Constraints: no VPS and no traditional database — only GitHub Contents API writes (per-file, assets sharded into volumes, 40MB/file soft cap); secrets only as Cloudflare `wrangler secret` (never in git or the frontend bundle); private notes must never leak via public routes (return 404, not 403); public feed exposes emails (known risk, addressed separately).
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

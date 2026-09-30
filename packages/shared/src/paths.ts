@@ -25,6 +25,28 @@ export const USER_REMINDERS_PATH = (userId: string) =>
 /** 任务规划：整棵计划树单文件（旧 reminders 仅迁移时读取，不再写入） */
 export const USER_PLAN_PATH = (userId: string) => `data/users/${userId}/plan.json`;
 
+/**
+ * 到点提醒（native-android-companion）。
+ *
+ * 刻意与 `USER_REMINDERS_PATH` 分开：那个文件归 `webbook-node-planner` 的规划迁移所有，
+ * 其 `mergeReminders` 会把「有 id 且有 text」的条目永久并入 `plan.json`。
+ * 若新版提醒共用一个文件，只要沾上 `text` 字段就会被静默吞成规划任务，且不可逆。
+ * 详见 design.md 的 D8。
+ */
+export const USER_NOTIFY_PATH = (userId: string) => `data/users/${userId}/notify.json`;
+
+/** 手机使用统计：一天一个分片，避免整文件读改写随天数线性恶化 */
+export const USER_USAGE_DAY_PATH = (userId: string, date: string) =>
+  `data/users/${userId}/usage/${date}.json`;
+
+/** 消费记录：一个月一个分片（按月合并写入，避免逐笔产生 commit） */
+export const USER_EXPENSES_MONTH_PATH = (userId: string, month: string) =>
+  `data/users/${userId}/expenses/${month}.json`;
+
+/** 消费分类规则：商户 → 类别。AI 只对每个新商户调用一次，之后走确定性规则 */
+export const USER_EXPENSE_RULES_PATH = (userId: string) =>
+  `data/users/${userId}/expenses/rules.json`;
+
 /** 飞书 User OAuth（refresh 等），仅 Worker 读写 */
 export const USER_FEISHU_OAUTH_PATH = (userId: string) =>
   `data/users/${userId}/feishu-oauth.json`;

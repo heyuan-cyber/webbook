@@ -1,6 +1,16 @@
 import type { Circle, CircleSummary, CircleVisibility, CircleJoinPolicy, DiscoverableCircle, Comment, Note, NoteTree, PublicFeedItem, BloggerSummary, AIStrategiesConfig, SystemSettings, AiProvidersResponse, AiGenerateRequest, AiGenerateResult, AiJobRecord } from '@webbook/shared';
 import { normalizeNote, normalizePlan } from '@webbook/shared';
 import type { PlanDoc } from '@webbook/shared';
+import type {
+  Expense,
+  ExpenseCategory,
+  ExpenseRules,
+  ExpenseSummary,
+  NotifyIndex,
+  NotifyItem,
+  NotifyRepeat,
+  UsageDay,
+} from '@webbook/shared';
 import { DEFAULT_API_BASE_URL } from '@/lib/publicDefaults';
 
 const BASE =
@@ -562,4 +572,120 @@ export const apiClient = {
     }
     return data;
   },
+
+  /* ══════════ 手机采集数据（native-android-companion）══════════
+   *
+   * 三条数据线共用同一套契约：服务端归属只取 JWT 的 user.id，
+   * 因此这些方法都必须带 token。
+   */
+
+  // ── 使用统计 ──
+  syncUsage: (token: string, days: unknown[]) =>
+    http<{ ok: true; written: string[] }>('/api/tracking/usage/sync', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ days }),
+    }),
+  loadUsageDay: (token: string, date: string) =>
+    http<{ date: string; day: UsageDay | null }>(
+      `/api/tracking/usage?date=${encodeURIComponent(date)}`,
+      { token },
+    ),
+  loadUsageRange: (token: string, from: string, to: string) =>
+    http<{ days: UsageDay[] }>(
+      `/api/tracking/usage?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      { token },
+    ),
+  loadUsageDates: (token: string) =>
+    http<{ dates: string[] }>('/api/tracking/usage/dates', { token }),
+  deleteUsageRange: (token: string, from: string, to: string) =>
+    http<{ ok: true; deleted: number }>(
+      `/api/tracking/usage?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      { method: 'DELETE', token },
+    ),
+
+  // ── 消费记账 ──
+  submitExpenses: (token: string, expenses: unknown[]) =>
+    http<{
+      added: number;
+      merged: number;
+      rejected: number;
+      months: string[];
+      /** 归类统计：规则命中 / 模型推断 / 归入未分类 */
+      classifiedByRule: number;
+      classifiedByAi: number;
+      unclassified: number;
+    }>('/api/tracking/expenses/bulk', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ expenses }),
+    }),
+  loadExpenseOverview: (token: string, month: string) =>
+    http<{
+      month: string;
+      summary: ExpenseSummary;
+      expenses: Expense[];
+      rules: ExpenseRules;
+    }>(`/api/tracking/expenses?month=${encodeURIComponent(month)}`, { token }),
+  setExpenseCategory: (token: string, id: string, category: ExpenseCategory) =>
+    http<Expense>(`/api/tracking/expenses/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({ category }),
+    }),
+  deleteExpense: (token: string, id: string) =>
+    http<{ ok: true; removed: Expense }>(
+      `/api/tracking/expenses/${encodeURIComponent(id)}`,
+      { method: 'DELETE', token },
+    ),
+
+  // ── 到点提醒（读写 notify.json，与 reminders.json 无关）──
+  loadNotify: (token: string) => http<NotifyIndex>('/api/notify', { token }),
+  createNotify: (
+    token: string,
+    input: { title: string; body?: string; dueAt?: string; repeat?: NotifyRepeat },
+  ) =>
+    http<NotifyItem>('/api/notify', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(input),
+    }),
+  patchNotify: (
+    token: string,
+    id: string,
+    patch: {
+      title?: string;
+      body?: string;
+      dueAt?: string | null;
+      repeat?: NotifyRepeat;
+      done?: boolean;
+    },
+  ) =>
+    http<NotifyItem>(`/api/notify/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify(patch),
+    }),
+  deleteNotify: (token: string, id: string) =>
+    http<{ ok: true }>(`/api/notify/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      token,
+    }),
+  /** 手机拉取窗口内的待触发实例；missed 用于呈现"错过"但不补发通知 */
+  loadNotifyDue: (token: string, windowDays?: number) =>
+    http<{
+      due: { id: string; dueAt: string; title: string; body: string }[];
+      missed: { id: string; dueAt: string; title: string; body: string }[];
+      window: { from: string; to: string; generatedAt: string };
+    }>(
+      `/api/notify/due${windowDays ? `?windowDays=${windowDays}` : ''}`,
+      { token },
+    ),
+  /** 送达回写：只有这个端点能写 notifiedAt，客户端无法在通用 PATCH 里伪造 */
+  markNotifyDelivered: (token: string, id: string, at?: string) =>
+    http<NotifyItem>(`/api/notify/${encodeURIComponent(id)}/delivered`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify(at ? { at } : {}),
+    }),
 };

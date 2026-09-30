@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 个人主页整页</title>
+<link rel="stylesheet" href="r5.css">
+<style>
+  .dev{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border-subtle);font-size:var(--fs-sm);color:var(--text-dim)}
+  .dev:last-child{border-bottom:none}
+  .dev .n{width:20px;height:20px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:700;margin-top:2px}
+  .dev b{color:var(--text);font-weight:600}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-chev"><path d="M6 9l6 6 6-6"/></g>
+<g id="i-arrow"><path d="M4 12h15M13 6l6 6-6 6"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+</defs></svg>
+
+<!-- 狐狸以**内联**方式写在下方宠物的 <svg> 里：<use href="#id"> 会建 shadow tree，
+     文档样式表里的 .pet .p-soft 这类后代选择器跨不过 shadow 边界，会渲染成黑剪影。 -->
+
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 五阶段 · 整页</div>
+  <h1 class="doc-h1">个人主页：让它像有人住</h1>
+  <p class="doc-sub">
+    现在这个页面最大的问题不是「不够花」，是<strong style="color:var(--text)">没有人</strong> ——
+    词标是邮箱前缀 <code>N17852326702</code>，通篇没有一处能看出这是谁、最近在干什么。
+    下面把 7 个装置放进真实版式里。宠物在右下角。
+  </p>
+
+  <div class="shots" style="margin-bottom:8px">
+    <figure><img src="_now/05-deployed-tall.png" alt="现状"><figcaption><b>现状 · 线上个人主页</b>满屏 Swiss 海报：词标 = 邮箱前缀，右侧一大片空；区块在折叠线以下</figcaption></figure>
+    <figure><img src="_now/04-deployed-site.png" alt="现状首屏"><figcaption><b>现状 · 首屏</b>grid 底纹被 mask 限制在中带；marquee 与「Scroll」之间约 100px 空档</figcaption></figure>
+  </div>
+
+  <h2>整页设计稿（可交互）</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">把鼠标移到右下角的小家伙附近 —— 它会转头看你；点它，它会说句话。把鼠标移开，它回到待机。</p>
+
+  <div class="site-frame">
+    <div class="site-bar"><span class="site-dot"></span><span class="site-dot"></span><span class="site-dot"></span><span class="site-url">webbook / blog / u / 何源</span></div>
+    <div class="site-body" data-pet-stage>
+      <header class="site-header">
+        <div class="site-brand">
+          <span class="site-avatar">何</span>
+          <span class="site-name">何源</span>
+        </div>
+        <nav class="site-nav">
+          <button class="site-tab on">首页</button>
+          <button class="site-tab">项目示例</button>
+          <button class="site-tab">博客</button>
+        </nav>
+      </header>
+
+      <section class="swiss">
+        <div class="swiss-grid"></div>
+        <div class="swiss-inner">
+          <!-- ④ 现在在折腾 -->
+          <span class="now"><span class="dot"></span>现在在折腾 <b>战斗演出编辑器的时间轴重构</b></span>
+          <span class="swiss-overline">游戏开发 · 渲染 · 工具链</span>
+          <!-- ② 活的词标：逐字上浮，可悬停 -->
+          <h1 class="swiss-wordmark wordmark play"><span>何</span><span>源</span></h1>
+          <p class="swiss-sub">用代码造作品，也把背后的思考写下来 —— 游戏开发 · 案例 · 系统 · 计算机基础 · 独立游戏设计。</p>
+          <div class="swiss-actions">
+            <button class="btn btn-primary">查看项目示例</button>
+            <a class="btn btn-ghost" href="#">浏览博客</a>
+          </div>
+          <!-- ③ 站点脉搏 -->
+          <div class="pulse" aria-label="最近 60 天的更新">
+            <i></i><i></i><i class="l1"></i><i></i><i></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i>
+            <i></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i></i><i></i>
+            <i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i></i><i class="l3"></i><i></i><i></i><i class="l1"></i>
+            <i></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i><i></i><i></i><i class="l2"></i><i></i>
+            <i></i><i></i><i class="l1"></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i>
+            <i></i><i class="l2"></i><i></i><i class="l1"></i><i></i><i></i><i></i><i class="l3"></i><i></i><i></i>
+          </div>
+          <div class="pulse-legend">最近 60 天 · 有更新的日子亮起来</div>
+        </div>
+        <div class="swiss-marquee">
+          <div class="swiss-track">
+            <span class="swiss-mi">Creative Developer</span><span class="swiss-mi">基于线上</span><span class="swiss-mi">Design</span>
+            <span class="swiss-mi">Code</span><span class="swiss-mi">Build</span><span class="swiss-mi">Ship</span>
+            <span class="swiss-mi">Creative Developer</span><span class="swiss-mi">基于线上</span><span class="swiss-mi">Design</span>
+            <span class="swiss-mi">Code</span><span class="swiss-mi">Build</span><span class="swiss-mi">Ship</span>
+          </div>
+        </div>
+        <span class="swiss-cue"><svg class="ic ic-14"><use href="#i-chev"/></svg>Scroll</span>
+      </section>
+
+      <section class="sec">
+        <div class="sec-head"><span class="sec-num">01</span><div><h2>项目示例</h2><p class="sec-lede">挑出来的几件，能看出怎么做出来的。</p></div></div>
+        <div class="cards">
+          <article class="card"><div class="card-cover c1"></div><div class="card-pad">
+            <h3 class="card-title">战斗演出编辑器</h3>
+            <p class="card-sum">时间轴 + 事件驱动，编辑器只描述演出意图。</p>
+            <div style="margin-top:10px;font-size:var(--fs-xs);color:var(--accent);display:flex;align-items:center;gap:5px">查看项目 <svg class="ic ic-12"><use href="#i-arrow"/></svg></div>
+          </div></article>
+          <article class="card"><div class="card-cover c2"></div><div class="card-pad">
+            <h3 class="card-title">战损贴花系统</h3>
+            <p class="card-sum">运行时生成划痕，配置进 datatable。</p>
+            <div style="margin-top:10px;font-size:var(--fs-xs);color:var(--accent);display:flex;align-items:center;gap:5px">查看项目 <svg class="ic ic-12"><use href="#i-arrow"/></svg></div>
+          </div></article>
+          <article class="card"><div class="card-cover c3"></div><div class="card-pad">
+            <h3 class="card-title">GS 性能排查工具</h3>
+            <p class="card-sum">一次掉帧从 capture 到定位的完整链路。</p>
+            <div style="margin-top:10px;font-size:var(--fs-xs);color:var(--accent);display:flex;align-items:center;gap:5px">查看项目 <svg class="ic ic-12"><use href="#i-arrow"/></svg></div>
+          </div></article>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-head"><span class="sec-num">02</span><div><h2>博客</h2><p class="sec-lede">按栏目分组，最近更新的排前面。</p></div></div>
+        <div class="cards">
+          <article class="card"><div class="card-cover c1"></div><div class="card-pad">
+            <h3 class="card-title">战斗演出编辑器架构设计</h3>
+            <p class="card-sum">三层解耦，只有轨道进 git。</p>
+            <div class="meta" style="margin-top:10px;font-size:var(--fs-2xs);color:var(--text-muted)"><span class="mono">2026-09-24</span> · 约 6 分钟</div>
+          </div></article>
+          <article class="card"><div class="card-cover c2"></div><div class="card-pad">
+            <h3 class="card-title">战损贴花使用指南</h3>
+            <p class="card-sum">换装流程、datatable 配置、贴图尺寸。</p>
+            <div class="meta" style="margin-top:10px;font-size:var(--fs-2xs);color:var(--text-muted)"><span class="mono">2026-09-10</span> · 约 3 分钟</div>
+          </div></article>
+          <article class="card"><div class="card-cover c3"></div><div class="card-pad">
+            <h3 class="card-title">光照管线笔记</h3>
+            <p class="card-sum">从烘焙到实时 GI 的取舍。</p>
+            <div class="meta" style="margin-top:10px;font-size:var(--fs-2xs);color:var(--text-muted)"><span class="mono">2026-09-02</span> · 约 8 分钟</div>
+          </div></article>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <span class="kicker">Let's Talk</span>
+        <h2>一起做点东西。</h2>
+        <p style="color:var(--text-dim)">何源的个人主页 —— 用代码造作品，也把背后的思考写下来。</p>
+        <!-- ⑤ 彩蛋：滚到底的一次性收尾语 -->
+        <p style="margin-top:18px;font-size:var(--fs-xs);color:var(--text-muted);font-family:var(--font-mono)">—— 看到这里了，说明你也挺闲的。 ——</p>
+      </footer>
+
+      <!-- ① 驻站宠物：sticky 底部停靠 —— 不随滚动走，始终在右下角 -->
+      <div class="pet-dock">
+        <div class="pet" data-pet data-say="这是我主人写东西的地方。" data-look="center" data-awake="true" hidden>
+          <span class="pet-ring"></span>
+          <svg viewBox="0 0 96 96">
+            <path class="p-soft p-tail" d="M34 77 C 21 75, 14 62, 22 53 C 29 46, 36 52, 31 59 C 28 64, 30 72, 36 74"/>
+            <ellipse class="p-soft" cx="50" cy="70" rx="19" ry="17"/>
+            <path class="p p-arm" style="--ax:-9px" d="M43 71 v9"/>
+            <path class="p p-arm" style="--ax:9px" d="M57 71 v9"/>
+            <g class="p-head">
+              <path class="p-soft p-ear" d="M36 33 L 33 13 L 48 28 Z"/>
+              <path class="p-soft p-ear r" d="M64 33 L 67 13 L 52 28 Z"/>
+              <ellipse class="p-soft" cx="50" cy="44" rx="18" ry="15.5"/>
+              <path class="p" d="M50 50 l-5.5 5 h11 z"/>
+              <path class="p p-mouth" d="M47 57 q3 2.5 6 0"/>
+              <ellipse class="p-eye" cx="43" cy="42" rx="2.7" ry="3"/>
+              <ellipse class="p-eye" cx="57" cy="42" rx="2.7" ry="3"/>
+            </g>
+            <text class="p p-zzz" x="70" y="30" font-size="13">z</text>
+          </svg>
+        </div>
+        <div class="pet-bubble" data-pet-bubble></div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:var(--fs-xs);color:var(--text-muted);margin:0 0 30px">
+    <span class="callout">新增</span> ① 驻站宠物　② 活的词标　③ 站点脉搏　④ 现在在折腾　⑤ 彩蛋收尾　　<span class="callout ghost">保留</span> Swiss 版式 / marquee / scroll-spy
+  </p>
+
+  <h2>七个装置</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">这一轮不只是宠物。按「解决哪个问题」排，不是按好看程度排。</p>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="panel">
+      <h3>解决「这是谁」</h3>
+      <div class="dev"><span class="n">2</span><div><b>活的词标</b> —— 逐字错峰上浮（一次性，760ms）+ 单字悬停抬起。<br>
+        <span style="color:var(--text-muted)">顺带修掉词标是邮箱前缀的问题：站主可设 <code>displayName</code>，缺省时才回落到邮箱。</span></div></div>
+      <div class="dev"><span class="n">4</span><div><b>现在在折腾</b> —— hero 顶部一行状态胶囊，站主一句话。<br>
+        <span style="color:var(--text-muted)">新字段 <code>SiteConfig.now</code>；空着就不显示。</span></div></div>
+    </div>
+    <div class="panel">
+      <h3>解决「有没有在更新」</h3>
+      <div class="dev"><span class="n">3</span><div><b>站点脉搏</b> —— 60 天小方格，有更新的日子亮起来。<br>
+        <span style="color:var(--text-muted)">数据直接来自 <code>posts[].updatedAt</code>，<b>零新字段</b>。悬停显示当天写了什么。</span></div></div>
+    </div>
+    <div class="panel">
+      <h3>解决「没有人味」</h3>
+      <div class="dev"><span class="n">1</span><div><b>驻站宠物</b> —— 见 <a href="pet-lab.html">pet-lab.html</a>。呼吸 / 眨眼 / 转头看你 / 打哈欠 / 伸懒腰。<br>
+        <span style="color:var(--text-muted)">复用 <code>guestPersona.ts</code> 已有的 10 个动物。</span></div></div>
+      <div class="dev"><span class="n">5</span><div><b>彩蛋</b> —— 深夜访问 hero 的 overline 变成「这么晚还没睡」；滚到底 footer 出一行随机结束语。<br>
+        <span style="color:var(--text-muted)">纯前端，无请求。</span></div></div>
+      <div class="dev"><span class="n">6</span><div><b>领路</b> —— 点宠物，它跑到下一个区块标题旁再跑回来。<br>
+        <span style="color:var(--text-muted)">宠物的唯一「功能」。替代掉 hero 里那个没人点的 Scroll 提示。</span></div></div>
+      <div class="dev"><span class="n">7</span><div><b>访客留痕</b> —— 第一次来它会「闻一闻」；第二次来它先看你。<br>
+        <span style="color:var(--text-muted)"><b>只用 localStorage</b>，不发请求、不存服务端 —— 所以它也不该被叫做「记忆」，只是「这次之前你来过」。</span></div></div>
+    </div>
+  </div>
+
+  <h2>为什么不直接用 emoji / Lottie / GIF</h2>
+  <table class="tbl">
+    <tr><th style="width:150px">方案</th><th style="width:90px">结论</th><th>理由</th></tr>
+    <tr><td><strong>emoji 🦊</strong></td><td class="no">不用</td><td>这个项目刚花一整轮把 48 处 emoji 换成 53 个线性 SVG（<code>Icon.tsx</code>）。用 emoji 做宠物是往回走；而且三个平台三套字形，缩放跟随字号、不能跟主题色</td></tr>
+    <tr><td><strong>Lottie</strong></td><td class="no">不用</td><td>单个动画 JSON 通常 50–300KB。项目有 <code>web-ui-bundle-optimize</code> 这一轮专门做过瘦身，冲突</td></tr>
+    <tr><td><strong>GIF / APNG</strong></td><td class="no">不用</td><td>无法跟随主题色（三套皮肤会坏）、体积大、不可交互</td></tr>
+    <tr><td><strong>单张 SVG + CSS transform</strong></td><td class="yes">用</td><td>2–4KB / 物种；跟随 <code>currentColor</code> 和 token，三套皮肤自动适配；每个部件独立可动；降级只需停掉 animation</td></tr>
+  </table>
+  <p class="doc-sub" style="font-size:var(--fs-sm);margin-top:12px">
+    <strong style="color:var(--text)">风格上刻意沿用 <code>Icon.tsx</code> 的线性语言</strong>：<code>stroke-width:1.7</code>、<code>fill:none</code> 打底、圆角线帽，
+    只在头身用 <code>--accent-soft</code> 补一点体块感。这样它看起来是「这个产品的一部分」，而不是贴上去的贴纸。
+  </p>
+
+  <h2>数据改动（向后兼容）</h2>
+  <div class="panel" style="margin-top:14px">
+    <pre style="margin:0;padding:14px 16px;border-radius:var(--r-md);background:var(--bg-deep);border:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:12.5px;color:var(--text-dim);overflow-x:auto">export interface SiteConfig {
+  workNoteIds?: string[];
+  blogNoteIds?: string[];
+  blogCategoryOrder?: string[];
+  // ── 本轮新增，全部可选 ──────────────────────────
+  displayName?: string;              // ② 词标用真名，缺省回落到邮箱前缀
+  now?: string;                      // ④ 「现在在折腾」，空则不渲染
+  pet?: {
+    species?: 'fox' | 'owl' | 'penguin' | 'otter' | 'whale' | 'panda'
+             | 'dolphin' | 'koala' | 'deer' | 'lark';
+    name?: string;
+    quiet?: boolean;                 // 站主默认让它睡着
+  } | null;                          // null = 完全不要宠物
+}</pre>
+    <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.8;margin-top:12px">
+      <strong style="color:var(--text)">关键：现在所有用户的 <code>site</code> 都是 <code>null</code></strong>（我查过两位真实作者，都是 null），
+      所以新字段必须<strong style="color:var(--text)">缺省即合理</strong>：
+      没配 <code>pet</code> → 从 <code>userId</code> 哈希派生一个物种（每个站主天生有一只）；
+      没配 <code>displayName</code> → 回落到现在的邮箱前缀行为，不会变差。
+      这跟上一轮「卡片自动封面按 <code>note.id</code> 派生」是同一个思路。
+    </p>
+  </div>
+
+  <h2>顺带发现的两个现状问题</h2>
+  <table class="tbl">
+    <tr><th style="width:210px">问题</th><th>证据</th></tr>
+    <tr><td><strong>一位作者的 feed 返回空</strong></td><td><code>/api/public/users/ac061a21…/feed</code> 返回 <code>{"posts":[],"site":null}</code>，但同一位在 <code>/api/public/feed</code> 里有 1 篇。个人主页因此对他显示「还没有文章」。前两轮已记录，仍未修</td></tr>
+    <tr><td><strong>词标用的是邮箱前缀</strong></td><td><code>nameFromEmail(ownerEmail)</code> → <code>N17852326702</code>。这是页面上最大的一个字，而它是个手机号段。建议 <code>displayName</code> 缺省时至少做一次「邮箱本地部分 → 更像名字」的处理，或引导站主填一次</td></tr>
+  </table>
+
+  <p style="margin-top:26px"><a href="pet-lab.html">← 看宠物实验室</a>　·　<a href="INDEX.html">回总览 →</a></p>
+</div>
+<script src="r5.js"></script>
+</body>
+</html>

@@ -7,7 +7,7 @@
  * 只 mock 掉 fetch / localStorage / window。这样验证的是生产代码路径本身，
  * 而不是它的复刻品。
  */
-import { pathToFileURL, fileURLToPath } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { build } from 'esbuild';
 

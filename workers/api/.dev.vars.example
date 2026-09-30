@@ -1,0 +1,43 @@
+# 模式 B（本机跑 Worker）需要的服务端密钥。
+#
+# 用法：复制为 workers/api/.dev.vars 后填写。
+#   Copy-Item workers/api/.dev.vars.example workers/api/.dev.vars
+# .dev.vars 已被 .gitignore 排除 —— 绝不要提交，也不要贴进 issue / 聊天记录。
+#
+# 只跑前端（模式 A，默认）**不需要**本文件：前端内置公开默认，直接连线上 Worker。
+# 线上 Worker 的密钥住在 Cloudflare，用 `npx wrangler secret put <NAME>` 设置。
+#
+# 非机密的配置（GITHUB_REPO / GITHUB_BRANCH / SUPABASE_URL / ADMIN_EMAIL /
+# AI_BASE_URL / AI_MODEL / RSS_FEEDS_* / SEARCH_PROVIDER_*）已在
+# wrangler.toml 的 [vars] 里，无需在此重复。
+
+# ── 必需 ────────────────────────────────────────────────
+# 对数据仓（webbook-data）有 contents 读写权限的 GitHub PAT。
+GITHUB_TOKEN=
+
+# 校验用户 JWT 用：Supabase → Project Settings → API → service_role key。
+# 只有 Worker 持有；绝不能出现在前端 bundle 里。
+SUPABASE_SERVICE_ROLE_KEY=
+
+# ── 可选：AI ────────────────────────────────────────────
+# 缺失时对应模型在界面上显示为「未配置」，不会假成功。
+AI_API_KEY=
+
+# ── 可选：飞书导出 ──────────────────────────────────────
+FEISHU_APP_ID=
+FEISHU_APP_SECRET=
+
+# ── 可选：联网检索 ──────────────────────────────────────
+SEARCH_API_KEY=
+# 想国内/国际分开配搜索源时：
+# SEARCH_API_KEY_DOMESTIC=
+# SEARCH_API_KEY_INTERNATIONAL=
+
+# ── 可选：生图 / 生视频 / 3D ────────────────────────────
+# CLOUDFLARE_ACCOUNT_ID=
+# CLOUDFLARE_API_TOKEN=
+# VOLC_ACCESS_KEY_ID=
+# VOLC_SECRET_ACCESS_KEY=
+# GEMINI_API_KEY=
+# OPENAI_API_KEY=
+# TRIPO_API_KEY=

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 版四「报刊」Editorial</title>
+<link rel="stylesheet" href="r3.css">
+<style>
+  .ed-progress { position:absolute; left:0; right:0; bottom:-1px; height:2px; background:transparent; z-index:3; }
+  .ed-progress i { display:block; height:100%; width:0; background:var(--accent);
+    transition:width 140ms cubic-bezier(.4,0,.2,1); }
+  .ed-scroll { flex:1; overflow:auto; scroll-behavior:smooth; }
+  .ed-toc a { display:block; padding:5px 0 5px 11px; font-size:var(--fs-xs); color:var(--text-muted);
+    border-left:2px solid var(--border-subtle); transition: color var(--dur-2) var(--ease-io), border-color var(--dur-2) var(--ease-io); }
+  .ed-toc a.on { color:var(--accent); border-left-color:var(--accent); }
+  .ed-title { font-size:52px; line-height:1.12; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-sliders"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><path d="M15 5v4M9 15v4"/></g>
+<g id="i-hash"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 三阶段 · 版四 / 四</div>
+  <h1 class="doc-h1">「报刊」Editorial</h1>
+  <p class="doc-sub">导航退到后面，<strong style="color:var(--text)">排版走到前面</strong>：大衬线标题、首字下沉、边注、窄栏宽。动效全部服务于<strong style="color:var(--text)">阅读位置感</strong> —— 顶部一条进度线、目录跟着滚动高亮、数字滚动到位。这一版最像「一本你自己的杂志」。</p>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row" style="flex-wrap:wrap;gap:22px">
+      <div><div class="kicker">气质</div><p style="color:var(--text)">衬线、留白、编辑感</p></div>
+      <div><div class="kicker">动效预算</div><p style="color:var(--text)">把 <code>--dur-2</code> 用在滚动反馈上</p></div>
+      <div><div class="kicker">参照</div><p style="color:var(--text)">Medium / Substack / 杂志长文</p></div>
+      <div><div class="kicker">适合</div><p style="color:var(--text)">更多是「读自己的笔记」而不是「改」的人</p></div>
+    </div>
+  </div>
+
+  <h2>样例屏：文章（滚一下试试）</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">在正文区滚动 → 顶部进度线走、右侧目录跟着高亮。这一版<strong style="color:var(--text)">没有左轨道、没有侧栏</strong>，导航是一条 tab 带（对应 Q1 的方案 C）。</p>
+
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / blog / 战损贴花使用指南 · 版四「报刊」</span></div>
+    <div class="frame-body" data-v="editorial">
+      <div class="app" style="flex-direction:column">
+        <header class="tb" style="position:relative">
+          <span style="font-family:var(--font-serif);font-size:var(--fs-lg);font-weight:600;padding-right:14px">WebBook</span>
+          <div class="tabs">
+            <button>笔记</button><button>博客</button><button class="on">广场</button><button>圈子</button><button>我</button>
+          </div>
+          <div class="tb-spacer"></div>
+          <button class="kbtn"><svg class="i i-14"><use href="#i-search"/></svg>搜索<span class="kbd">Ctrl K</span></button>
+          <button class="btn btn-icon btn-ghost"><svg class="i i-14"><use href="#i-sliders"/></svg></button>
+          <div class="ed-progress"><i id="edBar"></i></div>
+        </header>
+        <div class="ed-scroll" id="edScroll">
+          <div class="wrap" style="display:flex;gap:52px;padding-top:44px;padding-bottom:90px;align-items:flex-start">
+            <article style="flex:1;min-width:0;max-width:740px">
+              <div class="kicker">何源 · 渲染开发 / 贴花</div>
+              <h1 class="ed-title" style="margin:16px 0 16px">战损贴花<br>使用指南</h1>
+              <div class="meta" style="margin-bottom:38px;font-size:var(--fs-xs)">
+                <span class="mono">2026-09-10</span><span class="dot"></span><span>约 3 分钟</span>
+                <span class="dot"></span><span>1 条边注</span>
+              </div>
+              <div class="ed-body">
+                <p class="lede">换装流程里第一次看到战损贴花的人，通常会问三个问题：怎么预览、配置写在哪、贴图尺寸在哪改。这篇按这个顺序说。</p>
+                <h2 id="ed-1">一、换装流程中测试</h2>
+                <p>运行后使用 GM 命令，使用后会小卡一两秒 —— 这是贴图首次上传，属正常。在衣服上使用鼠标中键点击可以生成随机旋转的划痕；按住中键拖拽，松开后可指定长度与方向。</p>
+                <div class="ed-note">划痕的随机种子每次点击都会变。要复现某一次效果，先把种子记下来。</div>
+                <p>配置放在 <code>DT_BattleDecalTexture.uasset</code>：一行是一种武器类型和一种材质的贴图配置。改完不需要重启，重新触发一次换装即可。</p>
+                <blockquote>贴花是「后贴上去的一层」，它不参与骨骼动画 —— 所以衣服动得越剧烈，贴花越容易看出是浮在表面的。</blockquote>
+                <h2 id="ed-2">二、单场 Match 测试</h2>
+                <p>进战斗前先确认三件事：武器类型对得上、材质类型对得上、贴图数组非空。这三条任意一条不满足，贴花会静默不显示，日志里也不会有报错。</p>
+                <p>如果要验证贴花在移动中的表现，建议开一局自定义、把角色速度调到 1.5 倍，再拖动镜头观察边缘。</p>
+                <h2 id="ed-3">三、常见问题</h2>
+                <p>贴花不显示 → 先查上面三条；显示但位置偏 → 检查挂点名称；边缘锯齿 → 提高贴图分辨率，而不是改采样设置。</p>
+              </div>
+            </article>
+            <aside class="ed-toc" style="width:190px;flex:none;position:sticky;top:0">
+              <div class="kicker" style="margin-bottom:10px">目录</div>
+              <a href="#ed-1" class="on">一、换装流程中测试</a>
+              <a href="#ed-2">二、单场 Match 测试</a>
+              <a href="#ed-3">三、常见问题</a>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">核心差别</span> 去掉轨道与侧栏，导航变成一条下划线 tab 带 · 标题 52px 衬线 · 正文 17px / 行高 1.95 / 栏宽 740px · <strong style="color:var(--text)">首字下沉 + 边注 + 引文</strong>三件排版器物</p>
+
+  <h2>这一版的动效：位置感</h2>
+  <div class="grid-2">
+    <div class="demo" data-anim="count" data-auto data-mode="toggle" style="grid-column:1/-1">
+      <div class="demo-stage" style="gap:56px">
+        <div style="text-align:center">
+          <div class="ct-num" style="font-family:var(--font-serif);font-size:38px;line-height:1">12</div>
+          <div class="kicker" style="margin-top:8px">已读篇数</div>
+        </div>
+        <div style="text-align:center">
+          <div class="ct-num" style="font-family:var(--font-serif);font-size:38px;line-height:1;animation-delay:70ms">37</div>
+          <div class="kicker" style="margin-top:8px">笔记总数</div>
+        </div>
+        <div style="text-align:center">
+          <div class="ct-num" style="font-family:var(--font-serif);font-size:38px;line-height:1;animation-delay:140ms">2,140</div>
+          <div class="kicker" style="margin-top:8px">总字数</div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">① 数字到位</span><span class="play" data-play>点我播放</span></div>
+      <p class="demo-desc">统计数字用 <strong style="color:var(--text)">300ms 的轻微过冲</strong>（<code>--ease-spring</code>：先到 96.5% 再弹回 100%）到位，三个数字错峰 70ms。<strong style="color:var(--text)">注意：不做从 0 滚到 2140 的计数动画</strong> —— 那种动效只是拖时间，用户要的是最终值。</p>
+    </div>
+
+    <div class="demo" data-anim="stagger" data-auto>
+      <div class="demo-stage" style="padding:20px;flex-direction:column;align-items:stretch;gap:12px">
+        <div class="st-item">
+          <div style="height:9px;width:34%;border-radius:4px;background:var(--accent-soft);margin-bottom:8px"></div>
+          <div style="height:8px;width:96%;border-radius:4px;background:var(--bg-elev-2);margin-bottom:5px"></div>
+          <div style="height:8px;width:82%;border-radius:4px;background:var(--bg-elev-2)"></div>
+        </div>
+        <div class="st-item">
+          <div style="height:9px;width:46%;border-radius:4px;background:var(--accent-soft);margin-bottom:8px"></div>
+          <div style="height:8px;width:90%;border-radius:4px;background:var(--bg-elev-2)"></div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">② 段落入场</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">长文用 <code>IntersectionObserver</code> 逐段入场（<code>Reveal</code> 组件已经在做，但现在用的是写死的 0.5s）。这一版把它改成 <code>--dur-4</code> (300ms) + 12px 上移 —— <strong style="color:var(--text)">慢过 300ms 会打断阅读节奏</strong>。</p>
+    </div>
+
+    <div class="demo" data-anim="indicator" data-auto>
+      <div class="demo-stage">
+        <div class="tabs" style="display:inline-flex;gap:2px">
+          <button class="on">最新</button><button>最热</button><button>随机</button>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">③ 下划线 tab</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">报刊版的 tab 没有胶囊底，只有一条 2px 下划线。点击时下划线<strong style="color:var(--text)">直接换位置</strong>（不做滑动）—— 因为这一版的性格是「静态排版」，滑动会和衬线标题的稳重感打架。</p>
+    </div>
+  </div>
+
+  <h2>代价与风险</h2>
+  <table class="tbl">
+    <tr><th style="width:180px">项</th><th>说明</th></tr>
+    <tr><td><strong>最激进的一版</strong></td><td>同时否掉了左轨道<strong style="color:var(--text)">和</strong>侧栏。目录树变成必须靠 ⌘K 或面包屑进入 —— 对「写」的场景不友好</td></tr>
+    <tr><td><strong>但它最省成本</strong></td><td>几乎只动 CSS：<code>--font-serif</code>、字号、栏宽、分割线。没有新概念、没有新组件、没有新编排</td></tr>
+    <tr><td><strong>风险</strong></td><td>52px 的中文衬线标题在移动端必须降到 30–34px；首字下沉在中文里效果不如西文，建议只用在<strong style="color:var(--text)">第一篇的导语</strong>，不要每篇都用</td></tr>
+    <tr><td><strong>和现有实现的差距</strong></td><td>文章页现在已经是衬线了（<code>BlogArticleView</code>），所以这一版的增量其实很小 —— 主要是去掉外壳、加边注、加进度线</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:22px">
+    <div class="row" style="flex-wrap:wrap;gap:14px">
+      <button class="btn" data-reduce-toggle aria-pressed="false"><svg class="i i-14"><use href="#i-eye"/></svg><span data-reduce-label>正常动效</span></button>
+      <button class="btn btn-ghost" data-play-all><svg class="i i-14"><use href="#i-sparkles"/></svg>全部重播</button>
+      <span style="font-size:var(--fs-xs);color:var(--text-muted)" data-env-reduced>系统当前：正常</span>
+    </div>
+    <p class="demo-desc" style="margin-top:10px">关掉动效后，进度线仍然跟随滚动（它是<strong style="color:var(--text)">信息</strong>不是装饰），但段落变成直接显示。这条边界值得记住：<strong style="color:var(--text)">反映状态的动效保留，表达过程的动效去掉</strong>。</p>
+  </div>
+
+  <p style="margin-top:26px"><a href="v3-stage.html">← 看版三「沉浸」</a>　·　<a href="motion-lab.html">看动效规范 →</a></p>
+</div>
+<script src="r3.js"></script>
+<script>
+/* 版四：滚动进度线 + 目录高亮（约 25 行） */
+(function () {
+  var sc = document.getElementById('edScroll');
+  var bar = document.getElementById('edBar');
+  var links = Array.prototype.slice.call(document.querySelectorAll('.ed-toc a'));
+  var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  if (!sc || !bar) return;
+  var ticking = false;
+  function update() {
+    ticking = false;
+    var max = sc.scrollHeight - sc.clientHeight;
+    bar.style.width = (max > 0 ? (sc.scrollTop / max) * 100 : 0) + '%';
+    var y = sc.scrollTop + 90, idx = 0;
+    secs.forEach(function (s, i) { if (s && s.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  sc.addEventListener('scroll', function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
+})();
+</script>
+</body>
+</html>

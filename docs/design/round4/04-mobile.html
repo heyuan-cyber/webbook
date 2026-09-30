@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 04 移动端（底栏溢出 + 首屏裁切）</title>
+<link rel="stylesheet" href="r4.css">
+<style>
+  /* 复现「现状」底栏：每项约 124px，第 4 项被推到屏外 */
+  .m-nav-legacy { flex:none; display:flex; border-top:1px solid var(--border-subtle); background:var(--glass-bg-strong); overflow:hidden; }
+  .m-nav-legacy button { width:124px; flex:none; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 8px; border:none; background:transparent; color:var(--text-muted); font-size:var(--fs-2xs); }
+  .m-nav-legacy button.on { color:var(--accent); }
+  /* 复现「现状」空态：.empty-state 是衬线体，h2 = 1.5rem，正文继承 16px —— 这就是溢出的原因 */
+  .m-empty-legacy { padding:52px 24px; text-align:center; font-family:var(--font-serif); }
+  .m-empty-legacy h3 { font-size:1.5rem; font-weight:600; margin:14px 0 12px; font-family:var(--font-serif); }
+  .m-empty-legacy p { color:var(--text-dim); font-size:16px; line-height:1.7; white-space:nowrap; }
+  .m-empty-fixed { padding:52px 24px; text-align:center; }
+  .m-empty-fixed h3 { font-size:var(--fs-xl); margin:12px 0 8px; font-family:var(--font-serif); }
+  .m-empty-fixed p { color:var(--text-dim); font-size:var(--fs-sm); line-height:1.75; max-width:26ch; margin:0 auto; }
+  .crow { position:absolute; left:0; right:0; bottom:0; height:1px; background:var(--danger); opacity:.9; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-checksq"><path d="M9 11.5l2.5 2.5L20 8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-al"><path d="M20 12H5M11 18l-6-6 6-6"/></g>
+<g id="i-cr"><path d="M9 6l6 6-6 6"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-type"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></g>
+<g id="i-cal"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3v4M16 3v4"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 四阶段 · 04 / 04</div>
+  <h1 class="doc-h1">移动端：底栏放不下、首屏文字被裁</h1>
+  <p class="doc-sub">
+    底部导航和悬浮新建（PRD <code>U-03</code>）已经落地，方向对。但 390px 实测有两个确定的缺陷：
+    <strong style="color:var(--text)">底栏第 4 项「我的」被推到屏外</strong>，
+    <strong style="color:var(--text)">首屏说明文字横向溢出被裁</strong>。这一页把两个都修掉。
+  </p>
+
+  <h2>实测证据：4 项在 500px 放得下，在 390px 放不下</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">下面是同一页面在四个宽度下的 headless Chrome 实拍，只截底栏那一条。</p>
+  <div class="shots" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+    <figure><img src="_now/_nav-430.png" alt="430px"><figcaption><b>430px</b>笔记 / 任务 / 社区 可见，「我的」只露一个边</figcaption></figure>
+    <figure><img src="_now/_nav-460.png" alt="460px"><figcaption><b>460px</b>同样只露一个边 —— 说明这一行需要约 480px</figcaption></figure>
+    <figure><img src="_now/_nav-500.png" alt="500px"><figcaption><b>500px</b>4 项都在了。问题区间确认在 <strong>≤470px</strong></figcaption></figure>
+    <figure><img src="_now/08-app-mobile-2x.png" alt="390px"><figcaption><b>390px（iPhone 14/15）</b>只剩 3 项；同时首屏那句说明文字被右侧切掉</figcaption></figure>
+  </div>
+
+  <h2>修复前 / 修复后</h2>
+  <div class="phone-row">
+    <div>
+      <div class="m-frame">
+        <div class="m-root">
+          <div class="m-top"><svg class="i i-18" style="color:var(--text-dim)"><use href="#i-tree"/></svg><span class="m-title">笔记本</span><div style="flex:1"></div><button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-search"/></svg></button></div>
+          <div class="m-body" style="position:relative">
+            <div class="m-empty-legacy">
+              <div class="empty-ico" style="margin:0 auto"><svg class="i i-20"><use href="#i-file"/></svg></div>
+              <h3>欢迎使用 WebBook</h3>
+              <p>点左上角「目录」按钮打开目录，选择或新建一篇笔记。</p>
+            </div>
+            <div class="crow"></div>
+          </div>
+          <div class="m-nav-legacy">
+            <button class="on"><svg class="i i-20"><use href="#i-book"/></svg>笔记</button>
+            <button><svg class="i i-20"><use href="#i-checksq"/></svg>任务</button>
+            <button><svg class="i i-20"><use href="#i-globe"/></svg>社区</button>
+            <button><svg class="i i-20"><use href="#i-user"/></svg>我的</button>
+          </div>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:390px">
+        <strong style="color:var(--danger)">修复前 · 390px</strong><br>
+        红线标出裁切位置：底栏每项被撑到约 124px，一行需要 ~480px → 「我的」整项在屏外。
+        空态那句说明继承 <code>.empty-state</code> 的<strong style="color:var(--text)">衬线体 + 16px</strong>，
+        390px 下排不下一行就直接溢出（字号本身就是原因之一）。
+      </p>
+    </div>
+
+    <div>
+      <div class="m-frame">
+        <div class="m-root">
+          <div class="m-top"><svg class="i i-18" style="color:var(--text-dim)"><use href="#i-tree"/></svg><span class="m-title">笔记本</span><div style="flex:1"></div><button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-search"/></svg></button></div>
+          <div class="m-body">
+            <div class="m-empty-fixed">
+              <div class="empty-ico" style="margin:0 auto"><svg class="i i-20"><use href="#i-book"/></svg></div>
+              <h3>先写下一句话</h3>
+              <p>点右下角的 ＋ 就能开始。笔记先存在这台手机上，登录后自动同步。</p>
+              <div style="display:flex;gap:8px;justify-content:center;margin-top:18px">
+                <button class="btn btn-primary btn-sm"><svg class="i i-12"><use href="#i-plus"/></svg>新建笔记</button>
+                <button class="btn btn-sm"><svg class="i i-12"><use href="#i-tree"/></svg>打开目录</button>
+              </div>
+            </div>
+          </div>
+          <button class="m-fab"><svg class="i i-24"><use href="#i-plus"/></svg></button>
+          <nav class="m-nav">
+            <button class="m-nav-item on"><svg class="i i-20"><use href="#i-book"/></svg>笔记</button>
+            <button class="m-nav-item"><svg class="i i-20"><use href="#i-checksq"/></svg>任务</button>
+            <button class="m-nav-item"><svg class="i i-20"><use href="#i-globe"/></svg>社区</button>
+            <button class="m-nav-item"><svg class="i i-20"><use href="#i-user"/></svg>我的</button>
+          </nav>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:390px">
+        <strong style="color:var(--ok)">修复后 · 390px</strong><br>
+        4 项平分、标签 <code>min-width:0</code> 可省略；空态正文限宽 26ch 居中；
+        FAB 抬到底栏之上 70px，不再压住导航。
+      </p>
+    </div>
+
+    <div>
+      <div class="m-frame" style="width:360px">
+        <div class="m-root">
+          <div class="m-top"><svg class="i i-18" style="color:var(--text-dim)"><use href="#i-tree"/></svg><span class="m-title">基础游戏开发</span><div style="flex:1"></div><button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-search"/></svg></button></div>
+          <div class="m-body">
+            <div class="m-card"><div class="thumb cover c1" style="height:52px"></div><div style="min-width:0"><h4>战斗演出编辑器架构设计</h4><p><svg class="i i-12" style="vertical-align:-2px"><use href="#i-clock"/></svg> 2 小时前 · 12 个块</p></div></div>
+            <div class="m-card"><div class="thumb cover c3" style="height:52px"></div><div style="min-width:0"><h4>光照管线笔记</h4><p>昨天 · 8 个块</p></div></div>
+            <div class="m-card"><div class="thumb cover c2" style="height:52px"></div><div style="min-width:0"><h4>战损贴花使用指南</h4><p><span class="pill gold" style="padding:1px 7px">公开</span> 2026-09-10</p></div></div>
+            <div class="m-card"><div class="thumb" style="height:52px;background:var(--bg-elev-2);display:grid;place-items:center"><svg class="i i-20" style="color:var(--text-muted)"><use href="#i-folder"/></svg></div><div style="min-width:0"><h4 style="font-family:var(--font-sans);font-weight:600">工具链</h4><p>栏目 · 4 篇</p></div></div>
+          </div>
+          <button class="m-fab" style="right:14px"><svg class="i i-24"><use href="#i-plus"/></svg></button>
+          <nav class="m-nav">
+            <button class="m-nav-item on"><svg class="i i-20"><use href="#i-book"/></svg>笔记</button>
+            <button class="m-nav-item"><svg class="i i-20"><use href="#i-checksq"/></svg>任务</button>
+            <button class="m-nav-item"><svg class="i i-20"><use href="#i-globe"/></svg>社区</button>
+            <button class="m-nav-item"><svg class="i i-20"><use href="#i-user"/></svg>我的</button>
+          </nav>
+        </div>
+      </div>
+      <p class="frame-note" style="margin-top:12px;max-width:360px">
+        <strong style="color:var(--text)">修复后 · 360px（小屏）</strong><br>
+        列表项标题 <code>ellipsis</code>；封面缩略图按 <code>note.id</code> 派生，扫一眼能认出笔记。
+      </p>
+    </div>
+  </div>
+
+  <h2>四个具体改动</h2>
+  <table class="tbl">
+    <tr><th style="width:190px">项</th><th>做法</th><th style="width:190px">为什么这样做</th></tr>
+    <tr>
+      <td><strong>底栏放得下 4 项</strong></td>
+      <td><code>.m-nav-item { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }</code>；≤400px 时标签降到 10px</td>
+      <td>现在每项被内容撑到 ~124px。给 <code>min-width:0</code> 是让 flex 能真正压缩——这一条同时也是 390px 下「我的」被推出的直接原因</td>
+    </tr>
+    <tr>
+      <td><strong>空态正文限宽 + 降字号</strong></td>
+      <td>空态正文加 <code>max-width: 26ch; margin: 0 auto</code>；字号从继承的 16px 衬线改为 <code>--fs-sm</code>(13px) 无衬线，只有标题保留衬线</td>
+      <td>现在 <code>.empty-state</code> 只设了 <code>text-align:center</code> 和 <code>font-family: serif</code>，正文继承 16px —— 窄屏单行长句必然溢出。16px 衬线做提示文案本身也偏大</td>
+    </tr>
+    <tr>
+      <td><strong>FAB 不压导航</strong></td>
+      <td><code>bottom: calc(70px + env(safe-area-inset-bottom))</code></td>
+      <td>底栏约 58px 高，留 12px 间隙；用 <code>env()</code> 兼容全面屏</td>
+    </tr>
+    <tr>
+      <td><strong>圈子上底栏</strong></td>
+      <td>底栏第 3 项「社区」展开为「社区 / 圈子」，或把「圈子」并进「社区」页内的 tab</td>
+      <td>现在手机上<strong style="color:var(--text)">没有圈子的常驻入口</strong>，只能翻账号菜单——而桌面账号菜单里有。两端口径要对齐</td>
+    </tr>
+  </table>
+
+  <h2>顺带：底栏与顶栏 nav 的关系</h2>
+  <div class="panel" style="margin-top:14px">
+    <div class="row" style="gap:14px;align-items:flex-start">
+      <svg class="i i-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+      <div>
+        <h3 style="margin:0 0 6px">同一个数据源，两种布局</h3>
+        <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.8;margin:0">
+          移动底栏和桌面顶栏 nav 应该是<strong style="color:var(--text)">同一份 <code>{ key, label, icon, to, badge }[]</code></strong> 的两种渲染：
+          桌面横向排（图标 + 文字），手机竖向排（图标在上、文字在下）。
+          这样「手机上有的去桌面也一定有」不再靠人记。
+          断点：<code>≤720px</code> 隐藏顶栏 nav、显示底栏；<code>721–1080px</code> 顶栏 nav 只留图标。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:26px"><a href="03-public.html">← 看公开面</a>　·　<a href="INDEX.html">回总览</a></p>
+</div>
+<script src="r4.js"></script>
+</body>
+</html>

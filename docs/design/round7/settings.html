@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 站主配置 / 访客开关</title>
+<link rel="stylesheet" href="r7.css">
+<style>
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,12px);z-index:200;
+    display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:var(--r-lg);
+    background:var(--glass-bg-strong);backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);
+    box-shadow:var(--shadow-lg);font-size:var(--fs-sm);opacity:0;transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-spring);pointer-events:none}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .lock{font-family:var(--font-mono);font-size:9.5px;color:var(--text-muted);border:1px solid var(--border);border-radius:var(--r-pill);padding:1px 6px}
+  .prev-frame .site-body{height:430px}
+  .prev-frame .hero{min-height:280px;padding:26px 18px 0}
+  .prev-frame .hero-word{font-size:40px;margin:8px 0 8px}
+  .prev-frame .hero-sub{font-size:var(--fs-xs);max-width:44ch}
+  .prev-frame .hero-actions{margin-top:14px}
+  .prev-frame .pulse{margin-top:16px}
+  .prev-frame .pulse i{height:12px;width:6px}
+  .prev-frame .pulse-legend,.prev-frame .marquee{display:none}
+  .prev-frame .sec{padding:22px 18px}
+  .prev-frame .sec h2{font-size:var(--fs-xl)}
+  .prev-frame .cards{grid-template-columns:repeat(2,1fr);gap:10px}
+  .prev-frame .card-cover{height:56px}
+  .prev-frame .site-footer{padding:22px 18px 28px}
+  .prev-frame .site-footer h2{font-size:var(--fs-xl)}
+  .prev-frame .pet{width:64px;height:64px;right:14px;bottom:14px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-arrow"><path d="M4 12h15M13 6l6 6-6 6"/></g>
+</defs></svg>
+
+<nav class="nav">
+  <span class="brand">WebBook</span>
+  <span style="font-size:var(--fs-xs);color:var(--text-muted);margin-right:6px">交互层设计稿</span>
+  <a class="lk" href="presets.html">三档预设</a>
+  <a class="lk on" href="settings.html">站主配置 / 访客开关</a>
+  <a class="lk" href="spec.html">参数规范</a>
+  <span style="flex:1"></span>
+  <button class="btn btn-sm" data-fx-toggle><svg class="ic ic-12"><use href="#i-x"/></svg><span data-fx-label>装饰型：开启</span></button>
+  <button class="btn btn-sm" data-reduce-toggle><svg class="ic ic-12"><use href="#i-moon"/></svg><span data-reduce-label>减少动态：关闭</span></button>
+</nav>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 七阶段 · 02 / 03</div>
+  <h1 class="doc-h1">站主怎么配，访客怎么关</h1>
+  <p class="doc-sub">
+    六阶段的框架要能用，必须回答两侧的问题：<strong style="color:var(--text)">站主在哪选</strong>，
+    以及<strong style="color:var(--text)">访客觉得吵怎么办</strong>。左边这半页是站主的设置面板，右边那半页是访客的出口。
+  </p>
+
+  <h2>站主：设置 tab 里的「页面交互」</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    逐条开关<strong style="color:var(--text)">直接作用在右侧预览上</strong> —— 关掉「卡片倾斜」，预览里的卡片就不再倾斜。
+    滑块改的是六阶段定义好的参数上限，不是自由输入。
+  </p>
+
+  <div class="cfg">
+    <!-- ── 控件列 ── -->
+    <div>
+      <div class="cfg-box">
+        <div class="cfg-head">① 预设</div>
+        <div class="cfg-body">
+          <div class="radio">
+            <label><input type="radio" name="preset"><span><b>安静</b>只有功能性交互 + 区块入场。默认。</span></label>
+            <label class="on"><input type="radio" name="preset" checked><span><b>有活力</b>加空间层：视差 / 光晕 / 倾斜 / 乱码。</span></label>
+            <label><input type="radio" name="preset"><span><b>玩心</b>加角色与时间层：宠物 / 磁吸 / 涟漪。</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="cfg-box">
+        <div class="cfg-head">② 逐条（当前：有活力）</div>
+        <div class="cfg-body">
+          <div class="itm on" data-gate="parallax">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">Hero 视差</div>
+              <div class="meta"><span class="pill dim">scroll:progress</span><span class="pill dim">parallax</span><span class="pill deco">装饰</span></div>
+              <div class="param"><span style="font-size:var(--fs-xs);color:var(--text-muted);width:56px">速率差</span>
+                <input type="range" min="0.5" max="2" step="0.1" value="1.6" data-unit="×"><span class="val">1.6×</span></div>
+            </div>
+          </div>
+
+          <div class="itm on" data-gate="spotlight">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">光标光晕</div>
+              <div class="meta"><span class="pill dim">near</span><span class="pill dim">spotlight</span><span class="pill deco">装饰</span></div>
+              <div class="param"><span style="font-size:var(--fs-xs);color:var(--text-muted);width:56px">跟随时长</span>
+                <input type="range" min="120" max="480" step="20" value="260" data-unit="ms"><span class="val">260ms</span></div>
+            </div>
+          </div>
+
+          <div class="itm on" data-gate="tilt">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">卡片倾斜</div>
+              <div class="meta"><span class="pill dim">hover</span><span class="pill dim">tilt</span><span class="pill deco">装饰</span></div>
+              <div class="param"><span style="font-size:var(--fs-xs);color:var(--text-muted);width:56px">最大角度</span>
+                <input type="range" min="2" max="10" step="1" value="6" data-unit="°"><span class="val">6°</span></div>
+            </div>
+          </div>
+
+          <div class="itm on">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">词标乱码归位</div>
+              <div class="meta"><span class="pill dim">hover</span><span class="pill dim">scramble</span><span class="pill deco">装饰</span></div>
+            </div>
+          </div>
+
+          <div class="itm on" data-gate="pet">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">驻站宠物</div>
+              <div class="meta"><span class="pill dim">near</span><span class="pill dim">character</span><span class="pill deco">装饰</span><span class="pill dim">≥1100px</span></div>
+              <div class="param"><span style="font-size:var(--fs-xs);color:var(--text-muted);width:56px">种类</span>
+                <select style="flex:1;background:var(--bg-elev-1);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 8px;font-size:var(--fs-xs)">
+                  <option>狐狸</option><option>猫头鹰</option><option>企鹅</option><option>水獭</option><option>…另外 6 种</option>
+                </select></div>
+            </div>
+          </div>
+
+          <div class="itm locked">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">阅读进度 <span class="lock">功能型 · 不可关闭</span></div>
+              <div class="meta"><span class="pill dim">scroll:progress</span><span class="pill dim">morph</span><span class="pill fx">功能</span></div>
+            </div>
+          </div>
+
+          <div class="itm locked">
+            <span class="sw"></span>
+            <div class="txt">
+              <div class="nm">站点脉搏 <span class="lock">功能型 · 不可关闭</span></div>
+              <div class="meta"><span class="pill dim">—</span><span class="pill dim">heatmap</span><span class="pill fx">功能</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cfg-box">
+        <div class="cfg-head">③ 访客关掉装饰型交互时</div>
+        <div class="cfg-body">
+          <div class="radio">
+            <label class="on"><input type="radio" name="vis" checked><span><b>跟随访客</b>（推荐）访客点了「让页面安静下来」就安静。<br><span style="color:var(--text-muted);font-size:var(--fs-xs)">尊重访客的选择，也是唯一符合无障碍预期的选项。</span></span></label>
+            <label><input type="radio" name="vis"><span><b>始终开启</b>忽略访客开关。<br><span style="color:var(--text-muted);font-size:var(--fs-xs)">不建议 —— 这等于把站主的审美强加给每一个读文章的人。</span></span></label>
+            <label><input type="radio" name="vis"><span><b>默认关闭</b>所有人都先看到安静版，访客想看动效得自己去开。</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-primary"><svg class="ic ic-14"><use href="#i-check"/></svg>保存</button>
+        <button class="btn btn-ghost">重置为预设默认</button>
+      </div>
+    </div>
+
+    <!-- ── 预览列 ── -->
+    <div>
+      <div class="site-frame prev-frame">
+        <div class="site-bar"><span class="site-dot"></span><span class="site-dot"></span><span class="site-dot"></span>
+          <span class="site-url">实时预览 · preset = lively</span></div>
+        <div class="site-body" data-preset="lively" data-spotlight data-parallax>
+          <header class="site-header stuck">
+            <div class="site-brand"><span class="site-avatar" style="width:20px;height:20px;font-size:10px">何</span><span class="site-name" style="font-size:var(--fs-sm)">何源</span></div>
+            <nav class="site-nav"><button class="site-tab on" style="font-size:var(--fs-xs);padding:4px 9px">首页</button><button class="site-tab" style="font-size:var(--fs-xs);padding:4px 9px">博客</button></nav>
+          </header>
+          <section class="hero">
+            <div class="hero-grid" data-par-depth="0.4"></div>
+            <div class="hero-glow"></div>
+            <div class="hero-inner" data-par-depth="0.85">
+              <span class="hero-overline" style="font-size:10px">游戏开发 · 渲染 · 工具链</span>
+              <h1 class="hero-word" data-scramble="何源"><span>何</span><span>源</span></h1>
+              <p class="hero-sub">用代码造作品，也把背后的思考写下来。</p>
+              <div class="hero-actions"><button class="btn btn-primary btn-sm" data-magnetic>查看项目示例</button></div>
+              <div class="pulse"><i></i><i class="l1"></i><i></i><i class="l2"></i><i></i><i class="l3"></i><i></i><i class="l1"></i><i></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i class="l3"></i><i></i></div>
+            </div>
+          </section>
+          <section class="sec">
+            <div class="sec-head" style="margin-bottom:12px"><span class="sec-num" style="font-size:var(--fs-sm)">01</span><h2 style="font-size:var(--fs-xl)">项目示例</h2></div>
+            <div class="cards">
+              <article class="card"><div class="card-cover c1"></div><div class="card-pad" style="padding:9px 11px 11px">
+                <h3 class="card-title" style="font-size:var(--fs-sm)">战斗演出编辑器</h3><p class="card-sum" style="font-size:11px">时间轴 + 事件驱动。</p></div></article>
+              <article class="card"><div class="card-cover c2"></div><div class="card-pad" style="padding:9px 11px 11px">
+                <h3 class="card-title" style="font-size:var(--fs-sm)">战损贴花系统</h3><p class="card-sum" style="font-size:11px">运行时生成划痕。</p></div></article>
+            </div>
+          </section>
+          <footer class="site-footer">
+            <h2>一起做点东西。</h2>
+            <div><a class="quiet-link" data-quiet-demo><svg class="ic ic-12"><use href="#i-eye"/></svg>让这个页面安静下来</a></div>
+          </footer>
+          <div class="pet-dock fx-playful">
+            <div class="pet" data-pet data-look="center">
+              <svg viewBox="0 0 96 96"><g class="p-body">
+                <path class="p-soft p-tail" d="M34 77 C 21 75, 14 62, 22 53 C 29 46, 36 52, 31 59 C 28 64, 30 72, 36 74"/>
+                <ellipse class="p-soft" cx="50" cy="70" rx="19" ry="17"/>
+                <path class="p" d="M43 71 v9"/><path class="p" d="M57 71 v9"/>
+                <g class="p-head">
+                  <path class="p-soft" d="M36 33 L 33 13 L 48 28 Z"/><path class="p-soft" d="M64 33 L 67 13 L 52 28 Z"/>
+                  <ellipse class="p-soft" cx="50" cy="44" rx="18" ry="15.5"/><path class="p" d="M50 50 l-5.5 5 h11 z"/>
+                  <ellipse class="p-eye" cx="43" cy="42" rx="2.7" ry="3"/><ellipse class="p-eye" cx="57" cy="42" rx="2.7" ry="3"/>
+                </g></g></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:var(--fs-xs);color:var(--text-muted);margin-top:10px">
+        左边关掉哪一条，这里立刻生效。宠物在「有活力」档下是隐藏的 —— 所以预览里看不到它；
+        把预设切到「玩心」，或者单独打开宠物开关。
+      </p>
+    </div>
+  </div>
+
+  <h2>访客：页脚那一行</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    六阶段的约束②说「访客能一键关掉全部装饰型」，但<strong style="color:var(--text)">现在代码里完全没有这个出口</strong>。
+    放哪是个真问题 —— 放显眼处会变成一个常驻浮层，放太隐蔽又等于没有。
+  </p>
+  <div class="grid-3" style="margin-top:14px">
+    <div class="panel">
+      <h3>A · 页脚文字链 <span class="pill gold">推荐</span></h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        放在 footer 的版权行旁边，虚线小字「让这个页面安静下来」。<br><br>
+        <strong style="color:var(--text)">优点</strong>：不占视觉、能被找到、不打扰。访客读到页脚时本来就在做"这次浏览结束了"的判断，这时给他一个偏好开关很自然。
+      </p>
+    </div>
+    <div class="panel">
+      <h3>B · 右下角小图标</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        和宠物同一个角落。<br><br>
+        <strong style="color:var(--text)">问题</strong>：又是一个常驻浮层要管理，还要和宠物抢位置；而且一个"关掉动效"的按钮本身就出现在动效区里，有点自相矛盾。
+      </p>
+    </div>
+    <div class="panel">
+      <h3>C · 不给开关</h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        只跟随系统的 <code>prefers-reduced-motion</code>。<br><br>
+        <strong style="color:var(--text)">问题</strong>：等于把责任推给用户的系统设置。一个就想安静读文章的人，不该为了一个网站去改操作系统。
+      </p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h3>点了之后发生什么</h3>
+    <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.8">
+      ① 当前页面<strong style="color:var(--text)">立即</strong>安静下来（装饰型全部停止，不等刷新）；<br>
+      ② 一条 toast 确认：「已让这个页面安静下来」+ 一个「恢复」按钮 —— <strong style="color:var(--text)">决定必须可撤销</strong>；<br>
+      ③ 选择写进 <code>localStorage</code>，<strong style="color:var(--text)">按站主分开记</strong>（你在 A 站关了动效，不该影响 B 站）；<br>
+      ④ 页脚那行字变成「恢复页面动效」，位置不变。
+    </p>
+  </div>
+
+  <h2>两侧的边界</h2>
+  <table class="tbl">
+    <tr><th style="width:190px">谁</th><th>能决定什么</th><th style="width:210px">不能决定什么</th></tr>
+    <tr>
+      <td><strong>站主</strong></td>
+      <td>预设档位、逐条开关、参数值（在六阶段定的上限内）、访客开关的行为</td>
+      <td class="no">不能关闭功能型交互（阅读进度、站点脉搏）—— 那些承载信息</td>
+    </tr>
+    <tr>
+      <td><strong>访客</strong></td>
+      <td>一键关掉全部装饰型；随时恢复</td>
+      <td class="no">不能开启站主没开的交互（避免"我明明关了它又冒出来"）</td>
+    </tr>
+    <tr>
+      <td><strong>系统偏好</strong></td>
+      <td>优先级最高：<code>prefers-reduced-motion</code> 开着时，等于访客永久选择了安静</td>
+      <td class="no">—</td>
+    </tr>
+  </table>
+
+  <p style="margin-top:26px"><a href="presets.html">← 看三档预设</a>　·　<a href="spec.html">看参数规范 →</a></p>
+</div>
+
+<div class="toast" id="toast"><svg class="ic ic-14" style="color:var(--ok)"><use href="#i-check"/></svg><span id="toastText">已让这个页面安静下来</span><button class="btn btn-ghost btn-sm" id="toastUndo">恢复</button></div>
+
+<script src="r7.js"></script>
+<script>
+/* 访客开关的演示：点击 → 立即安静 + toast + 可撤销 */
+(function(){
+  var body = document.querySelector('.prev-frame .site-body');
+  var link = document.querySelector('[data-quiet-demo]');
+  var toast = document.getElementById('toast');
+  var text = document.getElementById('toastText');
+  var undo = document.getElementById('toastUndo');
+  if (!link || !toast) return;
+  var on = false, timer = 0;
+  function apply() {
+    document.documentElement.classList.toggle('no-fx', on);
+    link.innerHTML = on ? '恢复页面动效' : '<svg class="ic ic-12"><use href="#i-eye"/></svg>让这个页面安静下来';
+    text.textContent = on ? '已让这个页面安静下来' : '已恢复页面动效';
+    undo.textContent = on ? '恢复' : '再关掉';
+    toast.classList.add('show');
+    clearTimeout(timer);
+    timer = setTimeout(function(){ toast.classList.remove('show'); }, 3200);
+  }
+  link.addEventListener('click', function(e){ e.preventDefault(); on = !on; apply(); });
+  undo.addEventListener('click', function(){ on = !on; apply(); });
+})();
+</script>
+</body>
+</html>

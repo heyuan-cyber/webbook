@@ -120,6 +120,32 @@ export function AccountMenu() {
         圈子
       </Link>
 
+      {/*
+        手机伴侣三页（native-android-companion）。
+        为什么放在账户菜单而不是底栏：底栏已有 4 项且 `m-nav-item` 是 flex:1，
+        第 5 项会挤压触摸目标；这三页是低频入口（看统计、对账、管提醒），
+        不值得占用一等导航位。账户菜单是 portal + position:fixed，
+        唯一的移动端规则是把菜单加宽，因此在任何宽度下都可达。
+      */}
+      <div className="acct-sep" />
+      <div className="acct-block">
+        <span className="acct-block-label">
+          <Icon name="layers" size={12} /> 手机伴侣
+        </span>
+        <Link className="acct-item" role="menuitem" to="/app/usage" onClick={() => setOpen(false)}>
+          <Icon name="layers" size={14} />
+          使用统计
+        </Link>
+        <Link className="acct-item" role="menuitem" to="/app/expense" onClick={() => setOpen(false)}>
+          <Icon name="list" size={14} />
+          账单
+        </Link>
+        <Link className="acct-item" role="menuitem" to="/app/notify" onClick={() => setOpen(false)}>
+          <Icon name="clock" size={14} />
+          提醒
+        </Link>
+      </div>
+
       {/* 「后台」只对管理员显示 —— 原先对游客也渲染，点进去只是权限卡片 */}
       {isAdmin && (
         <>

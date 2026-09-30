@@ -28,7 +28,11 @@ export default [
       '**/build/**',
       '**/.gradle/**',
       'apps/android-twa/**',
+      // Capacitor 宿主：android/ 是生成的 Gradle 工程，
+      // plugins/ 与 scripts/ 是构建期脚本，都不属于本仓的源码规范范围
       'apps/android-cap/android/**',
+      'apps/android-cap/dist/**',
+      'apps/android-cap/www/**',
     ],
   },
   js.configs.recommended,
@@ -76,10 +80,30 @@ export default [
 
   /* ── Node 侧：构建脚本、部署脚本、根/vite 配置 ── */
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', '*.{js,mjs,cjs}'],
+    files: ['scripts/**/*.{js,mjs,cjs}', '*.{js,mjs,cjs}', 'apps/*/scripts/**/*.{js,mjs,cjs}'],
     languageOptions: {
       globals: runtimeGlobals.node,
       parserOptions: { ecmaVersion: 2022, sourceType: 'module' },
+    },
+  },
+  {
+    /*
+     * Puppeteer 探针脚本：进程跑在 Node，但 page.evaluate(...) 的回调字面量是在
+     * 浏览器页面里求值的，里面出现的 document / location / indexedDB 属于浏览器全局。
+     * 因此这两个脚本同时需要两套全局。放在上一组之后以合并而非覆盖。
+     */
+    files: ['scripts/probe-*.mjs'],
+    languageOptions: {
+      globals: { ...runtimeGlobals.node, ...runtimeGlobals.browser },
+      parserOptions: { ecmaVersion: 2022, sourceType: 'module' },
+    },
+  },
+  {
+    // 设计稿原型：直接在浏览器中打开的独立 HTML/JS，纯浏览器环境
+    files: ['docs/**/*.js'],
+    languageOptions: {
+      globals: runtimeGlobals.browser,
+      parserOptions: { ecmaVersion: 2022, sourceType: 'script' },
     },
   },
   {

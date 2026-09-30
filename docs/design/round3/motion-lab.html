@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 动效规范（可点播）</title>
+<link rel="stylesheet" href="r3.css">
+<style>
+  .dur-row { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-subtle); }
+  .dur-name { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--accent); width:88px; flex:none; }
+  .dur-track { flex:1; height:22px; border-radius:5px; background:var(--bg-deep); border:1px solid var(--border-subtle); position:relative; overflow:hidden; }
+  .dur-fill { position:absolute; left:0; top:0; bottom:0; border-radius:4px;
+    background:linear-gradient(90deg, var(--accent-strong), var(--accent-bright)); width:var(--pct); }
+  .dur-row.playing .dur-fill { animation:dur-grow var(--ms) var(--ease-io) both; }
+  @keyframes dur-grow { from{width:0} to{width:var(--pct)} }
+  .dur-use { font-size:var(--fs-xs); color:var(--text-muted); width:280px; flex:none; }
+  .curve-cell svg { display:block; width:100%; height:96px; }
+  .curve-cell { border:1px solid var(--border-subtle); border-radius:var(--r-md); background:var(--bg-deep); padding:8px; }
+  .curve-name { font-family:var(--font-mono); font-size:11px; color:var(--accent); margin-bottom:4px; }
+  .curve-val { font-family:var(--font-mono); font-size:10px; color:var(--text-muted); }
+  .dot { width:14px; height:14px; border-radius:50%; background:var(--accent); }
+  .keep { color:var(--ok); font-weight:600; }
+  .drop { color:var(--danger); font-weight:600; }
+  .dim { color:var(--warn); font-weight:600; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-alert"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+<g id="i-hash"><path d="M9 4L7 20M17 4l-2 16M4 9h16M3 15h16"/></g>
+<g id="i-type"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 三阶段 · 动效规范</div>
+  <h1 class="doc-h1">动效规范：可点播的样片库</h1>
+  <p class="doc-sub">这一页不是「更多动画」，是<strong style="color:var(--text)">把动效变成一个可讨论、可验收的对象</strong>。每一条都能点、能重播、能一键降级对照。所有参数都是 CSS 变量，所以调一个数整站跟着变。</p>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row" style="flex-wrap:wrap;gap:14px">
+      <button class="btn" data-reduce-toggle aria-pressed="false"><svg class="i i-14"><use href="#i-eye"/></svg><span data-reduce-label>正常动效</span></button>
+      <button class="btn btn-ghost" data-play-all><svg class="i i-14"><use href="#i-sparkles"/></svg>全部重播</button>
+      <span style="font-size:var(--fs-xs);color:var(--text-muted)" data-env-reduced>系统当前：正常</span>
+      <span style="font-size:var(--fs-xs);color:var(--text-muted)">← 这一行的开关作用于整页，随时对比</span>
+    </div>
+  </div>
+
+  <h2>① 时长阶：6 档，每条都有唯一职责</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">现在的实现只有 3 档（120 / 180 / 260ms），而且最关键的镜头用了<strong style="color:var(--text)">写死的 140ms</strong>、段落入场用了写死的 500ms —— 都不在阶上。点每一行听节拍。</p>
+  <div class="panel" style="margin-top:14px">
+    <div class="dur-row" data-anim style="--ms:90ms;--pct:12%"><span class="dur-name">--dur-1</span><span class="dur-track"><i class="dur-fill"></i></span><span class="dur-use">90ms　按压、勾选、微反馈</span><button class="play" data-play>播</button></div>
+    <div class="dur-row" data-anim style="--ms:140ms;--pct:18%"><span class="dur-name">--dur-2</span><span class="dur-track"><i class="dur-fill"></i></span><span class="dur-use">140ms　hover / 选中 / 颜色切换（最高频）</span><button class="play" data-play>播</button></div>
+    <div class="dur-row" data-anim style="--ms:200ms;--pct:26%"><span class="dur-name">--dur-3</span><span class="dur-track"><i class="dur-fill"></i></span><span class="dur-use">200ms　菜单、面板、toast 进出</span><button class="play" data-play>播</button></div>
+    <div class="dur-row" data-anim style="--ms:300ms;--pct:40%"><span class="dur-name">--dur-4</span><span class="dur-track"><i class="dur-fill"></i></span><span class="dur-use">300ms　页面切换、共享元素、抽屉、段落入场</span><button class="play" data-play>播</button></div>
+    <div class="dur-row" data-anim style="--ms:480ms;--pct:63%"><span class="dur-name">--dur-5</span><span class="dur-track"><i class="dur-fill"></i></span><span class="dur-use">480ms　镜头飞行、连线生长、大范围位移</span><button class="play" data-play>播</button></div>
+    <div class="dur-row" data-anim style="--ms:760ms;--pct:100%"><span class="dur-name">--dur-6</span><span class="dur-track"><i class="dur-fill"></i></span><span class="dur-use">760ms　首屏编排、一次性仪式（用一次就够）</span><button class="play" data-play>播</button></div>
+  </div>
+  <p class="doc-sub" style="font-size:var(--fs-sm);margin-top:12px">两条硬规矩：<strong style="color:var(--text)">① 超过 300ms 的动效不许出现在用户高频操作上</strong>（打开笔记、切 tab、勾选）；<strong style="color:var(--text)">② 时长不随数据量增长</strong> —— 列表有 3 项还是 12 项，总时长都要一样（靠错峰步长反向补偿）。</p>
+
+  <h2>② 缓动：5 条曲线</h2>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="curve-cell">
+      <div class="curve-name">--ease-out　cubic-bezier(.16, 1, .3, 1)</div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="100" x2="100" y2="100" stroke="var(--border)" stroke-width=".5"/>
+        <line x1="0" y1="0" x2="0" y2="100" stroke="var(--border)" stroke-width=".5"/>
+        <path d="M0 100 C 16 0, 30 0, 100 0" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="curve-val">进入用。快起慢收 —— 元素「到位」而不是「飘过去」</div>
+    </div>
+    <div class="curve-cell">
+      <div class="curve-name">--ease-in　cubic-bezier(.4, 0, 1, 1)</div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="100" x2="100" y2="100" stroke="var(--border)" stroke-width=".5"/>
+        <path d="M0 100 C 60 100, 100 60, 100 0" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="curve-val">退出用。慢起快收 —— 让「消失」显得干脆</div>
+    </div>
+    <div class="curve-cell">
+      <div class="curve-name">--ease-io　cubic-bezier(.4, 0, .2, 1)</div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="100" x2="100" y2="100" stroke="var(--border)" stroke-width=".5"/>
+        <path d="M0 100 C 40 100, 60 0, 100 0" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="curve-val">状态互换用（hover / 颜色）。两端都不突兀，是现在的 <code>--ease</code></div>
+    </div>
+    <div class="curve-cell">
+      <div class="curve-name">--ease-spring　cubic-bezier(.34, 1.42, .5, 1)</div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="100" x2="100" y2="100" stroke="var(--border)" stroke-width=".5"/>
+        <path d="M0 100 C 34 30, 44 -14, 100 0" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <path d="M0 100 C 34 30, 44 -14, 100 0 L 100 100 Z" fill="var(--accent-softer)"/>
+      </svg>
+      <div class="curve-val">「弹一下」用。曲线越过终点（y&lt;0 段）再回来。只用在 ≤200ms 的小元素上，否则会显得廉价</div>
+    </div>
+    <div class="curve-cell" style="grid-column:1/-1">
+      <div class="curve-name">--ease-stage　cubic-bezier(.22, 1, .36, 1)</div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="height:110px">
+        <line x1="0" y1="100" x2="100" y2="100" stroke="var(--border)" stroke-width=".5"/>
+        <line x1="0" y1="0" x2="100" y2="0" stroke="var(--border-subtle)" stroke-width=".5" stroke-dasharray="2 2"/>
+        <path d="M0 100 C 22 0, 36 0, 100 0" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <text x="3" y="94" fill="var(--text-muted)" font-size="4" font-family="monospace">0</text>
+        <text x="88" y="94" fill="var(--text-muted)" font-size="4" font-family="monospace">1</text>
+      </svg>
+      <div class="curve-val">镜头专用。<strong style="color:var(--text)">比 --ease-out 更平、不过冲</strong> —— 镜头只要有一点点回弹，人就会晕。这是唯一一条为「空间移动」而不是「元素出现」设计的曲线</div>
+    </div>
+  </div>
+
+  <h2>③ 位移与错峰：两个容易被忽略的参数量</h2>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="panel">
+      <h3>位移距离</h3>
+      <div class="dur-row" style="border:none"><span class="dur-name">--move-1</span><span class="dur-track"><i class="dur-fill" style="width:4%"></i></span><span class="dur-use">2px　按压下沉</span></div>
+      <div class="dur-row" style="border:none"><span class="dur-name">--move-2</span><span class="dur-track"><i class="dur-fill" style="width:12%"></i></span><span class="dur-use">6px　提示、气泡</span></div>
+      <div class="dur-row" style="border:none"><span class="dur-name">--move-3</span><span class="dur-track"><i class="dur-fill" style="width:24%"></i></span><span class="dur-use">12px　入场</span></div>
+      <div class="dur-row" style="border:none"><span class="dur-name">--move-4</span><span class="dur-track"><i class="dur-fill" style="width:48%"></i></span><span class="dur-use">24px　侧滑面板</span></div>
+      <p class="demo-desc">现在 <code>.reveal</code> 用 14px、<code>.stage-world</code> 无位移、按钮按下无位移、<code>App.tsx</code> 的页面转场用 8px —— 四个数，互相没有关系。<strong style="color:var(--text)">位移越大，时长越长</strong>：12px 配 300ms，24px 配 400ms 以上。</p>
+    </div>
+    <div class="panel">
+      <h3>错峰步长</h3>
+      <div class="dur-row" style="border:none"><span class="dur-name">--stagger-1</span><span class="dur-track"><i class="dur-fill" style="width:14%"></i></span><span class="dur-use">28ms　密集列表（≥12 项）</span></div>
+      <div class="dur-row" style="border:none"><span class="dur-name">--stagger-2</span><span class="dur-track"><i class="dur-fill" style="width:22%"></i></span><span class="dur-use">44ms　卡片网格（4~11 项）</span></div>
+      <div class="dur-row" style="border:none"><span class="dur-name">--stagger-3</span><span class="dur-track"><i class="dur-fill" style="width:35%"></i></span><span class="dur-use">70ms　分节标题（≤4 项）</span></div>
+      <p class="demo-desc"><strong style="color:var(--text)">必须封顶</strong>：20 项 × 28ms = 560ms，最后一项会明显「迟到」。规则是 <code>delay = min(index, 8) × step</code> —— 第 9 项之后全部同时开始。</p>
+    </div>
+  </div>
+
+  <h2>④ 样片库：12 条动效，逐条可点</h2>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="demo" data-anim="stagger"><div class="demo-stage" style="padding:14px;flex-direction:column;align-items:stretch;gap:7px">
+      <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">01</span><span style="font-size:var(--fs-sm)">基础游戏开发</span></div>
+      <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">02</span><span style="font-size:var(--fs-sm)">渲染开发</span></div>
+      <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">03</span><span style="font-size:var(--fs-sm)">Gameplay开发</span></div>
+      <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">04</span><span style="font-size:var(--fs-sm)">工具链</span></div>
+    </div><div class="demo-bar"><span class="demo-name">01 列表错峰</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc">错峰 28ms / 位移 12px / 单条 300ms。总时长 = 300 + 3×28 = 384ms。</p></div>
+
+    <div class="demo" data-anim="shared"><div class="demo-stage" style="padding:18px">
+      <div class="sh-card card" style="width:132px;height:64px;flex:none;overflow:hidden">
+        <div class="cover c1" style="height:30px"></div>
+        <div style="padding:6px 8px;font-size:10px;font-weight:600">战斗演出编辑器…</div>
+      </div>
+      <div class="sh-detail" style="margin-left:14px;flex:1">
+        <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:5px">战斗演出编辑器架构设计</div>
+        <div style="height:6px;width:88%;border-radius:3px;background:var(--bg-elev-2);margin-bottom:5px"></div>
+        <div style="height:6px;width:62%;border-radius:3px;background:var(--bg-elev-2)"></div>
+      </div>
+    </div><div class="demo-bar"><span class="demo-name">02 共享元素</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc">容器 300ms，内容延后 200ms。详情不能和容器同时到位，否则「生长」感消失。</p></div>
+
+    <div class="demo" data-anim="palette"><div class="demo-stage" style="padding:14px;align-items:flex-start">
+      <div class="pal" style="width:100%;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-1);overflow:hidden">
+        <div style="padding:8px 11px;border-bottom:1px solid var(--border-subtle);color:var(--text-muted);font-size:var(--fs-xs)">跳转到…</div>
+        <div class="pal-row" style="padding:6px 11px;font-size:var(--fs-xs)">战斗演出编辑器架构设计</div>
+        <div class="pal-row" style="padding:6px 11px;font-size:var(--fs-xs)">战损贴花使用指南</div>
+        <div class="pal-row" style="padding:6px 11px;font-size:var(--fs-xs)">光照管线笔记</div>
+      </div>
+    </div><div class="demo-bar"><span class="demo-name">03 命令面板弹出</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc">从顶部锚点长出 + <code>--ease-spring</code> 回弹。结果行错峰 28ms。</p></div>
+
+    <div class="demo" data-anim="camera" data-mode="toggle"><div class="demo-stage" style="overflow:hidden">
+      <div class="cam-world" style="position:absolute;inset:0">
+        <div style="position:absolute;left:24px;top:30px;padding:5px 9px;border-radius:7px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">目标</div>
+        <div style="position:absolute;left:120px;top:58px;padding:5px 9px;border-radius:7px;background:var(--bg-elev-2);border:1px solid var(--accent-line);font-size:10px">时间轴</div>
+        <div style="position:absolute;left:200px;top:90px;padding:5px 9px;border-radius:7px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">插值</div>
+      </div>
+    </div><div class="demo-bar"><span class="demo-name">04 镜头飞行</span><span class="play" data-play>切</span></div>
+    <p class="demo-desc">480ms + <code>--ease-stage</code>。时长与位移量脱钩。</p></div>
+
+    <div class="demo" data-anim="wire"><div class="demo-stage">
+      <svg viewBox="0 0 320 120" style="width:100%;height:118px">
+        <path class="wire-path" style="--len:250" d="M58 60 C 108 60, 118 22, 166 22" stroke="var(--accent)" stroke-width="1.8" fill="none"/>
+        <path class="wire-path" style="--len:250;animation-delay:120ms" d="M58 60 C 108 60, 118 98, 166 98" stroke="var(--accent)" stroke-width="1.8" fill="none" opacity=".7"/>
+      </svg>
+      <div class="wire-node" style="position:absolute;left:16px;top:44px;padding:6px 10px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">轨道层</div>
+      <div class="wire-node" style="position:absolute;left:204px;top:6px;padding:6px 10px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">求值层</div>
+      <div class="wire-node" style="position:absolute;left:204px;top:82px;padding:6px 10px;border-radius:8px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">表现层</div>
+    </div><div class="demo-bar"><span class="demo-name">05 连线生长</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc"><code>stroke-dashoffset</code> 480ms，分支错峰 120ms 表达因果。</p></div>
+
+    <div class="demo" data-anim="breathe" data-mode="toggle"><div class="demo-stage" style="padding:16px;align-items:stretch">
+      <div class="br-node" style="border:1px solid var(--border);border-radius:11px;padding:13px;background:var(--bg-elev-1)">
+        <div class="row" style="gap:8px;margin-bottom:11px"><span class="br-dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span><span style="font-size:var(--fs-xs);color:var(--accent)">AI 正在生成…</span></div>
+        <span class="br-line" style="width:92%"></span><span class="br-line" style="width:74%"></span><span class="br-line" style="width:52%;margin-bottom:0"></span>
+      </div>
+    </div><div class="demo-bar"><span class="demo-name">06 AI 呼吸</span><span class="play" data-play>切</span></div>
+    <p class="demo-desc">周期 1.15s（不是整秒）。这是<strong style="color:var(--text)">唯一允许无限循环</strong>的动效 —— 它表示「还在进行」。</p></div>
+
+    <div class="demo" data-anim="indicator"><div class="demo-stage">
+      <div class="ind-track"><div class="ind-thumb"></div><button class="on">最新</button><button>最热</button><button>随机</button></div>
+    </div><div class="demo-bar"><span class="demo-name">07 选中滑块</span><span class="play" data-play>播</span></div>
+    <p class="demo-desc">单一滑块元素 200ms + 过冲。点 tab 试。</p></div>
+
+    <div class="demo" data-anim="check"><div class="demo-stage" style="flex-direction:column;align-items:flex-start;gap:13px;padding:18px">
+      <div class="row" style="gap:10px"><span class="ck-box"><svg class="i i-12"><use href="#i-check"/></svg></span><span class="ck-text" style="font-size:var(--fs-sm)">时间轴精度定在 1/60 秒</span></div>
+      <div class="row" style="gap:10px"><span class="ck-box"><svg class="i i-12"><use href="#i-check"/></svg></span><span class="ck-text" style="font-size:var(--fs-sm)">插值曲线随轨道保存</span></div>
+    </div><div class="demo-bar"><span class="demo-name">08 勾选 + 删除线</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc">勾选框 140ms 弹一下，删除线 300ms 划过去。</p></div>
+
+    <div class="demo" data-anim="save" data-mode="toggle"><div class="demo-stage"><button class="sv idle"><span class="spin"><svg class="i i-12"><use href="#i-clock"/></svg></span>同步中…</button></div>
+      <div class="demo-bar"><span class="demo-name">09 保存状态 morph</span><span class="play" data-play>切</span></div>
+      <p class="demo-desc">纯颜色交叉，无位移。状态提示不抢注意力。</p></div>
+
+    <div class="demo" data-anim="skeleton"><div class="demo-stage" style="padding:16px;flex-direction:column;align-items:stretch">
+      <div style="position:relative;height:64px">
+        <div class="skl-bone" style="position:absolute;inset:0">
+          <div style="height:11px;width:40%;border-radius:5px;background:var(--bg-elev-2);margin-bottom:8px"></div>
+          <div style="height:8px;width:88%;border-radius:4px;background:var(--bg-elev-2);margin-bottom:6px"></div>
+          <div style="height:8px;width:66%;border-radius:4px;background:var(--bg-elev-2)"></div>
+        </div>
+        <div class="skl-real" style="position:absolute;inset:0">
+          <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:5px">时间轴 + 事件驱动</div>
+          <div style="font-size:var(--fs-xs);color:var(--text-muted)">编辑器只描述意图。</div>
+        </div>
+      </div>
+    </div><div class="demo-bar"><span class="demo-name">10 骨架交叉淡入</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc">骨架与内容同时交叉 200ms。绝不能「先空一下」。</p></div>
+
+    <div class="demo" data-anim="sheet"><div class="demo-stage" style="padding:0;height:130px;overflow:hidden;position:relative">
+      <div class="sh-sheet" style="position:absolute;left:0;right:0;bottom:0;background:var(--bg-elev-1);border-radius:12px 12px 0 0;border-top:1px solid var(--border-strong);padding:11px 15px">
+        <div style="width:32px;height:4px;border-radius:2px;background:var(--border-strong);margin:0 auto 9px"></div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);padding:4px 0">空白笔记</div>
+        <div style="font-size:var(--fs-xs);color:var(--text-dim);padding:4px 0">今日速记</div>
+      </div>
+    </div><div class="demo-bar"><span class="demo-name">11 底部面板上滑</span><button class="play" data-play>播</button></div>
+    <p class="demo-desc">300ms <code>--ease-out</code>。背景同时压暗到 35%。</p></div>
+
+    <div class="demo" data-anim="count" data-mode="toggle"><div class="demo-stage" style="gap:44px">
+      <div style="text-align:center"><div class="ct-num" style="font-family:var(--font-serif);font-size:32px;line-height:1">12</div><div class="kicker" style="margin-top:7px">已读</div></div>
+      <div style="text-align:center"><div class="ct-num" style="font-family:var(--font-serif);font-size:32px;line-height:1;animation-delay:70ms">37</div><div class="kicker" style="margin-top:7px">笔记</div></div>
+    </div><div class="demo-bar"><span class="demo-name">12 数字到位</span><span class="play" data-play>切</span></div>
+    <p class="demo-desc">300ms 轻微过冲。<strong style="color:var(--text)">不做从 0 滚动的计数动画</strong>。</p></div>
+  </div>
+
+  <h2>⑤ reduced-motion 策略：保留什么、去掉什么</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">「全部关掉」是偷懒。正确的分界是：<strong style="color:var(--text)">反映状态的动效保留，表达过程的动效去掉</strong>。下面每一条都可以用页面顶部的开关验证。</p>
+  <table class="tbl">
+    <tr><th style="width:200px">动效</th><th style="width:96px">降级后</th><th>理由</th></tr>
+    <tr><td><strong>滚动进度线</strong></td><td class="keep">保留</td><td>它是位置信息，不是装饰。去掉之后用户会失去「还剩多少」的判断</td></tr>
+    <tr><td><strong>同步状态 morph</strong></td><td class="keep">保留（瞬时）</td><td>状态必须能看出来。只是颜色不再渐变，直接切换</td></tr>
+    <tr><td><strong>骨架 → 内容</strong></td><td class="keep">保留（瞬时）</td><td>避免布局跳变。降级为直接替换，不加淡入</td></tr>
+    <tr><td><strong>勾选 / 删除线</strong></td><td class="dim">保留（60ms）</td><td>极短，且是操作确认。全砍掉会让人觉得「没点上」</td></tr>
+    <tr><td><strong>镜头飞行</strong></td><td class="drop">去掉</td><td>瞬间到位。用户仍能到达位置，只是没有过程</td></tr>
+    <tr><td><strong>段落 / 列表错峰</strong></td><td class="drop">去掉</td><td>内容一次成形，不做位移也不做淡入</td></tr>
+    <tr><td><strong>共享元素</strong></td><td class="drop">去掉</td><td>详情直接出现，卡片不「长大」</td></tr>
+    <tr><td><strong>AI 呼吸 / 微光</strong></td><td class="drop">去掉</td><td>无限循环动画是前庭不适的主要来源。改为静态文案「生成中…」</td></tr>
+    <tr><td><strong>面板弹出回弹</strong></td><td class="dim">降级为纯淡入</td><td>保留「出现了」这个事实，去掉 scale 与回弹</td></tr>
+    <tr><td><strong>页面转场</strong></td><td class="drop">去掉</td><td>现在 <code>App.tsx</code> 已经在 <code>reduced</code> 时设 <code>duration: 0</code>，这是对的，保持</td></tr>
+  </table>
+
+  <h2>⑥ 和现有代码的差距（改哪里）</h2>
+  <table class="tbl">
+    <tr><th style="width:220px">现状</th><th>问题</th><th style="width:230px">建议</th></tr>
+    <tr><td><code>layout.css</code> <code>.stage-world { transition: transform .14s }</code></td><td>平移与缩放共用写死的 140ms，不在时长阶上；没有「程序化飞行」概念</td><td>拆成两条：手动 <code>var(--dur-2)</code> + <code>--ease-out</code>；飞行 <code>var(--dur-5)</code> + <code>--ease-stage</code></td></tr>
+    <tr><td><code>layout.css</code> <code>.reveal { transition: .5s }</code></td><td>500ms 超出「入场 ≤300ms」的规矩，长列表滚动时会显得拖</td><td>改 <code>var(--dur-4)</code>，位移 14px → <code>--move-3</code> (12px)</td></tr>
+    <tr><td><code>App.tsx</code> route 转场 <code>y: 8</code></td><td>8px 是字面值，且和 <code>--move-*</code> 无关</td><td>用 <code>--move-3</code>；方向按层级（进入更深 → 从上；返回 → 从下）</td></tr>
+    <tr><td><code>lib/motion.ts</code> <code>MOTION</code></td><td>只有 3 档时长、2 条缓动，且用秒（JS）与 CSS 的毫秒两套单位</td><td>补齐到 6 档 / 5 曲线，并从一个共享源生成，避免两边漂移</td></tr>
+    <tr><td><code>Reveal.tsx</code> 的 <code>delay</code> prop</td><td>能传延迟，但没有步长约定，调用方各写各的</td><td>改成 <code>index</code> + <code>group</code>，步长由 <code>--stagger-*</code> 决定，并内置封顶</td></tr>
+    <tr><td>CSS 里 4 处 <code>prefers-reduced-motion</code></td><td>每处各写各的，容易漏</td><td>归到「token 置零」一个机制上（本设计稿的做法：<code>--dur-* / --move-* / --stagger-*</code> 全置 0/1ms）</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:24px">
+    <div class="row" style="gap:12px;align-items:flex-start">
+      <svg class="i i-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+      <div>
+        <h3 style="margin:0 0 6px">一句话总结这一页</h3>
+        <p style="color:var(--text-dim);font-size:var(--fs-md);line-height:1.8;margin:0">
+          动效不是「加多少」，是<strong style="color:var(--text)">每条动效都能回答一个问题</strong>：
+          「东西从哪来？」（共享元素、错峰）、「我在空间的哪里？」（镜头）、
+          「还要多久？」（进度、呼吸）、「刚才成了吗？」（勾选、保存态）。
+          答不上来的，就不该有。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:26px"><a href="INDEX.html">← 回四版对照</a></p>
+</div>
+<script src="r3.js"></script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 02 笔记本（首屏 + 笔记态）</title>
+<link rel="stylesheet" href="r4.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-checksq"><path d="M9 11.5l2.5 2.5L20 8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-settings"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><path d="M15 5v4M9 15v4"/></g>
+<g id="i-layers"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></g>
+<g id="i-logout"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/></g>
+<g id="i-cd"><path d="M6 9l6 6 6-6"/></g>
+<g id="i-cr"><path d="M9 6l6 6-6 6"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-image"><path d="M4 5h16v14H4z"/><path d="M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/><path d="M4 16.5l4.5-4.5L14 17M14 15l2.5-2.5L20 16"/></g>
+<g id="i-type"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></g>
+<g id="i-cal"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3v4M16 3v4"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-grip"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-send"><path d="M21 3L3 10.5l6.5 2.8L12.5 21z"/><path d="M9.5 13.3L21 3"/></g>
+<g id="i-lock"><path d="M6 11h12v9H6z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></g>
+<g id="i-book2"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 四阶段 · 02 / 04</div>
+  <h1 class="doc-h1">笔记本：首屏与笔记态</h1>
+  <p class="doc-sub">
+    顶栏已经修好了（<code>93a9f61</code>），但<strong style="color:var(--text)">内容区还是老样子</strong>：
+    第一次打开是正中央两行灰字，其余 90% 空白；侧栏、顶栏、内容三层同色，只靠发丝线分开。
+    这一页改的是这两件事 —— <strong style="color:var(--text)">首屏</strong>与<strong style="color:var(--text)">层级</strong>。
+  </p>
+
+  <div class="shots">
+    <figure><img src="_now/01-app-desktop.png" alt="现状"><figcaption><b>现状 · /app（1600×1000）</b>正中央两行灰字；顶栏已修好，内容区没跟上</figcaption></figure>
+    <figure><img src="_now/08-app-mobile-2x.png" alt="移动端现状"><figcaption><b>现状 · /app @390px</b>说明文字横向溢出被裁；底栏第 4 项「我的」也在屏外</figcaption></figure>
+  </div>
+
+  <h2>首屏：从「欢迎使用」到「开始写」</h2>
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / app — 第一次打开，还没有笔记</span></div>
+    <div class="frame-body">
+      <div class="app">
+        <aside class="sb">
+          <div class="sb-head"><span class="logo"><span class="logo-mark"><svg class="i i-14"><use href="#i-book"/></svg></span>WebBook</span><button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-cr"/></svg></button></div>
+          <div class="sb-search"><input class="input" placeholder="搜索笔记…"></div>
+          <div class="sb-actions"><button class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-folder"/></svg>栏目</button><button class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-plus"/></svg>笔记</button></div>
+          <div class="sb-body">
+            <div class="empty" style="padding:30px 12px">
+              <div class="empty-ico"><svg class="i i-20"><use href="#i-folder"/></svg></div>
+              <h3 style="font-size:var(--fs-md);font-family:var(--font-sans);font-weight:600">还没有内容</h3>
+              <p style="font-size:var(--fs-xs);color:var(--text-muted);max-width:22ch">在右边写第一句话就会自动建一篇。</p>
+            </div>
+          </div>
+        </aside>
+        <div class="shell-main">
+          <header class="topbar">
+            <div class="topbar-left" style="gap:14px">
+              <nav class="nav">
+                <button class="nav-item on"><svg class="i i-14"><use href="#i-book"/></svg>笔记</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-globe"/></svg>博客</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-users"/></svg>圈子</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-user"/></svg>我</button>
+              </nav>
+              <span class="nav-sep"></span>
+              <nav class="crumb"><span class="crumb-here">笔记本</span></nav>
+            </div>
+            <div class="topbar-right">
+              <button class="cmdbar"><svg class="i i-14"><use href="#i-search"/></svg><span class="cmdbar-text">搜索或跳转…</span><span class="cmdbar-k"><kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd></span></button>
+              <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-checksq"/></svg></button>
+              <div class="acct"><button class="acct-trigger" aria-expanded="false" data-acct-trigger><span class="acct-avatar">H</span></button>
+                <div class="acct-menu" data-acct-menu hidden>
+                  <div class="acct-head"><span class="acct-avatar">H</span><div><strong style="font-size:var(--fs-sm);display:block">1060707057@qq.com</strong><span class="meta" style="margin:0">管理员</span></div></div>
+                  <div class="acct-sep"></div>
+                  <a class="acct-item"><svg class="i i-14"><use href="#i-settings"/></svg>管理后台</a>
+                  <div class="acct-sep"></div>
+                  <button class="acct-item acct-item-danger"><svg class="i i-14"><use href="#i-logout"/></svg>退出登录</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div style="flex:1;display:flex;min-height:0">
+            <div class="firstrun">
+              <div class="fr-main">
+                <div class="kicker" style="margin-bottom:14px">你的知识库 · 本地优先</div>
+                <h2 class="fr-title">先写下一句话，<br>剩下的交给 <em>WebBook</em>。</h2>
+                <p class="fr-sub">笔记存在你自己的仓里，图片和长文自动分卷。没网也能写，登录后自动同步。</p>
+                <div class="fr-write"><span class="caret"></span>今天想记点什么…</div>
+                <div class="fr-actions">
+                  <button class="btn btn-primary"><svg class="i i-14"><use href="#i-plus"/></svg>新建一篇笔记</button>
+                  <button class="btn"><svg class="i i-14"><use href="#i-folder"/></svg>新建栏目</button>
+                  <button class="btn btn-ghost"><svg class="i i-14"><use href="#i-send"/></svg>粘贴 Markdown 导入</button>
+                </div>
+              </div>
+              <aside class="fr-side">
+                <h4>快速开始</h4>
+                <div class="fr-quick">
+                  <button><svg class="i i-14"><use href="#i-type"/></svg><span class="qt">写一篇随笔<small>空白舞台，双击插块</small></span></button>
+                  <button><svg class="i i-14"><use href="#i-cal"/></svg><span class="qt">今日速记<small>自动带上日期标题</small></span></button>
+                  <button><svg class="i i-14"><use href="#i-image"/></svg><span class="qt">传一张图<small>拖进来就行</small></span></button>
+                  <button><svg class="i i-14"><use href="#i-sparkles"/></svg><span class="qt">让 AI 起个草稿<small>生文 / 生图 / 联网简报</small></span></button>
+                </div>
+                <h4>最近打开</h4>
+                <p style="font-size:var(--fs-xs);color:var(--text-muted);line-height:1.7">还没有记录。<br>打开过的笔记会出现在这里，最多 8 条。</p>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">新增</span> 一句主标题 + 可聚焦的书写条 + 3 个动作 + 右侧「快速开始 / 最近打开」　　<span class="callout ghost">不动</span> 舞台几何 / 块编辑器 / 目录树</p>
+
+  <h2>笔记态：把三层表面分开</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    现在的侧栏用 <code>--glass-bg</code>(62% 不透明) 叠在同色背景上，顶栏 82% —— 玻璃底下没有东西可透，结果只是<strong style="color:var(--text)">同时降低了对比度却没有制造深度</strong>。改成实色分层 + 卡片顶部一道 1px 高光。
+  </p>
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">webbook / app / note — 笔记态</span></div>
+    <div class="frame-body">
+      <div class="app">
+        <aside class="sb" style="background:var(--bg-elev)">
+          <div class="sb-head"><span class="logo"><span class="logo-mark"><svg class="i i-14"><use href="#i-book"/></svg></span>WebBook</span><button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-cr"/></svg></button></div>
+          <div class="sb-search"><input class="input" placeholder="搜索笔记…"></div>
+          <div class="sb-actions"><button class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-folder"/></svg>栏目</button><button class="btn btn-ghost btn-sm"><svg class="i i-12"><use href="#i-plus"/></svg>笔记</button></div>
+          <div class="sb-body">
+            <div class="tree-row" style="--d:0"><span class="tw"><svg class="i i-12"><use href="#i-cd"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg><span class="tl">基础游戏开发</span></div>
+            <div class="tree-row" style="--d:1"><span class="tw"><svg class="i i-12"><use href="#i-cd"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg><span class="tl">渲染开发</span></div>
+            <div class="tree-row on" style="--d:2"><span class="tw"></span><svg class="i i-14" style="color:var(--accent)"><use href="#i-file"/></svg><span class="tl">战斗演出编辑器架构设计</span></div>
+            <div class="tree-row" style="--d:2"><span class="tw"></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-file"/></svg><span class="tl">光照管线笔记</span></div>
+            <div class="tree-row" style="--d:0"><span class="tw"><svg class="i i-12"><use href="#i-cr"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg><span class="tl">工具链</span></div>
+            <div class="tree-row" style="--d:1"><span class="tw"></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-file"/></svg><span class="tl">构建脚本备忘</span></div>
+          </div>
+        </aside>
+        <div class="shell-main">
+          <header class="topbar">
+            <div class="topbar-left" style="gap:14px">
+              <nav class="nav">
+                <button class="nav-item on"><svg class="i i-14"><use href="#i-book"/></svg>笔记</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-globe"/></svg>博客</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-users"/></svg>圈子</button>
+                <button class="nav-item"><svg class="i i-14"><use href="#i-user"/></svg>我</button>
+              </nav>
+              <span class="nav-sep"></span>
+              <nav class="crumb"><span class="crumb-link">渲染开发</span><span class="crumb-sep">/</span><span class="crumb-here">战斗演出编辑器架构设计</span></nav>
+            </div>
+            <div class="topbar-right">
+              <span class="pill ok"><svg class="i i-12"><use href="#i-check"/></svg>已同步</span>
+              <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-clock"/></svg></button>
+              <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-sparkles"/></svg></button>
+              <button class="btn btn-sm"><svg class="i i-12"><use href="#i-lock"/></svg>私密</button>
+              <div class="acct"><button class="acct-trigger" aria-expanded="false" data-acct-trigger><span class="acct-avatar">H</span></button>
+                <div class="acct-menu" data-acct-menu hidden>
+                  <div class="acct-head"><span class="acct-avatar">H</span><div><strong style="font-size:var(--fs-sm);display:block">1060707057@qq.com</strong><span class="meta" style="margin:0">管理员</span></div></div>
+                  <div class="acct-sep"></div>
+                  <a class="acct-item"><svg class="i i-14"><use href="#i-settings"/></svg>管理后台</a>
+                  <div class="acct-sep"></div>
+                  <button class="acct-item acct-item-danger"><svg class="i i-14"><use href="#i-logout"/></svg>退出登录</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div style="flex:1;overflow:auto;padding:30px clamp(32px,7vw,104px) 60px">
+            <div style="max-width:760px">
+              <h1 style="font-size:var(--fs-3xl);margin-bottom:9px">战斗演出编辑器架构设计</h1>
+              <div class="meta" style="margin-bottom:28px"><span class="mono">2026-09-24</span><span class="dot"></span><span>12 个块</span><span class="dot"></span><span>2 条连线</span><span class="dot"></span><span class="mono">a3f19c2</span></div>
+              <p style="color:var(--text-dim);font-size:var(--fs-lg);line-height:1.9;margin-bottom:22px">把战斗演出从「帧驱动」改成「时间轴 + 事件驱动」，编辑器侧只描述演出意图，运行时负责插值。</p>
+              <div class="card" style="padding:16px 18px;margin-bottom:20px;background:var(--bg-elev-1)">
+                <div class="row" style="gap:8px;margin-bottom:8px"><svg class="i i-14" style="color:var(--accent)"><use href="#i-info"/></svg><span class="kicker">标注</span></div>
+                <p style="color:var(--text-dim);font-size:var(--fs-md);line-height:1.75">时间轴精度定在 1/60 秒；编辑器只存关键帧，插值曲线随轨道保存。</p>
+              </div>
+              <h3 style="font-size:var(--fs-xl);margin-bottom:12px">分层</h3>
+              <div class="card" style="padding:0;background:var(--bg-elev-1)">
+                <div class="row" style="gap:14px;padding:12px 16px;border-bottom:1px solid var(--border-subtle)"><span class="mono" style="color:var(--accent);font-size:var(--fs-xs);width:22px">01</span><div><strong style="font-weight:600">轨道层</strong><span style="color:var(--text-muted)"> — 纯数据，可序列化，进 git</span></div></div>
+                <div class="row" style="gap:14px;padding:12px 16px;border-bottom:1px solid var(--border-subtle)"><span class="mono" style="color:var(--accent);font-size:var(--fs-xs);width:22px">02</span><div><strong style="font-weight:600">求值层</strong><span style="color:var(--text-muted)"> — 每帧从轨道采样，产出姿态</span></div></div>
+                <div class="row" style="gap:14px;padding:12px 16px"><span class="mono" style="color:var(--accent);font-size:var(--fs-xs);width:22px">03</span><div><strong style="font-weight:600">表现层</strong><span style="color:var(--text-muted)"> — 只消费姿态，不反向写</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">改动</span> 侧栏改实色 <code>--bg-elev</code>、顶栏改实色、卡片加 <code>inset 0 1px 0 rgba(255,255,255,.045)</code> 顶部高光　　<span class="callout ghost">不动</span> 块与连线的数据模型</p>
+
+  <h2>这一页改了什么</h2>
+  <table class="tbl">
+    <tr><th style="width:170px">项</th><th>改动</th><th style="width:200px">收益</th></tr>
+    <tr><td><strong>首屏</strong></td><td>居中灰字 → 主标题 + 书写条 + 3 动作 + 右侧快速开始</td><td>冷启动第一眼不再空白</td></tr>
+    <tr><td><strong>侧栏</strong></td><td><code>--glass-bg</code>(62%) → 实色 <code>--bg-elev</code></td><td>玻璃底下没有内容可透，实色反而层次清楚</td></tr>
+    <tr><td><strong>顶栏</strong></td><td>加 nav 四项 + 分隔线；面包屑降为情境</td><td>去处可见 + 当前页高亮</td></tr>
+    <tr><td><strong>笔记头</strong></td><td>标题独占一行；元信息全部走等宽字</td><td>元信息「退后」，不抢标题</td></tr>
+    <tr><td><strong>块</strong></td><td>分层示意从「虚线画布」改成卡片内三行</td><td>和正文的排版语言一致</td></tr>
+  </table>
+
+  <p style="margin-top:26px"><a href="01-nav.html">← 看导航模型</a>　·　<a href="03-public.html">看公开面 →</a></p>
+</div>
+<script src="r4.js"></script>
+</body>
+</html>

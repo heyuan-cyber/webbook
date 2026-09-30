@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 三阶段 · 四版对照</title>
+<link rel="stylesheet" href="r3.css">
+<style>
+  .vcard { display:block; border:1px solid var(--border-subtle); border-radius:var(--r-lg); background:var(--bg-elev);
+    padding:20px 22px 18px; transition:border-color var(--dur-2) var(--ease-io), transform var(--dur-3) var(--ease-out); }
+  .vcard:hover { border-color:var(--accent-line); transform:translateY(-3px); }
+  .vcard .vn { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--accent); }
+  .vcard h3 { font-size:var(--fs-2xl); margin:6px 0 6px; }
+  .vcard p { color:var(--text-dim); font-size:var(--fs-sm); line-height:1.7; }
+  .vcard .tags { margin-top:12px; display:flex; gap:6px; flex-wrap:wrap; }
+  .matrix { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .matrix th, .matrix td { padding:9px 10px; border:1px solid var(--border-subtle); text-align:left; }
+  .matrix th { background:var(--bg-elev); color:var(--text); font-weight:650; font-size:var(--fs-xs); }
+  .matrix td { color:var(--text-dim); }
+  .matrix .y { color:var(--ok); font-weight:700; }
+  .matrix .n { color:var(--border-strong); }
+  .swatch-row { display:flex; gap:8px; margin-top:12px; }
+  .swatch-row i { flex:1; height:26px; border-radius:var(--r-sm); border:1px solid var(--border-subtle); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+</defs></svg>
+
+<div class="doc">
+  <div class="kicker">设计稿 · 三阶段 · 四版对照</div>
+  <h1 class="doc-h1">四版气质 + 一套动效层</h1>
+  <p class="doc-sub">
+    二阶段给的是<strong style="color:var(--text)">一版结构</strong>（一体外壳）。这一轮出<strong style="color:var(--text)">四种性格</strong>，并把动效从「顺手加的几个 transition」变成一套<strong style="color:var(--text)">有名字、有职责、可验收的层</strong>。
+    四版共用同一套 DOM 结构，所以可以逐个换、也可以混搭。
+  </p>
+
+  <h2>四版并排看</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <a class="vcard" href="v1-quiet.html">
+      <div class="vn">版一 / 四</div>
+      <h3>「静」Quiet Craft</h3>
+      <p>去掉装饰只留结构。动效只在状态变化时出现 —— 没有入场、没有错峰、没有视差。</p>
+      <div class="tags"><span class="pill gold">写作三小时不打扰</span><span class="pill dim">动效预算最低</span></div>
+      <div class="swatch-row"><i style="background:#14161a"></i><i style="background:#0c0e12"></i><i style="background:#c4a574"></i><i style="background:#2b3038"></i><i style="background:#eae6df"></i></div>
+    </a>
+    <a class="vcard" href="v2-flow.html">
+      <div class="vn">版二 / 四</div>
+      <h3>「流」Flow</h3>
+      <p>元素之间连得上：卡片长成详情、列表依次到位、滑块跟着手指走。动效负责解释「从哪来、到哪去」。</p>
+      <div class="tags"><span class="pill gold">共享元素</span><span class="pill dim">动效预算中高</span></div>
+      <div class="swatch-row"><i style="background:#14161a"></i><i style="background:#1f232a"></i><i style="background:#dcc29a"></i><i style="background:#3a414b"></i><i style="background:#eae6df"></i></div>
+    </a>
+    <a class="vcard" href="v3-stage.html">
+      <div class="vn">版三 / 四</div>
+      <h3>「沉浸」Cinematic Stage</h3>
+      <p>画布是主角，chrome 变成浮在上面的玻璃片。核心动效是镜头飞行与连线生长。</p>
+      <div class="tags"><span class="pill gold">镜头语言</span><span class="pill dim">动效预算最高</span></div>
+      <div class="swatch-row"><i style="background:#101317"></i><i style="background:rgba(20,23,28,.72)"></i><i style="background:#c4a574"></i><i style="background:rgba(196,165,116,.09)"></i><i style="background:#dfe5ea"></i></div>
+    </a>
+    <a class="vcard" href="v4-editorial.html">
+      <div class="vn">版四 / 四</div>
+      <h3>「报刊」Editorial</h3>
+      <p>导航退后、排版上前：大衬线、首字下沉、边注。动效全部服务于阅读位置感。</p>
+      <div class="tags"><span class="pill gold">排版驱动</span><span class="pill dim">动效预算低</span></div>
+      <div class="swatch-row"><i style="background:#f4f1ea"></i><i style="background:#1b1a17"></i><i style="background:#a8442a"></i><i style="background:#ddd6c6"></i><i style="background:#5c574d"></i></div>
+    </a>
+    <a class="vcard" href="motion-lab.html" style="border-color:var(--accent-line);background:linear-gradient(180deg,var(--accent-softer),transparent)">
+      <div class="vn">贯穿四版</div>
+      <h3>动效规范（可点播）</h3>
+      <p>6 档时长 / 5 条缓动 / 12 条样片，每条都能点、能重播、能一键降级对照。还有 reduced-motion 的保留-去掉清单。</p>
+      <div class="tags"><span class="pill gold">12 条样片</span><span class="pill gold">降级清单</span><span class="pill dim">差距映射</span></div>
+    </a>
+  </div>
+
+  <h2>关键差异矩阵</h2>
+  <table class="matrix" style="margin-top:14px">
+    <tr>
+      <th style="width:132px">维度</th>
+      <th>版一 静</th><th>版二 流</th><th>版三 沉浸</th><th>版四 报刊</th>
+    </tr>
+    <tr><td><strong>导航模型</strong></td>
+      <td>左轨道 + 侧栏</td><td>左轨道 + 侧栏</td><td>无轨道·浮层侧栏</td><td>顶部 tab·无侧栏</td></tr>
+    <tr><td><strong>Q1 的答案</strong></td><td>方案 A</td><td>方案 A</td><td>方案 C 变体</td><td>方案 C</td></tr>
+    <tr><td><strong>卡片</strong></td><td>无阴影·分割线</td><td>双层阴影·大圆角</td><td>玻璃节点</td><td>无卡片·纯文字</td></tr>
+    <tr><td><strong>底纹</strong></td><td>网格 28% 透明</td><td>网格 55%</td><td>网格 90%·44px</td><td class="n">无网格</td></tr>
+    <tr><td><strong>顶栏</strong></td><td>实色·无模糊</td><td>模糊 18px + 饱和</td><td>无边框·渐变兜底</td><td>实色·下划线 tab</td></tr>
+    <tr><td><strong>最长动效</strong></td><td>200ms</td><td>300ms</td><td>480ms</td><td>300ms</td></tr>
+    <tr><td><strong>缓动条数</strong></td><td>1（ease-io）</td><td>3（+out +spring）</td><td>2（+stage）</td><td>1（ease-io）</td></tr>
+    <tr><td><strong>无限循环动效</strong></td><td class="n">无</td><td class="n">无</td><td>AI 呼吸（1.15s）</td><td class="n">无</td></tr>
+    <tr><td><strong>实现成本</strong></td><td class="y">低（删样式）</td><td>高（共享元素）</td><td>中高（镜头 + 玻璃）</td><td class="y">低（改 CSS）</td></tr>
+    <tr><td><strong>低端机风险</strong></td><td class="y">最低</td><td>中</td><td>高</td><td class="y">最低</td></tr>
+    <tr><td><strong>最怕的用法</strong></td><td>觉得「太素」</td><td>列表项太多时显得慢</td><td>不常用 ⌘K 就不好用</td><td>写笔记时找不到目录树</td></tr>
+  </table>
+
+  <h2>动效不是四选一 —— 它是可以拆的</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">四版里真正互斥的只有<strong style="color:var(--text)">视觉气质</strong>和<strong style="color:var(--text)">导航模型</strong>。动效条目之间基本独立，可以按需摘。下面这张表是「哪些能单独拿走」。</p>
+  <table class="matrix" style="margin-top:14px">
+    <tr><th style="width:220px">动效条目</th><th style="width:110px">来自</th><th style="width:96px">可否单独摘</th><th>说明</th></tr>
+    <tr><td><strong>镜头飞行</strong></td><td>版三</td><td class="y">可以</td><td>只改 <code>.stage-world</code> 的 transition + 加一个 <code>flyTo()</code>。和视觉气质无关</td></tr>
+    <tr><td><strong>连线生长</strong></td><td>版三</td><td class="y">可以</td><td>纯 SVG <code>dashoffset</code>，独立于其他一切</td></tr>
+    <tr><td><strong>共享元素转场</strong></td><td>版二</td><td class="dim">要改造</td><td>需要编排层（layoutId / FLIP），但视觉上可以长成版一的样子</td></tr>
+    <tr><td><strong>列表错峰</strong></td><td>版二</td><td class="y">可以</td><td>改 <code>Reveal</code> 的 API（index + group）即可，任何气质都能用</td></tr>
+    <tr><td><strong>勾选 / 保存态 / 骨架交叉</strong></td><td>版一</td><td class="y">可以</td><td>「状态确认」类，建议四版都上</td></tr>
+    <tr><td><strong>滚动进度 + 目录跟随</strong></td><td>版四</td><td class="y">可以</td><td>文章页独立组件，不影响外壳</td></tr>
+    <tr><td><strong>顶部 tab 导航</strong></td><td>版四</td><td class="dim">与 Q1 绑定</td><td>这是导航模型选择，不是动效</td></tr>
+    <tr><td><strong>无轨道 + 浮层侧栏</strong></td><td>版三</td><td class="dim">与 Q1 绑定</td><td>同上</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row" style="gap:12px;align-items:flex-start">
+      <svg class="i i-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+      <div>
+        <h3 style="margin:0 0 6px">最可能的组合</h3>
+        <p style="color:var(--text-dim);font-size:var(--fs-md);line-height:1.8;margin:0">
+          <strong style="color:var(--text)">版一的外壳 + 版二的错峰 + 版三的镜头</strong>。
+          理由：日常写作要安静（版一），但列表第一次出来时可以有一点秩序感（版二错峰），
+          而画布上的镜头飞行只在「打开笔记 / 点块」这种低频但关键的动作上出现（版三）。
+          版四的排版器物（边注、进度线）可以单独放到<strong style="color:var(--text)">公开文章页</strong>，不影响笔记本。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <h2>先感受三条：动效层里最该先定的</h2>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="demo" data-anim="stagger" data-auto>
+      <div class="demo-stage" style="padding:14px;flex-direction:column;align-items:stretch;gap:7px">
+        <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">01</span><span style="font-size:var(--fs-sm)">基础游戏开发</span></div>
+        <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">02</span><span style="font-size:var(--fs-sm)">渲染开发</span></div>
+        <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">03</span><span style="font-size:var(--fs-sm)">Gameplay开发</span></div>
+        <div class="st-item row" style="gap:9px"><span class="mono" style="color:var(--accent);font-size:11px">04</span><span style="font-size:var(--fs-sm)">工具链</span></div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">列表错峰</span><button class="play" data-play>播</button></div>
+      <p class="demo-desc">步长 28ms、封顶第 8 项。这是投入产出比最高的一条 —— 只改 <code>Reveal</code> 的 API。</p>
+    </div>
+
+    <div class="demo" data-anim="camera" data-mode="toggle">
+      <div class="demo-stage" style="overflow:hidden">
+        <div class="cam-world" style="position:absolute;inset:0">
+          <div style="position:absolute;left:24px;top:30px;padding:5px 9px;border-radius:7px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">目标</div>
+          <div style="position:absolute;left:120px;top:58px;padding:5px 9px;border-radius:7px;background:var(--bg-elev-2);border:1px solid var(--accent-line);font-size:10px">时间轴</div>
+          <div style="position:absolute;left:200px;top:90px;padding:5px 9px;border-radius:7px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:10px">插值</div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">镜头飞行</span><span class="play" data-play>推 / 拉</span></div>
+      <p class="demo-desc">480ms + <code>--ease-stage</code>。现在 <code>.stage-world</code> 只有一条写死的 140ms，平移缩放共用。</p>
+    </div>
+
+    <div class="demo" data-anim="check" data-auto>
+      <div class="demo-stage" style="flex-direction:column;align-items:flex-start;gap:13px;padding:18px">
+        <div class="row" style="gap:10px"><span class="ck-box"><svg class="i i-12"><use href="#i-check"/></svg></span><span class="ck-text" style="font-size:var(--fs-sm)">时间轴精度定在 1/60 秒</span></div>
+        <div class="row" style="gap:10px"><span class="ck-box"><svg class="i i-12"><use href="#i-check"/></svg></span><span class="ck-text" style="font-size:var(--fs-sm)">插值曲线随轨道保存</span></div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">状态确认</span><button class="play" data-play>播</button></div>
+      <p class="demo-desc">勾选 140ms 弹一下 + 删除线 300ms 划过。<strong style="color:var(--text)">四版都该有</strong>。</p>
+    </div>
+
+    <div class="demo" data-anim="shared" data-auto>
+      <div class="demo-stage" style="padding:18px">
+        <div class="sh-card card" style="width:132px;height:64px;flex:none;overflow:hidden">
+          <div class="cover c1" style="height:30px"></div>
+          <div style="padding:6px 8px;font-size:10px;font-weight:600">战斗演出编辑器…</div>
+        </div>
+        <div class="sh-detail" style="margin-left:14px;flex:1">
+          <div style="font-size:var(--fs-sm);font-weight:600;margin-bottom:5px">战斗演出编辑器架构设计</div>
+          <div style="height:6px;width:88%;border-radius:3px;background:var(--bg-elev-2);margin-bottom:5px"></div>
+          <div style="height:6px;width:62%;border-radius:3px;background:var(--bg-elev-2)"></div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">共享元素</span><button class="play" data-play>播</button></div>
+      <p class="demo-desc">成本最高的一条。需要新的编排层，建议在 P2 之后单独评估。</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:22px">
+    <div class="row" style="flex-wrap:wrap;gap:14px">
+      <button class="btn" data-reduce-toggle aria-pressed="false"><svg class="i i-14"><use href="#i-eye"/></svg><span data-reduce-label>正常动效</span></button>
+      <button class="btn btn-ghost" data-play-all><svg class="i i-14"><use href="#i-sparkles"/></svg>全部重播</button>
+      <span style="font-size:var(--fs-xs);color:var(--text-muted)" data-env-reduced>系统当前：正常</span>
+    </div>
+  </div>
+
+  <h2>要你拍板的两件事</h2>
+  <table class="tbl">
+    <tr><th style="width:150px">问题</th><th>选项</th><th style="width:220px">我的看法</th></tr>
+    <tr>
+      <td><strong>A · 选哪一版气质</strong></td>
+      <td>版一「静」／版二「流」／版三「沉浸」／版四「报刊」／混搭</td>
+      <td>版一 作为默认外壳；版四的排版器物单独给公开文章页；版三 的镜头单独摘出来给舞台</td>
+    </tr>
+    <tr>
+      <td><strong>B · 动效层做到哪一档</strong></td>
+      <td>
+        <strong style="color:var(--text)">L1 只做状态层</strong>（勾选、保存态、骨架交叉、hover）<br>
+        <strong style="color:var(--text)">L2 = L1 + 秩序层</strong>（列表错峰、面板弹出、滑块）<br>
+        <strong style="color:var(--text)">L3 = L2 + 空间层</strong>（镜头飞行、连线生长）<br>
+        <strong style="color:var(--text)">L4 = L3 + 连续层</strong>（共享元素、页面共享转场）
+      </td>
+      <td><strong style="color:var(--text)">建议 L2 先落地</strong>。<br>L1 几乎无感；L2 的错峰是投入产出比最高的一条；L3 的镜头只对舞台用户有意义；L4 成本最高、风险最大，等前三档稳定后单独做</td>
+    </tr>
+  </table>
+
+  <h2>现状差距（这一轮要改的）</h2>
+  <table class="tbl">
+    <tr><th style="width:230px">现状</th><th>问题</th></tr>
+    <tr><td><code>.stage-world { transition: transform .14s }</code></td><td>平移与缩放共用写死的 140ms，不在任何时长阶上，也没有「程序化飞行」这个概念</td></tr>
+    <tr><td><code>.reveal { transition: .5s }</code></td><td>500ms 超出「入场 ≤300ms」；位移 14px 是字面值</td></tr>
+    <tr><td><code>MOTION</code> (lib/motion.ts)</td><td>只有 3 档时长 / 2 条缓动；JS 用秒、CSS 用毫秒，两套单位靠人肉同步</td></tr>
+    <tr><td>4 处各写各的 <code>prefers-reduced-motion</code></td><td>容易漏；且大部分是「全关」，没有区分「保留状态 / 去掉过程」</td></tr>
+    <tr><td><code>Reveal</code> 的 <code>delay</code> prop</td><td>能传延迟但没有步长约定，调用方各写各的，也没有封顶</td></tr>
+    <tr><td><code>App.tsx</code> 页面转场 <code>y: 8</code></td><td>8px 是字面值，和 <code>--move-*</code> 无关；不区分「进入更深」与「返回」的方向</td></tr>
+  </table>
+
+  <p style="margin-top:26px;color:var(--text-muted);font-size:var(--fs-sm)">
+    这一轮同样<strong style="color:var(--text)">没有改任何产品代码</strong> —— 全部产物都在 <code>docs/design/round3/</code>。
+  </p>
+</div>
+<script src="r3.js"></script>
+</body>
+</html>

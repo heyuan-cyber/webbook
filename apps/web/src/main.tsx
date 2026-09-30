@@ -5,6 +5,8 @@ import { App } from './App';
 import { isInstalledShell, purgeShellCaches } from './lib/shellContext';
 import './styles/global.css';
 import './styles/layout.css';
+// 手机伴侣三页（使用统计 / 账单 / 提醒）；只用语义 token，故不依赖引入顺序
+import './styles/companion.css';
 // 皮肤必须最后引入：它是颜色的唯一来源，需覆盖 global.css 的同名 token
 import './styles/theme.css';
 

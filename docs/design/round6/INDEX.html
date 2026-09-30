@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 个人主页交互层</title>
+<link rel="stylesheet" href="r6.css">
+<style>
+  .ask{border-left:3px solid var(--accent);padding:2px 0 2px 16px;margin:18px 0}
+  .ask h3{font-family:var(--font-sans);font-size:var(--fs-md);font-weight:650;margin:0 0 4px}
+  .ask p{color:var(--text-dim);font-size:var(--fs-sm)}
+  .opts{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .opt{border:1px solid var(--border);border-radius:var(--r-pill);padding:4px 13px;font-size:var(--fs-xs);color:var(--text-dim);background:var(--bg-elev-1)}
+  .opt.rec{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+  .vcard{display:block;border:1px solid var(--border-subtle);border-radius:var(--r-lg);background:var(--bg-elev);padding:19px 21px 17px;transition:border-color var(--dur-2) var(--ease-io),transform var(--dur-3) var(--ease-out)}
+  .vcard:hover{border-color:var(--accent-line);transform:translateY(-3px)}
+  .vcard h3{font-size:var(--fs-2xl);margin:4px 0 6px}
+  .vcard p{color:var(--text-dim);font-size:var(--fs-sm);line-height:1.7}
+  .vcard .tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+  .pcount{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-alert"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></g>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 六阶段 · 交互层</div>
+  <h1 class="doc-h1">个人主页交互层</h1>
+  <p class="doc-sub">
+    我上一轮把你的例子当成了目标，只做了宠物 —— 那是我的问题。
+    你真正要的是<strong style="color:var(--text)">「这个页面能支持更多交互效果」</strong>，
+    也就是：<strong style="color:var(--text)">一套可分类、可组合、可批量降级的交互层</strong>，宠物只是里面「角色动效」这一类的一个实例。
+  </p>
+
+  <div class="panel row" style="flex-wrap:wrap;gap:12px;margin-top:18px">
+    <a class="btn btn-primary" href="lab.html">进交互实验室（13 条可点）→</a>
+    <a class="btn" href="../round5/pet-lab.html">宠物行为实验室</a>
+    <button class="btn" data-fx-toggle aria-pressed="false"><svg class="ic ic-14"><use href="#i-x"/></svg><span data-fx-label>装饰型交互：开启</span></button>
+    <button class="btn" data-reduce-toggle><svg class="ic ic-14"><use href="#i-moon"/></svg><span data-reduce-label>减少动态：关闭</span></button>
+  </div>
+
+  <h2>先看现状：六层里四层是空的</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    我把个人主页现在的交互全部翻了一遍（<code>UserBlogPage.tsx</code> / <code>site/*.tsx</code> / <code>layout.css</code>）。
+    用一个六层框架来看，缺口非常清楚。
+  </p>
+
+  <div class="layers">
+    <div class="layer has">
+      <span class="ln">1</span><span class="lt">排版动效</span>
+      <span class="ld">让内容「到位」。入场、错峰、绘制、字标编排。<strong style="color:var(--text)">建立阅读节奏，不承载信息</strong></span>
+      <span class="ls"><span class="yes">部分</span> · Reveal / marquee</span>
+    </div>
+    <div class="layer has">
+      <span class="ln">2</span><span class="lt">反馈动效</span>
+      <span class="ld">让操作「被确认」。hover / press / 波纹 / 磁吸</span>
+      <span class="ls"><span class="yes">部分</span> · 卡片 hover</span>
+    </div>
+    <div class="layer">
+      <span class="ln">3</span><span class="lt">空间动效</span>
+      <span class="ld">让页面有「深度」。视差、倾斜、光标光晕、点击涟漪</span>
+      <span class="ls"><span class="no">空</span></span>
+    </div>
+    <div class="layer">
+      <span class="ln">4</span><span class="lt">内容动效</span>
+      <span class="ld">让数据「可读」。更新热力、数字到位、阅读进度、栏目占比</span>
+      <span class="ls"><span class="no">空</span></span>
+    </div>
+    <div class="layer">
+      <span class="ln">5</span><span class="lt">角色动效</span>
+      <span class="ld">让页面有「住户」。宠物、彩蛋、领路、签名</span>
+      <span class="ls"><span class="no">空</span> · 五阶段已设计</span>
+    </div>
+    <div class="layer">
+      <span class="ln">6</span><span class="lt">时间动效</span>
+      <span class="ld">让页面有「当下感」。深夜文案、节日、第 N 次来访、纪念日</span>
+      <span class="ls"><span class="no">空</span></span>
+    </div>
+  </div>
+
+  <table class="tbl" style="margin-top:16px">
+    <tr><th style="width:200px">代码事实</th><th>说明</th></tr>
+    <tr><td><strong><code>hooks/</code> 只有 1 个文件</strong></td><td>只有 <code>useMediaQuery.ts</code>。没有任何交互相关的 hook —— 说明交互能力现在是散在各组件里手写的</td></tr>
+    <tr><td><strong>reduced-motion 有两套机制</strong></td><td><code>useMotionSafe()</code>（9 个文件）+ <code>Reveal.tsx</code> 里直接 <code>matchMedia</code> 一次。<strong style="color:var(--text)">两套写法意味着迟早会漏</strong></td></tr>
+    <tr><td><strong>动效 token 只有时长和缓动</strong></td><td><code>lib/motion.ts</code> 里 3 档时长 / 2 条缓动，<strong style="color:var(--text)">没有位移距离、没有错峰步长</strong> —— 这两个恰恰是最容易写歪的</td></tr>
+    <tr><td><strong>没有「关闭交互」的出口</strong></td><td>访客除了改系统设置，没有任何办法让页面安静下来</td></tr>
+  </table>
+
+  <h2>交互层的三个组成</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    要让「支持更多交互效果」变成可扩展的事，而不是一条条加功能，需要把交互拆成 <strong style="color:var(--text)">触发器 × 效果 × 约束</strong> 三件东西。
+    新增一条交互 = 组合一个触发器和一效果，而不是写一个新组件。
+  </p>
+
+  <h3>① 触发器：访客做什么（10 个）</h3>
+  <table class="tbl">
+    <tr><th style="width:130px">触发器</th><th style="width:190px">含义</th><th style="width:80px">现状</th><th>个人主页上的可能用法</th></tr>
+    <tr><td><code>hover</code></td><td>指针悬停元素</td><td class="yes">已有</td><td>卡片抬起、词标乱码归位、脉络格悬停出日期</td></tr>
+    <tr><td><code>near</code></td><td>指针进入元素周围 R 半径</td><td class="no">新</td><td>磁吸按钮、光标光晕、宠物转头</td></tr>
+    <tr><td><code>scroll:enter</code></td><td>元素进入视口</td><td class="yes">Reveal</td><td>区块入场、数字到位、连线绘制</td></tr>
+    <tr><td><code>scroll:progress</code></td><td>滚动进度 0–1</td><td class="yes">文章页有</td><td>阅读进度线、视差、顶栏 morph</td></tr>
+    <tr><td><code>scroll:idle</code></td><td>停在同一个位置超过 N 秒</td><td class="no">新</td><td>宠物打哈欠、「要不要我带你逛逛？」</td></tr>
+    <tr><td><code>click</code></td><td>点击 / 轻触</td><td class="yes">已有</td><td>涟漪、揭示隐藏段落、宠物说话</td></tr>
+    <tr><td><code>clock</code></td><td>本地时间（时段 / 整点 / 节日）</td><td class="no">新</td><td>深夜换文案、节日换词标、周年</td></tr>
+    <tr><td><code>visit:nth</code></td><td>第几次来访（localStorage）</td><td class="no">新</td><td>第二次来宠物先看你、第五次提示订阅</td></tr>
+    <tr><td><code>key</code></td><td>键盘输入</td><td class="no">新</td><td>输入 <code>he</code> 触发签名动画（彩蛋）</td></tr>
+    <tr><td><code>hash</code></td><td>URL 里带特定 hash</td><td class="no">新</td><td>揭示「只发给某个人」的段落</td></tr>
+  </table>
+
+  <h3>② 效果：页面怎么回应（12 个）</h3>
+  <table class="tbl">
+    <tr><th style="width:130px">效果</th><th style="width:80px">类型</th><th style="width:74px">成本</th><th>说明与参数上限</th></tr>
+    <tr><td><code>rise</code></td><td><span class="pill deco">装饰</span></td><td>极低</td><td>位移 + 淡入。位移 ≤12px、时长 ≤300ms</td></tr>
+    <tr><td><code>stagger</code></td><td><span class="pill deco">装饰</span></td><td>极低</td><td>错峰。步长 28/44/70ms 三档，<strong style="color:var(--text)">必须封顶第 8 项</strong></td></tr>
+    <tr><td><code>parallax</code></td><td><span class="pill deco">装饰</span></td><td>低</td><td>分层不同速率。<strong style="color:var(--text)">速率差 ≤2×</strong>，只写 transform</td></tr>
+    <tr><td><code>tilt</code></td><td><span class="pill deco">装饰</span></td><td>低</td><td>3D 倾斜。≤6°，perspective ≥600px</td></tr>
+    <tr><td><code>magnetic</code></td><td><span class="pill deco">装饰</span></td><td>低</td><td>光标吸引。半径 ≤140px、位移 ≤8px，<strong style="color:var(--text)">热区不动</strong></td></tr>
+    <tr><td><code>spotlight</code></td><td><span class="pill deco">装饰</span></td><td>低</td><td>光标处柔光。跟随缓动 ≥200ms（不要实时跟手）</td></tr>
+    <tr><td><code>scramble</code></td><td><span class="pill deco">装饰</span></td><td>极低</td><td>文字乱码归位。纯文本替换，同次悬停只播一遍</td></tr>
+    <tr><td><code>draw</code></td><td><span class="pill deco">装饰</span></td><td>低</td><td>路径绘制。<code>dashoffset</code>，≤480ms</td></tr>
+    <tr><td><code>pop</code></td><td><span class="pill deco">装饰</span></td><td>极低</td><td>数字到位。300ms 过冲，<strong style="color:var(--text)">不做 0→N 计数</strong></td></tr>
+    <tr><td><code>morph</code></td><td><span class="pill fx">功能</span></td><td>低</td><td>形态过渡。只改颜色/边框/阴影，<strong style="color:var(--text)">不改高度</strong></td></tr>
+    <tr><td><code>character</code></td><td><span class="pill deco">装饰</span></td><td>中</td><td>角色行为。见 <a href="../round5/pet-lab.html">五阶段</a> —— 整套行为预算已经定好</td></tr>
+    <tr><td><code>heatmap</code></td><td><span class="pill fx">功能</span></td><td>极低</td><td>数据可视化。<strong style="color:var(--text)">颜色是信息，降级时保留</strong></td></tr>
+    <tr><td><code>reveal</code></td><td><span class="pill fx">功能</span></td><td>极低</td><td>条件显示内容。注意<strong style="color:var(--text)">不是权限</strong>，别放隐私</td></tr>
+  </table>
+
+  <h3>③ 约束：每条交互都必须满足（7 条）</h3>
+  <table class="tbl">
+    <tr><th style="width:170px">约束</th><th>规则</th></tr>
+    <tr><td><strong>① 可分类</strong></td><td>每条交互声明 <code>kind: 'functional' | 'decorative'</code>。<strong style="color:var(--text)">这是所有降级策略的前提</strong> —— 分不清就只能一刀切全关，那会连阅读进度一起砍掉</td></tr>
+    <tr><td><strong>② 可关闭</strong></td><td>访客能一键关掉全部装饰型，记 <code>localStorage</code>。现在的代码里<strong style="color:var(--text)">没有这个出口</strong></td></tr>
+    <tr><td><strong>③ 不挂空监听</strong></td><td>关闭时<strong style="color:var(--text)">根本不注册</strong>监听，而不是"注册了但不执行"</td></tr>
+    <tr><td><strong>④ 不用常驻 rAF</strong></td><td>只在事件里 rAF 节流；空闲即停。宠物也只在指针进入领地时才挂 <code>pointermove</code></td></tr>
+    <tr><td><strong>⑤ 移动端有替代</strong></td><td>触屏没有 hover → 依赖 hover/near 的交互在 ≤720px <strong style="color:var(--text)">直接不挂载</strong>（不是降级成 tap，那会误触）</td></tr>
+    <tr><td><strong>⑥ 不挡内容</strong></td><td>装饰层 <code>pointer-events:none</code>；位移只改视觉，<strong style="color:var(--text)">点击热区永远不动</strong></td></tr>
+    <tr><td><strong>⑦ 首屏不阻塞</strong></td><td>交互层在 hydration 之后挂载；无 JS 时页面完整可读，只是不动</td></tr>
+  </table>
+
+  <h2>组合：新增一条交互应该只是填一个对象</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">这是「支持更多」的关键 —— 不是再加一个组件，而是让交互变成数据。</p>
+  <pre class="code">type Kind = 'functional' | 'decorative';
+
+interface Interaction {
+  id: string;                 // 'hero-parallax'
+  target: string;             // 语义槽位：'hero' | 'card' | 'wordmark' | 'pulse' …
+  on: TriggerKind;            // 'hover' | 'near' | 'scroll-enter' | 'clock' | …
+  do: EffectKind;             // 'rise' | 'parallax' | 'tilt' | 'character' | …
+  kind: Kind;                 // 决定它在降级时是留下还是消失
+  params?: Record&lt;string, number | string&gt;;
+  minWidth?: number;          // 低于此宽度不挂载（触屏没有 hover）
+}
+
+// 四条真实交互，拆开看都只是"一个触发器 + 一个效果"
+const HOMEPAGE: Interaction[] = [
+  { id: 'hero-parallax', target: 'hero',     on: 'scroll-progress', do: 'parallax',
+    kind: 'decorative', params: { layers: 3, maxRate: 1.8 } },
+  { id: 'card-tilt',     target: 'card',     on: 'hover',           do: 'tilt',
+    kind: 'decorative', params: { max: 6 }, minWidth: 721 },
+  { id: 'pet',           target: 'corner',   on: 'near',            do: 'character',
+    kind: 'decorative', params: { species: 'fox', radius: 260 }, minWidth: 1100 },
+  { id: 'read-progress', target: 'article',  on: 'scroll-progress', do: 'morph',
+    kind: 'functional' },
+];</pre>
+
+  <h3>站主视角：预设包，不是 20 个参数</h3>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    站主不该被要求配 20 个参数。给三个预设包 + 个别开关就够：
+  </p>
+  <div class="grid-2" style="margin-top:14px">
+    <div class="panel">
+      <h3>安静 <span class="pcount">quiet · 默认</span></h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        只有功能性交互 + 区块入场。没有视差、没有倾斜、没有光晕、没有宠物。<br>
+        <span class="pcount">= rise · stagger · morph · heatmap · reveal</span>
+      </p>
+    </div>
+    <div class="panel">
+      <h3>有反应 <span class="pcount">lively</span></h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        在安静之上加空间层：视差、卡片倾斜、光标光晕、词标乱码。<br>
+        <span class="pcount">= quiet + parallax · tilt · spotlight · scramble</span>
+      </p>
+    </div>
+    <div class="panel">
+      <h3>玩心 <span class="pcount">playful</span></h3>
+      <p style="font-size:var(--fs-sm);color:var(--text-dim);line-height:1.75">
+        在「有反应」之上加角色与时间层：宠物、磁吸按钮、深夜文案、hash 彩蛋。<br>
+        <span class="pcount">= lively + character · magnetic · clock · hash</span>
+      </p>
+    </div>
+    <div class="panel">
+      <h3>配置形态</h3>
+      <pre class="code" style="margin:0">SiteConfig.interactions = {
+  preset: 'lively',
+  disable: ['card-tilt'],   // 关掉预设里的某几条
+  params: {
+    'pet.species': 'owl',
+    'hero-parallax.maxRate': 1.4,
+  },
+}</pre>
+    </div>
+  </div>
+
+  <h2>落地形态：4 个文件，不是 20 个组件</h2>
+  <table class="tbl">
+    <tr><th style="width:230px">新增</th><th>职责</th></tr>
+    <tr><td><code>lib/interactions/catalog.ts</code></td><td>触发器枚举 + 效果枚举 + 每条效果的<strong style="color:var(--text)">参数上限</strong>（tilt ≤6°、magnetic ≤8px 这类约束写进类型里，而不是写在注释里）</td></tr>
+    <tr><td><code>lib/interactions/presets.ts</code></td><td>三个预设包 = 三份 <code>Interaction[]</code></td></tr>
+    <tr><td><code>hooks/useInteractions.ts</code></td><td>读 <code>SiteConfig.interactions</code> → 解析预设 → <strong style="color:var(--text)">统一判断 reduced-motion / 访客关闭 / 断点</strong>，再挂载。当前那些散在各处的 <code>useMotionSafe()</code> 收敛到这里</td></tr>
+    <tr><td><code>components/FxToggle.tsx</code></td><td>页脚那个「让页面安静下来」的开关，写 <code>localStorage</code></td></tr>
+    <tr><td><code>layout.css</code> 追加</td><td>把 <code>--stagger-*</code> / <code>--move-*</code> 补进 token（现在只有 <code>--dur-*</code> / <code>--ease*</code>）</td></tr>
+  </table>
+  <p class="doc-sub" style="font-size:var(--fs-sm);margin-top:12px">
+    <strong style="color:var(--text)">注意这 4 个文件没有一个在加新功能</strong> —— 它们只是把已有的交互收进一个可查询、可批量开关、可配置的层。
+    之后再加「点击涟漪」「节日词标」「栏目占比环」都只是往 catalog 里加一条。
+  </p>
+
+  <h2>两份可点的设计稿</h2>
+  <div class="grid-2" style="margin-top:16px">
+    <a class="vcard" href="lab.html">
+      <div class="kicker">13 条可点</div>
+      <h3>交互实验室</h3>
+      <p>每条都标了触发器 / 效果 / 成本 / 降级行为，分成功能型与装饰型。
+      右上角开关一键关掉全部装饰型 —— <strong style="color:var(--text)">这就是把约束做成了可验证的东西</strong>。</p>
+      <div class="tags"><span class="pill gold">视差</span><span class="pill gold">倾斜</span><span class="pill gold">磁吸</span><span class="pill gold">光晕</span><span class="pill gold">乱码</span><span class="pill dim">+8 条</span></div>
+    </a>
+    <a class="vcard" href="../round5/pet-lab.html">
+      <div class="kicker">五阶段 · 角色动效那一类</div>
+      <h3>宠物行为实验室</h3>
+      <p>宠物不是独立的东西，是 <code>character</code> 效果的一个实例。行为预算、位置、降级都已在那边细设。</p>
+      <div class="tags"><span class="pill dim">4 物种</span><span class="pill dim">行为开关</span><span class="pill dim">反面对照</span></div>
+    </a>
+  </div>
+
+  <h2>要你拍板三件事</h2>
+
+  <div class="ask">
+    <h3>Q1 · 交互层的边界划在哪？</h3>
+    <p>这决定了要建多少基础设施，也决定了站主能配多少。</p>
+    <div class="opts">
+      <span class="opt rec">A. 建交互层（catalog + presets + useInteractions），交互变成数据（推荐）</span>
+      <span class="opt">B. 只补几条高价值交互，不做抽象</span>
+      <span class="opt">C. 只做约束与降级（分类 + 关闭开关），交互照旧一条条写</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">A 是唯一能回答「支持<strong style="color:var(--text)">更多</strong>交互」的方案；B 半年后又是一堆手写；C 解决不了扩展，但成本最低。</p>
+  </div>
+
+  <div class="ask">
+    <h3>Q2 · 默认预设选哪个？</h3>
+    <p>新站主默认拿到哪一档。</p>
+    <div class="opts">
+      <span class="opt rec">安静 quiet（默认）</span>
+      <span class="opt">有反应 lively</span>
+      <span class="opt">玩心 playful</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">我建议默认 <strong style="color:var(--text)">quiet</strong>：个人主页第一任务是让人读文章。想要花哨的站主自己去设置里开。</p>
+  </div>
+
+  <div class="ask">
+    <h3>Q3 · 访客的「安静开关」放哪？</h3>
+    <p>现在代码里完全没有这个出口。</p>
+    <div class="opts">
+      <span class="opt rec">A. 页脚一行文字链「让这个页面安静下来」（推荐）</span>
+      <span class="opt">B. 右下角常驻小图标</span>
+      <span class="opt">C. 只跟随系统 prefers-reduced-motion，不给手动开关</span>
+    </div>
+    <p style="margin-top:8px;font-size:12px">A 不占视觉、能被找到、也不打扰；B 又变成一个浮层要管理；C 等于把责任推给用户的系统设置。</p>
+  </div>
+
+  <div class="panel" style="margin-top:22px;display:flex;gap:12px;align-items:flex-start">
+    <svg class="ic ic-20" style="color:var(--accent);flex:none;margin-top:2px"><use href="#i-info"/></svg>
+    <p style="color:var(--text-dim);font-size:var(--fs-sm);line-height:1.8;margin:0">
+      这一轮同样<strong style="color:var(--text)">没有改任何产品代码</strong>。产物在 <code>docs/design/round6/</code>。<br>
+      能力清单全部对照真实代码：<code>hooks/</code> 只有 1 个文件、reduced-motion 有两套机制、动效 token 缺位移与错峰 —— 都在上面的「现状」里列了。
+    </p>
+  </div>
+</div>
+<script src="r6.js"></script>
+</body>
+</html>

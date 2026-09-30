@@ -18,7 +18,14 @@ import { loadUserProfile, saveUserProfile } from './userProfile';
 import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
 import type { Note, NoteTree, NoteVisibility } from '@webbook/shared';
-import { normalizeNote, normalizePlan } from '@webbook/shared';
+import {
+  isExpenseCategory,
+  isNotifyRepeat,
+  normalizeNote,
+  normalizePlan,
+  NOTIFY_DUE_WINDOW_DAYS,
+  USAGE_BACKFILL_MAX_DAYS,
+} from '@webbook/shared';
 import type { AIStrategiesConfig, SystemSettings } from '@webbook/shared';
 import {
   loadUserTree,
@@ -71,6 +78,25 @@ import {
 } from './circles';
 import { migrateLegacyToUser } from './migrateLegacy';
 import { runCronStrategies } from './aiStrategies';
+import {
+  loadUsageDay,
+  saveUsageDays,
+  loadUsageRange,
+  listUsageDates,
+  deleteUsageRange,
+  loadExpenseOverview,
+  saveExpensesBulk,
+  updateExpenseCategory,
+  deleteExpense,
+} from './tracking';
+import {
+  loadNotifyIndex,
+  createNotifyItem,
+  patchNotifyItem,
+  deleteNotifyItem,
+  getDueInstances,
+  markNotifyDelivered,
+} from './notify';
 import {
   requireAdmin,
   listAdminUsers,
@@ -299,6 +325,162 @@ export default {
           }
           throw e;
         }
+      }
+
+      /* ══════════ 手机采集数据（native-android-companion）══════════
+       *
+       * 三条数据线的共同纪律：
+       *   - 归属只取 JWT 里的 user.id，绝不采信请求体里的 userId（否则可越权读写他人数据）
+       *   - 未登录一律 unauthorized()
+       *   - 这些路径都在 data/users/{userId}/ 下，不经过任何 /api/public/* 出口，
+       *     因此天然满足"不通过公开途径暴露"（公开路由只读 tree/notes 的 public 可见性）
+       */
+
+      // ── 使用统计 ──
+      if (pathname === '/api/tracking/usage/sync' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => null)) as { days?: unknown } | null;
+        if (!body || !Array.isArray(body.days)) return json({ error: 'days required' }, 400);
+        // 上限保护：一次上报的日期数不应超过回溯窗口，避免被当作批量写入通道
+        if (body.days.length > USAGE_BACKFILL_MAX_DAYS * 4) {
+          return json({ error: 'too many days' }, 400);
+        }
+        const written = await saveUsageDays(env, user.id, body.days);
+        return json({ ok: true, written });
+      }
+      if (pathname === '/api/tracking/usage' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const date = url.searchParams.get('date');
+        const from = url.searchParams.get('from');
+        const to = url.searchParams.get('to');
+        if (date) {
+          const day = await loadUsageDay(env, user.id, date);
+          return json({ date, day });
+        }
+        if (!from || !to) return json({ error: 'date or from+to required' }, 400);
+        return json({ days: await loadUsageRange(env, user.id, from, to) });
+      }
+      if (pathname === '/api/tracking/usage/dates' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json({ dates: await listUsageDates(env, user.id) });
+      }
+      if (pathname === '/api/tracking/usage' && req.method === 'DELETE') {
+        if (!user) return unauthorized();
+        const from = url.searchParams.get('from');
+        const to = url.searchParams.get('to');
+        if (!from || !to) return json({ error: 'from+to required' }, 400);
+        return json({ ok: true, deleted: await deleteUsageRange(env, user.id, from, to) });
+      }
+
+      // ── 消费记账 ──
+      if (pathname === '/api/tracking/expenses/bulk' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => null)) as { expenses?: unknown } | null;
+        if (!body || !Array.isArray(body.expenses)) {
+          return json({ error: 'expenses required' }, 400);
+        }
+        // 一次提交的批量上限：既防滥用，也保证单次请求不会拖垮 Worker
+        if (body.expenses.length > 200) return json({ error: 'too many expenses' }, 400);
+        return json(await saveExpensesBulk(env, user.id, body.expenses));
+      }
+      if (pathname === '/api/tracking/expenses' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const month = url.searchParams.get('month') ?? new Date().toISOString().slice(0, 7);
+        return json(await loadExpenseOverview(env, user.id, month));
+      }
+      const expensePatch = pathname.match(/^\/api\/tracking\/expenses\/([^/]+)$/);
+      if (expensePatch && req.method === 'PATCH') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => null)) as { category?: unknown } | null;
+        if (!body || !isExpenseCategory(body.category)) {
+          return json({ error: 'valid category required' }, 400);
+        }
+        const updated = await updateExpenseCategory(
+          env,
+          user.id,
+          expensePatch[1]!,
+          body.category,
+        );
+        if (!updated) return json({ error: 'not found' }, 404);
+        return json(updated);
+      }
+      if (expensePatch && req.method === 'DELETE') {
+        if (!user) return unauthorized();
+        const removed = await deleteExpense(env, user.id, expensePatch[1]!);
+        if (!removed) return json({ error: 'not found' }, 404);
+        return json({ ok: true, removed });
+      }
+
+      // ── 到点提醒（读写 notify.json，与 reminders.json 完全隔离）──
+      if (pathname === '/api/notify' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        return json(await loadNotifyIndex(env, user.id));
+      }
+      if (pathname === '/api/notify' && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => null)) as {
+          title?: unknown;
+          body?: unknown;
+          dueAt?: unknown;
+          repeat?: unknown;
+        } | null;
+        if (!body || typeof body.title !== 'string' || !body.title.trim()) {
+          return json({ error: 'title required' }, 400);
+        }
+        const item = await createNotifyItem(env, user.id, {
+          title: body.title,
+          ...(typeof body.body === 'string' ? { body: body.body } : {}),
+          ...(typeof body.dueAt === 'string' ? { dueAt: body.dueAt } : {}),
+          ...(isNotifyRepeat(body.repeat) ? { repeat: body.repeat } : {}),
+        });
+        if (!item) return json({ error: 'invalid reminder' }, 400);
+        return json(item, 201);
+      }
+      // 注意：/due 必须在 /api/notify/:id 之前匹配，否则会被当成 id
+      if (pathname === '/api/notify/due' && req.method === 'GET') {
+        if (!user) return unauthorized();
+        const raw = Number(url.searchParams.get('windowDays'));
+        const windowDays =
+          Number.isFinite(raw) && raw > 0 && raw <= 30 ? Math.floor(raw) : NOTIFY_DUE_WINDOW_DAYS;
+        return json(await getDueInstances(env, user.id, windowDays));
+      }
+      const notifyItemMatch = pathname.match(/^\/api\/notify\/([^/]+)$/);
+      if (notifyItemMatch && req.method === 'PATCH') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+        if (!body) return json({ error: 'body required' }, 400);
+        const patch: Parameters<typeof patchNotifyItem>[3] = {};
+        if (typeof body.title === 'string') patch.title = body.title;
+        if (typeof body.body === 'string') patch.body = body.body;
+        if (typeof body.done === 'boolean') patch.done = body.done;
+        if (isNotifyRepeat(body.repeat)) patch.repeat = body.repeat;
+        if (body.dueAt === null) patch.dueAt = null;
+        else if (typeof body.dueAt === 'string') patch.dueAt = body.dueAt;
+        // 送达回写走独立端点，不在这里暴露，避免客户端伪造"已送达"
+        const updated = await patchNotifyItem(env, user.id, notifyItemMatch[1]!, patch);
+        if (!updated) return json({ error: 'not found' }, 404);
+        return json(updated);
+      }
+      if (notifyItemMatch && req.method === 'DELETE') {
+        if (!user) return unauthorized();
+        const ok = await deleteNotifyItem(env, user.id, notifyItemMatch[1]!);
+        if (!ok) return json({ error: 'not found' }, 404);
+        return json({ ok: true });
+      }
+      // 送达回写：手机在触发后调用，使云端可区分"已排程"与"已送达"
+      const notifyDeliveredMatch = pathname.match(/^\/api\/notify\/([^/]+)\/delivered$/);
+      if (notifyDeliveredMatch && req.method === 'POST') {
+        if (!user) return unauthorized();
+        const body = (await req.json().catch(() => null)) as { at?: unknown } | null;
+        const at = typeof body?.at === 'string' ? body.at : undefined;
+        const updated = await markNotifyDelivered(
+          env,
+          user.id,
+          notifyDeliveredMatch[1]!,
+          at,
+        );
+        if (!updated) return json({ error: 'not found' }, 404);
+        return json(updated);
       }
 
       // ── Admin ──

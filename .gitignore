@@ -17,9 +17,10 @@ apps/android-twa/**/*.apk
 apps/android-twa/app/build/
 apps/android-twa/build/
 apps/android-twa/.gradle/
-.agents/
-.cursor/
-openspec/
 
-# TypeScript ����������Ϣ��ÿ�ι������䣬��Ӧ��⣩
+# 注：.agents/ .cursor/ openspec/ 自 2026-09-26 起纳入版本管理。
+# 它们只含文本（技能说明、Cursor 命令、提案/设计/规格），无密钥；
+# 入库后换机 clone 即可继续 OpenSpec 工作流，不必手工搬运。
+
+# TypeScript 增量构建信息（每次构建都变，不应入库）
 *.tsbuildinfo

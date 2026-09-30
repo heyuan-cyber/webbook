@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 版一「静」Quiet Craft</title>
+<link rel="stylesheet" href="r3.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-book"><path d="M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></g>
+<g id="i-folder"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>
+<g id="i-file"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></g>
+<g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+<g id="i-check"><path d="M4 12.5l5 5L20 6.5"/></g>
+<g id="i-checksq"><path d="M9 11.5l2.5 2.5L20 8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/></g>
+<g id="i-cr"><path d="M9 6l6 6-6 6"/></g>
+<g id="i-cd"><path d="M6 9l6 6 6-6"/></g>
+<g id="i-search"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M16.2 16.2L21 21"/></g>
+<g id="i-tree"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></g>
+<g id="i-clock"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 8v4.5l3 1.8"/></g>
+<g id="i-user"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M5 20a7 7 0 0 1 14 0"/></g>
+<g id="i-users"><path d="M9 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 7"/><path d="M18 20a6 6 0 0 0-3-5.2"/></g>
+<g id="i-sliders"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><path d="M15 5v4M9 15v4"/></g>
+<g id="i-globe"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M4 12h16"/><path d="M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4z"/></g>
+<g id="i-lock"><path d="M6 11h12v9H6z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></g>
+<g id="i-sparkles"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 16l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-grip"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></g>
+<g id="i-type"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 三阶段 · 版一 / 四</div>
+  <h1 class="doc-h1">「静」Quiet Craft</h1>
+  <p class="doc-sub">把装饰全部拿掉，只留结构。<strong style="color:var(--text)">动效只出现在状态变化的那一刻</strong> —— 没有入场动画、没有错峰、没有视差。它的目标不是「好看」，是<strong style="color:var(--text)">写作三小时之后仍然不打扰你</strong>。</p>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row" style="flex-wrap:wrap;gap:22px">
+      <div><div class="kicker">气质</div><p style="color:var(--text)">克制、纸感、字重对比</p></div>
+      <div><div class="kicker">动效预算</div><p style="color:var(--text)">只有 <code>--dur-2</code> (140ms)，无编排</p></div>
+      <div><div class="kicker">参照</div><p style="color:var(--text)">Bear / iA Writer / 纸质笔记本</p></div>
+      <div><div class="kicker">适合</div><p style="color:var(--text)">每天长时间写作的人</p></div>
+    </div>
+  </div>
+
+  <h2>样例屏：笔记本（所有交互都可以点）</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">目录行、轨道、标签页都能点；点一下看选中态是怎么「不声不响」地换过去的。整个页面没有任何自动播放的东西。</p>
+
+  <div class="frame">
+    <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url" data-v="quiet">webbook / app · 版一「静」</span></div>
+    <div class="frame-body" data-v="quiet">
+      <div class="app">
+        <nav class="rail">
+          <div class="rail-logo"><svg class="i i-20"><use href="#i-book"/></svg></div>
+          <button class="rail-item on"><span class="rail-ind"></span><svg class="i i-20"><use href="#i-tree"/></svg>笔记</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-globe"/></svg>博客</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-users"/></svg>圈子</button>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-user"/></svg>我</button>
+          <div class="rail-spacer"></div>
+          <button class="rail-item"><svg class="i i-20"><use href="#i-sliders"/></svg>皮肤</button>
+          <div class="rail-avatar on">何</div>
+        </nav>
+        <aside class="sb">
+          <div class="sb-head"><span class="sb-title">目录</span><span class="sb-count">37</span></div>
+          <div class="sb-search"><input class="input" placeholder="搜索笔记…"></div>
+          <div class="sb-body">
+            <div class="tree-row" style="--d:0"><span class="tw"><svg class="i i-12"><use href="#i-cd"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>基础游戏开发</div>
+            <div class="tree-row" style="--d:1"><span class="tw"><svg class="i i-12"><use href="#i-cd"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>渲染开发</div>
+            <div class="tree-row" style="--d:2"><span class="tw"><svg class="i i-12"><use href="#i-cd"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>基础</div>
+            <div class="tree-row" style="--d:3"><span class="tw"><svg class="i i-12"><use href="#i-cd"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>Gameplay开发</div>
+            <div class="tree-row on" style="--d:4"><span class="tw"></span><svg class="i i-14" style="color:var(--accent)"><use href="#i-file"/></svg><span class="tl">战斗演出编辑器架构设计</span>
+              <span class="fb"><span><svg class="i i-12"><use href="#i-checksq"/></svg></span><span><svg class="i i-12"><use href="#i-grip"/></svg></span></span>
+            </div>
+            <div class="tree-row" style="--d:1"><span class="tw"></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-file"/></svg>光照管线笔记</div>
+            <div class="tree-row" style="--d:0"><span class="tw"><svg class="i i-12"><use href="#i-cr"/></svg></span><svg class="i i-14" style="color:var(--text-muted)"><use href="#i-folder"/></svg>工具链</div>
+          </div>
+        </aside>
+        <div class="stage" style="background:var(--bg)">
+          <div class="stage-grid"></div>
+          <header class="tb">
+            <div class="crumb"><span>基础游戏开发</span><span class="sep">/</span><span>渲染开发</span><span class="sep">/</span><span>Gameplay开发</span><span class="sep">/</span><b>战斗演出编辑器架构设计</b></div>
+            <div class="tb-spacer"></div>
+            <span class="pill ok"><svg class="i i-12"><use href="#i-check"/></svg>已同步</span>
+            <button class="btn btn-ghost btn-icon"><svg class="i i-14"><use href="#i-clock"/></svg></button>
+            <button class="btn btn-sm"><svg class="i i-12"><use href="#i-lock"/></svg>私密</button>
+          </header>
+          <div style="flex:1;overflow:auto;padding:34px clamp(32px,8vw,120px) 60px;position:relative;z-index:1">
+            <div style="max-width:720px">
+              <h1 style="font-size:var(--fs-3xl);margin-bottom:10px">战斗演出编辑器架构设计</h1>
+              <div class="meta" style="margin:0 0 30px">
+                <span class="mono">2026-09-24</span><span class="dot"></span><span>12 个块</span>
+                <span class="dot"></span><span>2 条连线</span><span class="dot"></span><span class="mono">a3f19c2</span>
+              </div>
+              <p style="font-size:var(--fs-lg);line-height:1.9;color:var(--text-dim);margin-bottom:26px">
+                把战斗演出从「帧驱动」改成「时间轴 + 事件驱动」，编辑器侧只描述演出意图，运行时负责插值。
+              </p>
+              <div style="padding:18px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:26px">
+                <div class="kicker" style="margin-bottom:8px">标注</div>
+                <p style="color:var(--text-dim);line-height:1.8">时间轴精度定在 1/60 秒；编辑器只存关键帧，插值曲线随轨道保存。</p>
+              </div>
+              <h3 style="font-size:var(--fs-xl);margin-bottom:12px">分层</h3>
+              <div style="display:flex;flex-direction:column;gap:0">
+                <div style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border-subtle)">
+                  <span class="mono" style="color:var(--accent);font-size:var(--fs-xs);width:22px">01</span>
+                  <div><strong style="font-weight:600">轨道层</strong><span style="color:var(--text-muted)"> — 纯数据，可序列化，进 git</span></div>
+                </div>
+                <div style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border-subtle)">
+                  <span class="mono" style="color:var(--accent);font-size:var(--fs-xs);width:22px">02</span>
+                  <div><strong style="font-weight:600">求值层</strong><span style="color:var(--text-muted)"> — 每帧从轨道采样，产出姿态</span></div>
+                </div>
+                <div style="display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--border-subtle)">
+                  <span class="mono" style="color:var(--accent);font-size:var(--fs-xs);width:22px">03</span>
+                  <div><strong style="font-weight:600">表现层</strong><span style="color:var(--text-muted)"> — 只消费姿态，不反向写</span></div>
+                </div>
+              </div>
+              <p style="color:var(--text-muted);font-size:var(--fs-sm);margin-top:26px">正文 15px / 行高 1.9 / 行宽 720px。这一版把「块」的画框也去掉了 —— 用分割线代替卡片。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-note"><span class="callout">核心差别</span> 无卡片阴影、无网格底纹、无背板模糊（<code>backdrop-filter</code> 全部关闭）· 正文用分割线而不是盒子 · 按钮不再有渐变</p>
+
+  <h2>这一版的动效：只有三条规则</h2>
+  <div class="grid-2">
+    <div class="demo" data-anim="indicator" data-auto>
+      <div class="demo-stage">
+        <div class="ind-track">
+          <div class="ind-thumb"></div>
+          <button class="on">全部</button><button>公开</button><button>私密</button>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">① 选中态滑动</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">唯一保留的「位移动画」。用 140ms 的轻微过冲（<code>--ease-spring</code>）告诉手指「点到了」—— 点上面的 tab 试试。其他所有选中态都是纯颜色切换，没有位移。</p>
+    </div>
+
+    <div class="demo" data-anim="check" data-auto>
+      <div class="demo-stage" style="flex-direction:column;align-items:flex-start;gap:14px;padding:20px">
+        <div class="row" style="gap:10px"><span class="ck-box"><svg class="i i-12"><use href="#i-check"/></svg></span><span class="ck-text">时间轴精度定在 1/60 秒</span></div>
+        <div class="row" style="gap:10px"><span class="ck-box"><svg class="i i-12"><use href="#i-check"/></svg></span><span class="ck-text">插值曲线随轨道保存</span></div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">② 勾选与删除线</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">勾选框用 140ms 的 <code>--ease-spring</code> 弹一下；删除线用 <code>width: 0 → 100%</code> 划过去，而不是瞬间出现。这是「静」版唯一允许的愉悦感。</p>
+    </div>
+
+    <div class="demo" data-anim="save" data-mode="toggle">
+      <div class="demo-stage"><button class="sv idle"><span class="spin"><svg class="i i-12"><use href="#i-clock"/></svg></span>同步中…</button></div>
+      <div class="demo-bar"><span class="demo-name">③ 保存状态 morph</span><span class="play" data-play>点我切换</span></div>
+      <p class="demo-desc">同步中 → 已同步：底色与文字色用 200ms 交叉，图标原地替换。<strong style="color:var(--text)">不做弹出、不做位移</strong> —— 状态提示不该抢注意力。</p>
+    </div>
+
+    <div class="demo" data-anim="skeleton" data-auto>
+      <div class="demo-stage" style="padding:18px;flex-direction:column;align-items:stretch;gap:8px">
+        <div style="position:relative;height:66px">
+          <div class="skl-bone" style="position:absolute;inset:0">
+            <div style="height:13px;width:42%;border-radius:4px;background:var(--bg-elev-2);margin-bottom:9px"></div>
+            <div style="height:9px;width:86%;border-radius:4px;background:var(--bg-elev-2);margin-bottom:6px"></div>
+            <div style="height:9px;width:60%;border-radius:4px;background:var(--bg-elev-2)"></div>
+          </div>
+          <div class="skl-real" style="position:absolute;inset:0">
+            <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">战斗演出编辑器架构设计</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-muted);line-height:1.7">时间轴 + 事件驱动，编辑器只描述意图。</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-bar"><span class="demo-name">④ 骨架 → 内容</span><button class="play" data-play><svg class="i i-12"><use href="#i-check"/></svg>重播</button></div>
+      <p class="demo-desc">骨架淡出与内容淡入<strong style="color:var(--text)">同时进行</strong>（各 200ms，交叉而非接力），避免出现「先空一下再出现」的闪烁。</p>
+    </div>
+  </div>
+
+  <h2>代价与风险</h2>
+  <table class="tbl">
+    <tr><th style="width:180px">项</th><th>说明</th></tr>
+    <tr><td><strong>不做的动效</strong></td><td>列表错峰、页面转场、视差、镜头飞行、共享元素 —— 全部没有。列表一次成型</td></tr>
+    <tr><td><strong>省下的</strong></td><td>合成层最少；长列表滚动不掉帧；写作时零干扰</td></tr>
+    <tr><td><strong>风险</strong></td><td>第一次打开会觉得「有点朴素」。需要用<strong style="color:var(--text)">排版</strong>（字号、行高、字重、留白节奏）而不是动效来撑住质感</td></tr>
+    <tr><td><strong>和现有实现的差距</strong></td><td>要去掉 <code>.card</code> 阴影、<code>.stage-grid</code>、<code>topbar</code> 的 <code>backdrop-filter</code>、<code>btn-primary</code> 的渐变；<code>.reveal</code>（0.5s 上移）在这一版要关掉</td></tr>
+  </table>
+
+  <div class="panel" style="margin-top:22px">
+    <div class="row" style="flex-wrap:wrap;gap:14px">
+      <button class="btn" data-reduce-toggle aria-pressed="false"><svg class="i i-14"><use href="#i-eye"/></svg><span data-reduce-label>正常动效</span></button>
+      <button class="btn btn-ghost" data-play-all><svg class="i i-14"><use href="#i-sparkles"/></svg>全部重播</button>
+      <span style="font-size:var(--fs-xs);color:var(--text-muted)" data-env-reduced>系统当前：正常</span>
+    </div>
+    <p class="demo-desc" style="margin-top:10px">点左边按钮可以在<strong style="color:var(--text)">同一台机器上</strong>切换动效开关，直接看降级后的样子（真实用户由系统偏好控制）。</p>
+  </div>
+
+  <p style="margin-top:26px"><a href="INDEX.html">← 回四版对照</a>　·　<a href="v2-flow.html">看版二「流」→</a></p>
+</div>
+<script src="r3.js"></script>
+</body>
+</html>

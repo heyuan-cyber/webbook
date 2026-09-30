@@ -474,6 +474,22 @@ WebBook 是从单用户版本迁移过来的。旧数据路径 `data/tree.json` 
 | `GET /api/feishu/folders` · `POST /api/feishu/export` | 飞书目录 / 导出（Markdown zip） |
 | `GET /api/ai/jobs/:id` | 异步生成任务轮询（文图视频3D） |
 
+### 5.6 手机伴侣（需登录，数据仅本人可见）
+
+详见 §十一。路径都在 `data/users/{userId}/` 下，不经由任何 `/api/public/*` 出口。
+
+| 路径 | 作用 |
+|------|------|
+| `GET`/`POST /api/notify` | 提醒列表 / 创建 |
+| `PATCH`/`DELETE /api/notify/:id` | 修改 / 删除（**不含送达回写**） |
+| `GET /api/notify/due?windowDays=7` | 窗口内待触发实例（重复规则已展开）+ 已错过项 |
+| `POST /api/notify/:id/delivered` | 送达回写——**只有这个端点能写 `notifiedAt`** |
+| `POST /api/tracking/usage/sync` · `GET /api/tracking/usage` | 使用统计上报 / 读取（`?date=` 或 `?from=&to=`） |
+| `GET /api/tracking/usage/dates` · `DELETE /api/tracking/usage` | 已有日期列表 / 清理区间 |
+| `POST /api/tracking/expenses/bulk` | 批量提交（服务端一次 merge，并做规则/AI 归类） |
+| `GET /api/tracking/expenses?month=` | 月度汇总 + 明细 + 规则 |
+| `PATCH`/`DELETE /api/tracking/expenses/:id` | 改类别（并沉淀规则）/ 删误记 |
+
 ---
 
 ## 六、一次完整的「让所有人访问到」链路
@@ -663,10 +679,15 @@ npm run dev:api    # API   http://localhost:8787（.dev.vars + [ai] binding）
 | 改了什么 | 怎么上线 |
 |----------|----------|
 | 前端 `apps/web/**` | `git push` → GitHub Actions |
-| Worker `workers/api/**` | `npx wrangler deploy` |
+| Worker `workers/api/**` | `npx wrangler deploy`（或 `npm run deploy:api`） |
 | 密钥 | `wrangler secret put <NAME>` |
 | 管理员邮箱 | 改 `wrangler.toml` + `deploy.yml` 后前者 `wrangler deploy`，后者 `git push` |
 | 仅数据仓笔记 | 在 App 里编辑保存即可，无需重新部署 |
+| **Android 宿主 `apps/android-cap/**`** | `npm run android:companion`（见 §十四） |
+
+> ⚠️ **Worker 必须显式部署才生效**。前端连的是线上 Worker；本地改完 `workers/api`
+> 若只跑 `typecheck` 而不 `deploy`，线上仍是旧版本——**新路由会返回 404，而本地一切正常**。
+> 这类"本地通过、线上 404"最容易误判成代码 bug。已实测过一次。
 
 ### 目录树并发语义变更的部署顺序（重要）
 
@@ -688,7 +709,106 @@ npm run dev:api    # API   http://localhost:8787（.dev.vars + [ai] binding）
 
 ---
 
-## 十一、费用估计
+## 十一、Android 宿主（Capacitor）
+
+### 11.1 为什么不是 TWA
+
+原 APK 是 **TWA**：它本质是 **Chrome 的一个标签页**，跑在 Chrome 进程内，应用自身
+**不持有任何系统权限**。因此拿不到到点提醒、使用统计、通知监听这三类能力——
+它们在 Web 沙箱里没有任何入口。
+
+`apps/android-cap` 用 **Capacitor** 给同一个网页套一个**自有进程**，通过插件把系统能力
+交给 Web 层。**网页端不重写**。TWA 工程 `apps/android-twa` 保留可用，作为回退路径。
+
+### 11.2 加载方式：打包进包（不用 `server.url`）
+
+`capacitor.config.ts` 的 `webDir` 指向 `../web/dist`，APK **自带网页**。
+
+**为什么不远程加载**：远程路径走 `handleProxyRequest`，注入 bridge 有一个额外前提
+（请求 `Accept` 头含 `text/html`）。条件不满足时**页面照常渲染，只是
+`window.Capacitor` 为 undefined** —— 所有原生能力静默失效，界面上看不出错。
+本地资产路径按扩展名判定、无条件注入，且已真机验证。
+
+**代价**：网页改动需重新出包。换来离线可用、启动更快、不依赖 Pages 可达性。
+
+### 11.3 构建
+
+```powershell
+npm run android:companion           # 自动构建 apps/web 再打包
+npm run android:companion:probe     # 出诊断探针包（排查原生能力用）
+```
+
+产物在 `apps/android-cap/dist/`。debug 包用 Android 默认调试签名，包名
+`io.github.heyuan_cyber.webbook`，**与既有 TWA（`.twa`）包名不同，可并存安装**。
+
+> **两个踩过的坑**：
+> 1. `@capacitor/app` 这类插件必须同时装在 **`apps/android-cap`**（原生侧靠它发现插件）。
+>    只装 `apps/web` 会导致前端代码进了包、`capacitor.plugins.json` 却是空的——
+>    表现为"代码在但插件不存在"的静默失败。
+> 2. `cap copy` 必须在 `apps/android-cap` 目录下执行，否则报
+>    `android platform has not been added yet`。
+
+### 11.4 四个权限
+
+都需要**在系统设置里手动授予**，且互相独立（缺一项只影响对应功能）。
+
+| 权限 | 路径 | 缺失后果 |
+|------|------|----------|
+| 使用情况访问 | 设置 → 特殊应用权限 → 使用情况访问 | 使用统计拿不到数据 |
+| 通知使用权 | 设置 → 通知 → 通知使用权 | 支付不被记录 |
+| **通知展示权限** | 设置 → 应用 → WebBook → 通知 | **提醒会响，但你收不到** |
+| 精确闹钟 | 设置 → 应用 → WebBook → 闹钟和提醒 | 提醒可能被延迟数分钟 |
+
+> **通知展示权限**在真机（小米 23049RAD8C / Android 15）上默认被拒。此时闹钟照常触发、
+> `AlarmReceiver` 照常执行，但 `nm.notify()` 抛 `SecurityException`——**用户什么都看不到**。
+> 排程成功、触发成功、结果为零，是最难排查的一类失效。因此提醒页会在该状态下显示醒目提示。
+
+**两个不会报错的坑**：
+- 未授予通知使用权时，系统**根本不绑定**监听服务且不报错。代码里"已授权"与"已连接"
+  必须分开检查，否则会把"没授权"误判成"监听坏了"。
+- `PACKAGE_USAGE_STATS` 是**特殊权限**（AppOps），`uses-permission` 只是声明，
+  不去系统设置里开就永远拿不到数据。
+
+### 11.5 数据仓新增目录
+
+```
+data/users/{userId}/
+├── notify.json              ← 到点提醒（**不是** reminders.json，见下）
+├── usage/
+│   ├── 2026-09-25.json      ← 一天一个分片
+│   └── 2026-09-26.json
+└── expenses/
+    ├── 2026-09.json         ← 一个月一个分片
+    └── rules.json           ← 商户 → 类别 规则
+```
+
+**为什么提醒不用 `reminders.json`**：那个文件归 `webbook-node-planner` 的规划迁移所有。
+其 `mergeReminders` 的过滤器是「有 `id` 且有 `text`」，会在用户首次加载 `/api/plan`
+时把命中的条目**永久**并入 `plan.json`（无论有无条目都会落下 `migratedReminders` 标记，
+因此污染不可逆）。共用文件会让新版提醒被静默吞成规划任务。
+
+**为什么按天/月分片**：唯一持久层是 GitHub Contents API（逐文件读改写，每次写入产生一个
+commit）。单文件方案每次追加都要读写全部历史；分片则新增一天/一月不触碰既有分片。
+
+### 11.6 新增 API
+
+| 路径 | 作用 |
+|------|------|
+| `GET /api/notify` · `POST /api/notify` | 提醒列表 / 创建 |
+| `PATCH /api/notify/:id` · `DELETE /api/notify/:id` | 修改 / 删除（**不含送达回写**） |
+| `GET /api/notify/due?windowDays=7` | 窗口内待触发实例（重复规则已展开）+ 已错过项 |
+| `POST /api/notify/:id/delivered` | **送达回写**——只有这个端点能写 `notifiedAt` |
+| `POST /api/tracking/usage/sync` · `GET /api/tracking/usage` | 使用统计上报 / 读取 |
+| `GET /api/tracking/usage/dates` · `DELETE /api/tracking/usage` | 已有日期 / 清理区间 |
+| `POST /api/tracking/expenses/bulk` | 批量提交（服务端一次 merge + 归类） |
+| `GET /api/tracking/expenses` · `PATCH`/`DELETE /:id` | 月度汇总 / 改类别 / 删误记 |
+
+> **为什么送达回写单独一个端点**：若把 `notifiedAt` 放进通用 `PATCH`，客户端就能伪造
+> "已送达"——那"已排程 vs 已送达"的区分（spec 明确要求）就失去意义了。
+
+---
+
+## 十二、费用估计
 
 | 服务 | 免费额度 | 个人够用？ |
 |------|----------|-----------|
@@ -700,7 +820,7 @@ npm run dev:api    # API   http://localhost:8787（.dev.vars + [ai] binding）
 
 ---
 
-## 十二、代码地图
+## 十三、代码地图
 
 ```
 WebBook/
@@ -748,7 +868,7 @@ WebBook/
 
 ---
 
-## 十三、术语速查
+## 十四、术语速查
 
 | 术语 | 一句话 |
 |------|--------|
@@ -767,7 +887,7 @@ WebBook/
 
 ---
 
-## 十四、当前线上地址
+## 十五、当前线上地址
 
 | 项目 | 地址 |
 |------|------|

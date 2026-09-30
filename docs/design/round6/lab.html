@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>WebBook 设计稿 · 交互实验室</title>
+<link rel="stylesheet" href="r6.css">
+<style>
+  .night-stage .n-day{display:block}
+  .night-stage .n-night{display:none}
+  .night-stage.revealed .n-day{display:none}
+  .night-stage.revealed .n-night{display:block;color:var(--accent)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-play"><path d="M8 5l11 7-11 7z"/></g>
+<g id="i-eye"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></g>
+<g id="i-moon"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></g>
+<g id="i-info"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/><path d="M12 11v5M12 8h.01"/></g>
+<g id="i-x"><path d="M6 6l12 12M18 6L6 18"/></g>
+</defs></svg>
+
+<div class="doc doc-wide">
+  <div class="kicker">设计稿 · 六阶段 · 交互层</div>
+  <h1 class="doc-h1">交互实验室</h1>
+  <p class="doc-sub">
+    13 条可点的交互。<strong style="color:var(--text)">每条都标了触发器、效果、成本、降级行为</strong>，
+    并且分成「功能型」和「装饰型」—— 右上角那个开关会把装饰型全部关掉，功能型留着。
+    这就是把「约束」做成可验证的东西，而不是写在文档里的一句话。
+  </p>
+
+  <div class="panel row" style="flex-wrap:wrap;gap:12px;margin-top:18px">
+    <button class="btn" data-fx-toggle aria-pressed="false"><svg class="ic ic-14"><use href="#i-x"/></svg><span data-fx-label>装饰型交互：开启</span></button>
+    <button class="btn" data-reduce-toggle><svg class="ic ic-14"><use href="#i-moon"/></svg><span data-reduce-label>减少动态：关闭</span></button>
+    <span style="font-size:var(--fs-xs);color:var(--text-muted)">
+      <span class="pill fx">功能型</span> 承载信息，关掉会丢东西　
+      <span class="pill deco">装饰型</span> 表达过程，关掉只少了感觉
+    </span>
+  </div>
+
+  <div class="lab-grid">
+
+    <!-- 1 视差 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">① Hero 视差</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage" data-par>
+        <div class="par-stage">
+          <div class="par-layer par-grid" data-par-depth="0.35"></div>
+          <div class="par-layer par-word" data-par-depth="1">何源</div>
+          <div class="par-layer par-band" data-par-depth="1.8"><i></i></div>
+        </div>
+      </div>
+      <div class="demo-foot">
+        <span class="pill dim">trigger · scroll</span><span class="pill dim">effect · parallax</span><span class="pill dim">3 层</span>
+      </div>
+      <p class="demo-desc">背景网格 / 词标 / 分隔线三层不同速率。<strong style="color:var(--text)">速率差控制在 0.35×–1.8×</strong>，超过 2× 会让人感到"页面散了"。滚动这个 demo 所在的页面区域就能看到。</p>
+      <p class="wire">降级：层位移归零，三层重合 → 视觉上等同静态海报<br>成本：passive scroll + rAF 节流，只写 transform</p>
+    </div>
+
+    <!-- 2 光标光晕 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">② 光标光晕</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage" data-spotlight>
+        <div class="spot-glow"></div>
+        <div class="spot-card">把鼠标移进来</div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · pointer</span><span class="pill dim">effect · spotlight</span></div>
+      <p class="demo-desc">一圈柔光跟着光标。<strong style="color:var(--text)">用 240ms 缓动跟随，不是实时跟手</strong> —— 实时跟手会有"黏住鼠标"的廉价感。只改 CSS 变量，不触发重排。</p>
+      <p class="wire">降级：光晕隐藏（不占层）<br>成本：pointermove + rAF 节流；离开即停止写入</p>
+    </div>
+
+    <!-- 3 卡片倾斜 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">③ 卡片倾斜</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage">
+        <div class="tilt-wrap"><div class="tilt-card" data-tilt>悬停卡片</div></div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · hover</span><span class="pill dim">effect · tilt</span><span class="pill dim">≤6°</span></div>
+      <p class="demo-desc">3D 倾斜。<strong style="color:var(--text)">上限 6°</strong> —— 超过 10° 文字会开始变形、可读性下降。透视 700px（小于 500px 会像广角镜头一样夸张）。</p>
+      <p class="wire">降级：卡片保持水平<br>成本：pointermove；离开时清 inline transform</p>
+    </div>
+
+    <!-- 4 磁吸 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">④ 磁吸按钮</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage">
+        <div class="mag-wrap"><button class="mag-btn" data-magnetic>靠近我</button></div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · pointer:near</span><span class="pill dim">effect · magnetic</span><span class="pill dim">≤8px</span></div>
+      <p class="demo-desc">光标进入 120px 半径时按钮被"吸"过去，<strong style="color:var(--text)">位移上限 8px</strong>，离开用 <code>--ease-spring</code> 弹回。只在主 CTA 上用 —— 每个按钮都吸会让人找不准。</p>
+      <p class="wire">降级：按钮不动<br>成本：pointermove；<b>必须保留原生点击热区</b>，位移只改视觉</p>
+    </div>
+
+    <!-- 5 字符乱码 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">⑤ 词标乱码归位</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage">
+        <div class="scr-word" data-scramble="何源"><span>何</span><span>源</span></div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · hover</span><span class="pill dim">effect · scramble</span><span class="pill dim">一次性</span></div>
+      <p class="demo-desc">鼠标移到词标上，字符短暂乱码再逐位归位 —— 读起来像"重新签名"。<strong style="color:var(--text)">每个字错峰 26ms</strong>，总时长 ≈ 300ms。同一次悬停只播一遍，不循环。</p>
+      <p class="wire">降级：不触发，文字保持原样<br>成本：纯文本替换；不涉及动画帧</p>
+    </div>
+
+    <!-- 6 错峰 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">⑥ 列表错峰入场</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage">
+        <div class="stg-stage">
+          <div class="stg-item"><span class="sq"></span>战斗演出编辑器架构设计</div>
+          <div class="stg-item"><span class="sq"></span>光照管线笔记</div>
+          <div class="stg-item"><span class="sq"></span>战损贴花使用指南</div>
+          <div class="stg-item"><span class="sq"></span>GS 性能排查工具</div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · scroll:enter</span><span class="pill dim">effect · stagger</span><button class="btn btn-sm" data-replay><svg class="ic ic-12"><use href="#i-play"/></svg>重播</button></div>
+      <p class="demo-desc">步长 44ms、位移 12px、单条 300ms。<strong style="color:var(--text)">必须封顶</strong>：<code>delay = min(index, 8) × step</code>，否则第 20 项要等近 1 秒。</p>
+      <p class="wire">降级：内容一次成形<br>成本：IntersectionObserver 一次，播完即断开</p>
+    </div>
+
+    <!-- 7 数据脉搏 -->
+    <div class="demo">
+      <div class="demo-head"><span class="demo-name">⑦ 站点脉搏</span><span class="sp"></span><span class="pill fx">功能型</span></div>
+      <div class="demo-stage" data-pulse>
+        <div class="pul-stage">
+          <div class="pul">
+            <i></i><i></i><i class="l1"></i><i></i><i></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i>
+            <i></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i></i><i></i>
+            <i class="l2"></i><i></i><i></i><i class="l1"></i><i></i><i></i><i class="l3"></i><i></i><i></i><i class="l1"></i>
+            <i></i><i class="l2"></i><i></i><i></i><i></i><i class="l1"></i><i></i><i></i><i class="l2"></i><i></i>
+            <i></i><i></i><i class="l1"></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i></i><i class="l1"></i><i></i>
+            <i></i><i class="l2"></i><i></i><i class="l1"></i><i></i><i></i><i></i><i class="l3"></i><i></i><i></i>
+          </div>
+          <div class="pul-tip">悬停任意一格</div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · hover</span><span class="pill dim">effect · data-viz</span><span class="pill dim">零新字段</span></div>
+      <p class="demo-desc">60 天更新热力。<strong style="color:var(--text)">数据直接来自已有的 <code>posts[].updatedAt</code></strong>，不需要任何新字段，也不需要请求。</p>
+      <p class="wire">降级：颜色仍然保留（它是信息不是过程），只去掉 hover 放大<br>成本：纯 CSS，无 JS</p>
+    </div>
+
+    <!-- 8 数字到位 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">⑧ 数字到位</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage">
+        <div class="cnt-stage">
+          <div class="cnt-cell"><div class="cnt-num">12</div><div class="cnt-lbl">公开文章</div></div>
+          <div class="cnt-cell"><div class="cnt-num">37</div><div class="cnt-lbl">笔记总数</div></div>
+          <div class="cnt-cell"><div class="cnt-num">3</div><div class="cnt-lbl">栏目</div></div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · scroll:enter</span><span class="pill dim">effect · pop</span><button class="btn btn-sm" data-replay><svg class="ic ic-12"><use href="#i-play"/></svg>重播</button></div>
+      <p class="demo-desc">300ms 轻微过冲（先到 95.5% 再回 100%），三个数字错峰 70ms。<strong style="color:var(--text)">刻意不做「从 0 滚到 2140」的计数动画</strong> —— 那只是拖时间，用户要的是最终值。</p>
+      <p class="wire">降级：数字直接显示<br>成本：一次性，无监听</p>
+    </div>
+
+    <!-- 9 滚动进度（功能型） -->
+    <div class="demo">
+      <div class="demo-head"><span class="demo-name">⑨ 阅读进度</span><span class="sp"></span><span class="pill fx">功能型</span></div>
+      <div class="demo-stage" data-progress>
+        <div class="prog-stage">
+          <div class="prog-bar"><i></i></div>
+          <div class="prog-body">
+            <h4>战损贴花使用指南</h4>
+            <p>换装流程里第一次看到战损贴花的人，通常会问三个问题：怎么预览、配置写在哪、贴图尺寸在哪改。</p>
+            <p>运行后使用 GM 命令，使用后会小卡一两秒 —— 这是贴图首次上传，属正常。</p>
+            <p>配置放在 DT_BattleDecalTexture.uasset：一行是一种武器类型和一种材质的贴图配置。</p>
+            <p>进战斗前先确认三件事：武器类型、材质类型、贴图数组非空。</p>
+            <p>如果要验证贴花在移动中的表现，建议开一局自定义再拖动镜头观察。</p>
+            <p>贴花不显示 → 先查上面三条；显示但位置偏 → 检查挂点名称。</p>
+          </div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · scroll:progress</span><span class="pill dim">effect · indicator</span></div>
+      <p class="demo-desc"><strong style="color:var(--text)">这是功能型</strong>：它告诉读者"还剩多少"。滚动上面的正文试试 —— 即使把装饰型全关掉，它仍然工作。</p>
+      <p class="wire">降级：<b>保留</b>（只把 80ms 过渡改成 0）<br>成本：passive scroll + rAF 节流</p>
+    </div>
+
+    <!-- 10 顶栏 morph（功能型） -->
+    <div class="demo">
+      <div class="demo-head"><span class="demo-name">⑩ 顶栏 morph</span><span class="sp"></span><span class="pill fx">功能型</span></div>
+      <div class="demo-stage" data-morph>
+        <div class="morph-stage">
+          <div class="morph-bar"><span class="morph-brand">何源</span><span style="flex:1"></span><span style="color:var(--text-muted)">首页 · 项目示例 · 博客</span></div>
+          <div class="morph-body">
+            向下滚动这个区域 →<br><br>顶栏从"透明浮在 hero 上"过渡到"实色贴顶"，品牌字号同时从 15px 收到 13px。<br><br>
+            它是功能型：滚动之后顶栏必须和内容区分开，否则文字会糊在一起。<br><br>
+            继续滚……<br><br>再滚……<br><br>到底了。往回滚试试过渡是不是双向的。
+          </div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · scroll:direction</span><span class="pill dim">effect · morph</span></div>
+      <p class="demo-desc">只用 <code>background / border-color / box-shadow / font-size</code> 四个属性过渡，<strong style="color:var(--text)">不改变高度</strong> —— 高度变化会引起下方内容跳动。</p>
+      <p class="wire">降级：<b>保留</b>（改为瞬时切换）<br>成本：passive scroll，阈值 12px</p>
+    </div>
+
+    <!-- 11 隐藏段落 -->
+    <div class="demo">
+      <div class="demo-head"><span class="demo-name">⑪ 隐藏段落</span><span class="sp"></span><span class="pill fx">功能型</span></div>
+      <div class="demo-stage">
+        <div class="hash-stage">
+          <div class="hash-note">你在链接里带了 <code>#secret</code> —— 这段只有拿到链接的人看得到。站主可以拿它放"只发给某个人"的话。</div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · url:hash</span><span class="pill dim">effect · reveal</span><button class="btn btn-sm" data-toggle-demo="revealed">模拟带 #secret 打开</button></div>
+      <p class="demo-desc">纯前端、零后端：URL 里带特定 hash 就揭示一段平时不显示的内容。<strong style="color:var(--text)">注意它不是权限控制</strong> —— 内容仍在 HTML 里，只是默认隐藏，别放真隐私。</p>
+      <p class="wire">降级：<b>保留</b>（这是内容不是装饰）<br>成本：读一次 location.hash</p>
+    </div>
+
+    <!-- 12 深夜文案 -->
+    <div class="demo">
+      <div class="demo-head"><span class="demo-name">⑫ 时间彩蛋</span><span class="sp"></span><span class="pill fx">功能型</span></div>
+      <div class="demo-stage">
+        <div class="night-stage">
+          <div class="night-line n-day">用代码造作品，也把背后的思考写下来。</div>
+          <div class="night-line n-night">这么晚还没睡。</div>
+          <div class="night-sub">本地时间 00:00–05:00 触发</div>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · clock</span><span class="pill dim">effect · copy-swap</span><button class="btn btn-sm" data-toggle-demo="revealed">模拟凌晨 2 点</button></div>
+      <p class="demo-desc">不做动画，只换一句文案 —— <strong style="color:var(--text)">成本最低、效果最好的一条</strong>。同类还有：整点、节日、纪念日、第 N 次来访。</p>
+      <p class="wire">降级：<b>保留</b>（只是文案）<br>成本：读一次 Date</p>
+    </div>
+
+    <!-- 13 宠物 -->
+    <div class="demo deco-only">
+      <div class="demo-head"><span class="demo-name">⑬ 驻站宠物</span><span class="sp"></span><span class="pill deco">装饰型</span></div>
+      <div class="demo-stage">
+        <div class="pet-mini">
+          <svg viewBox="0 0 96 96">
+            <g class="pb">
+              <path class="p-soft" d="M34 77 C 21 75, 14 62, 22 53 C 29 46, 36 52, 31 59 C 28 64, 30 72, 36 74"/>
+              <ellipse class="p-soft" cx="50" cy="70" rx="19" ry="17"/>
+              <path class="p" d="M43 71 v9"/><path class="p" d="M57 71 v9"/>
+              <g>
+                <path class="p-soft" d="M36 33 L 33 13 L 48 28 Z"/>
+                <path class="p-soft" d="M64 33 L 67 13 L 52 28 Z"/>
+                <ellipse class="p-soft" cx="50" cy="44" rx="18" ry="15.5"/>
+                <path class="p" d="M50 50 l-5.5 5 h11 z"/>
+                <ellipse class="pe" cx="43" cy="42" rx="2.7" ry="3"/>
+                <ellipse class="pe" cx="57" cy="42" rx="2.7" ry="3"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="demo-foot"><span class="pill dim">trigger · cursor:near</span><span class="pill dim">effect · character</span><a class="btn btn-sm" href="../round5/pet-lab.html">去行为实验室 →</a></div>
+      <p class="demo-desc">宠物是交互层里的<strong style="color:var(--text)">「角色动效」</strong>这一类的一个实例，不是单独的东西。它整条已经细设过：<a href="../round5/pet-lab.html">round5/pet-lab.html</a>。</p>
+      <p class="wire">降级：静态立绘<br>成本：CSS 动画；只在指针进入领地时挂监听</p>
+    </div>
+
+  </div>
+
+  <h2>把「约束」变成可验证的东西</h2>
+  <p class="doc-sub" style="font-size:var(--fs-sm)">
+    右上角那个开关就是本阶段的核心论点：<strong style="color:var(--text)">交互必须能被分类，才能被批量降级</strong>。
+    分不清「功能型 / 装饰型」的交互层，最终只能在 <code>prefers-reduced-motion</code> 里一刀切全关 —— 那会连进度线一起砍掉。
+  </p>
+  <table class="tbl">
+    <tr><th style="width:150px">约束</th><th>做法</th><th style="width:200px">在实验室里怎么验</th></tr>
+    <tr><td><strong>可分类</strong></td><td>每条交互声明 <code>kind: 'functional' | 'decorative'</code></td><td>右上角开关 —— 装饰型全灰掉，功能型照常</td></tr>
+    <tr><td><strong>可关闭</strong></td><td>访客级开关，记 <code>localStorage</code></td><td>同上（这里的开关不持久化，线上会）</td></tr>
+    <tr><td><strong>不挂空监听</strong></td><td>关闭时<strong style="color:var(--text)">根本不注册监听</strong>，而不是"注册了但不执行"</td><td>关掉后指针移动不会再写 CSS 变量</td></tr>
+    <tr><td><strong>不用常驻 rAF</strong></td><td>只有滚动 / 指针事件里 rAF 节流；空闲即停</td><td>⑨⑩ 的滚动，②③④ 的指针</td></tr>
+    <tr><td><strong>移动端有替代</strong></td><td>触屏没有 hover → 依赖 hover 的交互在 ≤720px 直接不挂载</td><td>窄屏打开本页，②③④⑤ 无反应（这是对的）</td></tr>
+    <tr><td><strong>不挡内容</strong></td><td>装饰层 <code>pointer-events:none</code>；位移只改视觉不改热区</td><td>④ 磁吸按钮位移 8px，点击热区不动</td></tr>
+    <tr><td><strong>首屏不阻塞</strong></td><td>交互层在 hydration 之后挂载；无 JS 时全部静态</td><td>禁用 JS 打开本页，13 条都还在（只是不动）</td></tr>
+  </table>
+
+  <p style="margin-top:26px"><a href="INDEX.html">← 回交互层总览</a>　·　<a href="../round5/pet-lab.html">宠物行为实验室（五阶段）→</a></p>
+</div>
+<script src="r6.js"></script>
+</body>
+</html>
