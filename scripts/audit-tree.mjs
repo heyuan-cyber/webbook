@@ -6,20 +6,28 @@
  *   npm run audit:tree -- --user-id=<uuid>
  *   npm run audit:tree -- --ref=<sha>     # 体检某个历史版本的目录树
  *
- * 前提：.env 中配置 GITHUB_TOKEN、GITHUB_REPO、GITHUB_BRANCH
+ * 配置来源（按优先级）：
+ *   GITHUB_TOKEN  ← 环境变量 → 仓库根 .env
+ *   GITHUB_REPO / GITHUB_BRANCH ← 环境变量 → .env → workers/api/wrangler.toml
+ * 因此全新 clone（没有 .env）只要给出 GITHUB_TOKEN 就能直接跑。
  *
  * 存在意义：2026-09-26 的整树覆盖事故之后才发现，数据仓里早就积累了三十多篇
  * "文件在、树里没有"的孤儿笔记——此前没有任何机制会主动报告这种不一致。
  * 本脚本只发 GET，不修改任何数据。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = resolve(root, '.env');
 
+/**
+ * 读取仓库根 .env。**不存在时返回空对象**——全新 clone 里没有 .env
+ * （它被 .gitignore 排除），此时全靠环境变量或 wrangler.toml 回退。
+ */
 function loadEnv() {
+  if (!existsSync(envPath)) return {};
   const text = readFileSync(envPath, 'utf8');
   const env = {};
   for (const line of text.split('\n')) {
@@ -29,6 +37,21 @@ function loadEnv() {
     if (i > 0) env[t.slice(0, i)] = t.slice(i + 1);
   }
   return env;
+}
+
+/**
+ * 非机密配置（GITHUB_REPO / GITHUB_BRANCH）回退到 wrangler.toml ——
+ * 与 Worker 共用同一份事实来源，免得第二台设备为了跑一次体检还要先造 .env。
+ */
+function readWranglerVars() {
+  const p = resolve(root, 'workers/api/wrangler.toml');
+  if (!existsSync(p)) return {};
+  const out = {};
+  for (const line of readFileSync(p, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z_]+)\s*=\s*"([^"]*)"/);
+    if (m) out[m[1]] = m[2];
+  }
+  return out;
 }
 
 /** scripts/ 允许用当前 shell 的 GITHUB_TOKEN 覆盖 .env（.env 里的可能已过期） */
@@ -48,16 +71,19 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 const env = loadEnv();
+const wranglerVars = readWranglerVars();
 const token = resolveToken(env);
-const repo = env.GITHUB_REPO;
-const branch = env.GITHUB_BRANCH || 'main';
+const repo =
+  process.env.GITHUB_REPO?.trim() || env.GITHUB_REPO || wranglerVars.GITHUB_REPO || '';
+const branch =
+  process.env.GITHUB_BRANCH?.trim() || env.GITHUB_BRANCH || wranglerVars.GITHUB_BRANCH || 'main';
 
 if (!token) {
-  console.error('✗ 缺少 GITHUB_TOKEN（.env 或环境变量）');
+  console.error('✗ 缺少 GITHUB_TOKEN（环境变量或仓库根 .env）');
   process.exit(1);
 }
 if (!repo) {
-  console.error('✗ 缺少 GITHUB_REPO（.env）');
+  console.error('✗ 缺少 GITHUB_REPO（环境变量、.env 或 workers/api/wrangler.toml）');
   process.exit(1);
 }
 
