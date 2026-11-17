@@ -1,10 +1,47 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { NoteTree } from '@webbook/shared';
+import { mergeTreeById } from '@webbook/shared';
 import { useAuth } from '@/auth/AuthContext';
 import { localStore } from '@/lib/storage';
-import { apiClient } from '@/lib/api';
+import { apiClient, TreeConflictError } from '@/lib/api';
 import { supabase } from '@/auth/supabaseProvider';
+import { useNotesStore } from '@/store/useNotesStore';
+import { toast } from '@/store/useToastStore';
 import { Icon } from '@/components/Icon';
+
+/**
+ * 登录时把本地游客目录并进云端：按节点 id 做并集，**绝不整树覆盖**。
+ * 云端 revision 未知（旧版 Worker）时不写——宁可少同步一次，也不能让本地树变成权威。
+ * 撞并发时重读重做一次（并集合并本身是幂等的）；仍失败则保留本地树，不覆盖云端。
+ *
+ * @returns 云端是否已经是"本地并入后"的树
+ */
+async function mergeLocalTreeIntoCloud(localTree: NoteTree, token: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const cloud = await apiClient.loadTree(token);
+      if (!cloud.revReported) {
+        toast('error', '云端目录版本未知，本地草稿目录暂未合并');
+        return false;
+      }
+      const merged = mergeTreeById(cloud.tree, localTree);
+      if (merged.stats.addedNodes === 0) return true;
+      await apiClient.saveTree(merged.tree, cloud.rev, token);
+      return true;
+    } catch (e) {
+      // 冲突：重读最新云端树再并一次；其它错误直接放弃（本地树仍是完整的）
+      if (e instanceof TreeConflictError && attempt === 0) continue;
+      if (e instanceof TreeConflictError) {
+        toast('error', '云端目录刚被其他设备修改，本地草稿目录未覆盖云端');
+      } else {
+        toast('error', '本地草稿目录合并失败，可在应用内重新整理');
+      }
+      return false;
+    }
+  }
+  return false;
+}
 
 export function LoginPage() {
   const { signIn, signUp } = useAuth();
@@ -20,8 +57,9 @@ export function LoginPage() {
     setBusy(true);
     setError('');
     try {
-      // 登录前检测本地游客草稿，提示合并
+      // 登录前先抓住游客草稿与游客目录：登录后 init 会用云端树刷新本机副本
       const ids = await localStore.allNoteIds();
+      const guestTree = await localStore.loadTree();
       if (mode === 'up') await signUp(email, password);
       else await signIn(email, password);
 
@@ -37,12 +75,15 @@ export function LoginPage() {
               const note = await localStore.loadNote(id);
               if (note) await apiClient.saveNote(note, token);
             }
-            const localTree = await localStore.loadTree();
-            if (localTree.roots.length > 0) {
-              // 首次登录把本地草稿目录推到云端：baseRev 传 null ⇒ 以本机为基准
-              await apiClient.saveTree(localTree, null, token);
+            if (guestTree.roots.length > 0) {
+              // 与云端按 id 并集合并（任务 5.1–5.3）；本地为空时不写，避免冲掉云端目录
+              const merged = await mergeLocalTreeIntoCloud(guestTree, token);
+              if (merged) {
+                // 这次写入推进了云端 revision，刷新仓库里的副本，否则首次目录改动会撞 409。
+                // 失败时不刷新：那会把未合并的游客目录从本机副本里抹掉。
+                await useNotesStore.getState().refreshTree();
+              }
             }
-            // 本地 tree 为空时不覆盖云端（避免冲掉 legacy 目录）
           }
         }
       }

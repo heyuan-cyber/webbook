@@ -42,7 +42,7 @@ interface NotesState {
   /** 云端目录不可安全写入（只读本地模式） */
   treeLocalOnly: boolean;
   /** 未决的目录树冲突；本地树原样保留，等用户决定保留哪一份 */
-  treeConflict: { localTree: NoteTree; serverRev: string | null } | null;
+  treeConflict: TreeConflict | null;
 
   init: (session: Session | null) => Promise<void>;
   selectNote: (id: string) => Promise<void>;
@@ -54,6 +54,8 @@ interface NotesState {
   resolveTreeConflictKeepLocal: () => Promise<void>;
   /** 恢复目录历史版本（条件写；若期间云端又变则转入冲突流程，不静默覆盖） */
   restoreTreeVersion: (tree: NoteTree) => Promise<void>;
+  /** 登录合并草稿目录后刷新云端目录与 revision（仓库里握着的 rev 已被这次写入推进） */
+  refreshTree: () => Promise<void>;
 
   addFolder: (parentId: string | null, title: string) => Promise<void>;
   addNote: (parentId: string | null, title: string) => Promise<string>;
@@ -78,6 +80,18 @@ export interface SearchHit {
   id: string;
   title: string;
   snippet: string;
+}
+
+/** 未决的目录树冲突：`localTree` 始终是"用户若选择覆盖，应当推上云端的那个版本" */
+export interface TreeConflict {
+  localTree: NoteTree;
+  serverRev: string | null;
+  /**
+   * 冲突来源：
+   * - `save`：普通目录写入撞了 revision，期间继续编辑会把 localTree 推进到最新；
+   * - `restore`：版本恢复撞了 revision，此时"本地"指的是**被恢复的那一版**。
+   */
+  from: 'save' | 'restore';
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -164,8 +178,21 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     }
   },
 
+  async refreshTree() {
+    const { repo, treeConflict } = getState();
+    // init 还没跑完（仓库还没有 token）时交给 init；冲突待决时交给用户决定
+    if (!repo.authed || treeConflict) return;
+    const tree = await repo.reloadTree();
+    setState({
+      tree,
+      treeRev: repo.getTreeRev(),
+      treeLocalOnly: repo.isLocalOnly(),
+    });
+  },
+
   async resolveTreeConflictKeepServer() {
     const { repo } = getState();
+    // reloadTree 会把云端树同步写回 IndexedDB：否则断网重载时又会看到已被丢弃的本地树
     const tree = await repo.reloadTree();
     setState({
       tree,
@@ -173,15 +200,23 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
       treeLocalOnly: repo.isLocalOnly(),
       treeConflict: null,
     });
+    if (repo.isLocalOnly()) {
+      // 读失败时 reloadTree 会退回本地树：这时不能告诉用户"已改用云端"
+      toast('error', '云端目录读取失败，已保留本地目录（本地模式）');
+      return;
+    }
     toast('success', '已改用云端目录');
   },
 
   async resolveTreeConflictKeepLocal() {
-    const { repo, treeConflict } = getState();
+    const { repo, treeConflict, tree } = getState();
     if (!treeConflict) return;
+    // save 冲突：state.tree 一定不比快照旧（冲突后可能又改过目录），直接用当前树；
+    // restore 冲突：state.tree 还是旧树，"本地"指的是被恢复的那一版。
+    const next = treeConflict.from === 'save' ? tree : treeConflict.localTree;
     try {
-      const rev = await repo.overwriteTree(treeConflict.localTree, treeConflict.serverRev);
-      setState({ treeRev: rev, treeLocalOnly: false, treeConflict: null });
+      const rev = await repo.overwriteTree(next, treeConflict.serverRev);
+      setState({ tree: next, treeRev: rev, treeLocalOnly: false, treeConflict: null });
       toast('success', '已用本地目录覆盖云端');
     } catch (e) {
       if (e instanceof TreeConflictError) {
@@ -195,15 +230,22 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
   },
 
   async restoreTreeVersion(next) {
-    const { repo, treeRev } = getState();
+    const { repo } = getState();
+    // 恢复是整树覆盖：先等自动保存的目录写排空，避免两个请求抢同一个 baseRev
+    await repo.waitForTreeWrites();
+    if (getState().treeConflict) {
+      toast('error', '云端目录正在冲突待决，请先处理上方提示');
+      return;
+    }
     try {
-      const rev = await repo.overwriteTree(next, treeRev);
+      const rev = await repo.overwriteTree(next, repo.getTreeRev());
       setState({ tree: next, treeRev: rev, treeLocalOnly: false, treeConflict: null });
       toast('success', '已恢复该版本目录');
     } catch (e) {
       if (e instanceof TreeConflictError) {
-        // 不静默覆盖：转入统一的冲突流程，由用户决定
-        setState({ treeConflict: { localTree: next, serverRev: e.rev } });
+        // 不静默覆盖：暂停远端写并转入统一的冲突流程，由用户决定
+        repo.blockTreeWrites();
+        setState({ treeConflict: { localTree: next, serverRev: e.rev, from: 'restore' } });
         toast('error', '云端目录已被其他设备修改，请选择保留哪一份');
         return;
       }
@@ -302,6 +344,8 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
     const next = { ...tree, roots: insertChild(tree.roots, parentId, node) };
     const note = createEmptyNote(id, title);
     setState({ tree: next, activeNoteId: id, activeNote: note, noteLoading: false });
+    // 不 await：目录写由 repository 串行化，连点"新建笔记"只会合并成一次远端写，
+    // 不会各自带着同一个 baseRev 互相撞 409（旧实现正是这样误报"其他设备修改"的）
     void persistTree(next);
     void repo.saveNote(note);
     return id;
@@ -436,7 +480,9 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
       roots: patchNode(tree.roots, activeNote.id, { visibility }),
     };
     setState({ activeNote: updated, tree: next });
-    // 可见性由笔记 PUT 在 Worker 侧同步到 tree，无需额外 saveTree
+    // 可见性是树节点上的字段，由目录写一并提交：服务端不再代写整棵树
+    //（那会在客户端不知情时推进 revision，制造"被其他设备修改"的假冲突）
+    markTreeDirty();
     scheduleSave(getState);
   },
 }));
@@ -445,7 +491,7 @@ export const useNotesStore = create<NotesState>((setState, getState) => ({
 function scheduleSave(getState: () => NotesState) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    const { repo, activeNote, tree } = getState();
+    const { repo, activeNote } = getState();
     if (!activeNote) return;
     if (noteHasTransientImageSrc(activeNote)) {
       scheduleSave(getState);
@@ -454,8 +500,10 @@ function scheduleSave(getState: () => NotesState) {
     useNotesStore.setState({ saving: true, saveError: false });
     const result = await repo.saveNote(activeNote);
     if (treeDirty) {
-      await persistTree(tree);
+      // 先清标记再取当前树：写笔记可能花掉几百毫秒，期间用户又改过目录时不能把旧快照推上云端。
+      // 若这期间又有改动，它会重新置脏并由下一次防抖保存补写。
       treeDirty = false;
+      await persistTree(useNotesStore.getState().tree);
     }
     useNotesStore.setState({ saving: false, saveError: !result.noteOk });
     if (!result.noteOk && repo.authed) {
@@ -467,22 +515,43 @@ function scheduleSave(getState: () => NotesState) {
 /**
  * 目录树写入的唯一出口。
  *
- * 冲突**不抛出**，而是进入待决状态并暂停后续树写入：界面据此询问用户保留哪一份，
- * 期间本地树与 IndexedDB 都保持不动，用户继续编辑不会丢内容。
+ * 契约：
+ * - **本地永远先落盘**：冲突未决、离线、远端失败都不能让目录改动只活在内存里；
+ * - 远端由 repository 串行化并合并排队（同一时刻一个 PUT，期间只保留最新一份树），
+ *   所以这里可以放心地被连续调用，不会自己把自己撞成 409；
+ * - 冲突**不抛出**，而是进入待决状态并暂停后续远端写：界面据此询问用户保留哪一份。
  */
 async function persistTree(tree: NoteTree): Promise<void> {
   const state = useNotesStore.getState();
-  // 冲突未决：暂停远端树写入（本地树已由 setState 更新并写入 IndexedDB）
-  if (state.treeConflict) return;
+  const pending = state.treeConflict;
+  // 冲突未决时继续编辑：把"要保留的本地树"推进到最新，用户选覆盖时不会丢掉冲突后的改动。
+  // restore 来源不动——那时的"本地"指的是被恢复的那一版。
+  if (pending && pending.from === 'save') {
+    useNotesStore.setState({ treeConflict: { ...pending, localTree: tree } });
+  }
   try {
     await state.repo.saveTree(tree);
-    useNotesStore.setState({
-      treeRev: state.repo.getTreeRev(),
-      treeLocalOnly: state.repo.isLocalOnly(),
-    });
+    if (!pending) {
+      useNotesStore.setState({
+        treeRev: state.repo.getTreeRev(),
+        treeLocalOnly: state.repo.isLocalOnly(),
+      });
+    }
   } catch (e) {
     if (e instanceof TreeConflictError) {
-      useNotesStore.setState({ treeConflict: { localTree: tree, serverRev: e.rev } });
+      const current = useNotesStore.getState().treeConflict;
+      if (current) {
+        // 同一次冲突的后续失败：只更新要保留的版本与云端 revision，不重复打扰用户
+        if (current.from === 'save') {
+          useNotesStore.setState({
+            treeConflict: { ...current, localTree: tree, serverRev: e.rev },
+          });
+        }
+        return;
+      }
+      useNotesStore.setState({
+        treeConflict: { localTree: tree, serverRev: e.rev, from: 'save' },
+      });
       toast('error', '云端目录已被其他设备修改，请选择保留哪一份');
       return;
     }

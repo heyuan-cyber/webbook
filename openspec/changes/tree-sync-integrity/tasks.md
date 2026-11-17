@@ -20,6 +20,7 @@
 - [x] 2.6 `PUT /api/tree` 捕获 `FileConflictError` 并返回 `409 { error: 'conflict', baseRev: <当前sha> }`；只认 `FileConflictError`，网络/权限错误不得报成 409
 - [x] 2.7 确认 `GET /api/tree` 内的 legacy 自动迁移仍走 `saveUserTree`（一次性引导写），不因 2.5 而失效
 - [x] 2.7b 把笔记保存路径上的**可见性同步**也改为条件写：`loadUserTreeWithRev` + `saveUserTreeConditional`，冲突重读重试一次；失败不阻断笔记保存（best-effort）
+  - 后续在 10.2 中整体移除：服务端代写整树正是"客户端 revision 悄悄过期"的来源
 - [x] 2.8 新增 `GET /api/tree/history`（需登录，owner-only）：复用 `fileHistory`，返回 `{ versions: [{ sha, date, message }] }`，按时间倒序并限制条数
 - [x] 2.9 新增 `GET /api/tree/versions/:sha`（需登录，owner-only）：返回该版本的目录树；sha 非法或不存在时返回 404
 
@@ -80,3 +81,16 @@
 
 - [x] 9.1 确认部署顺序为「前端 fail-closed → `wrangler deploy` Worker → 重新加载」，并在 `docs/DEPLOY-GUIDE.md` 记录该顺序与原因
 - [x] 9.2 在 `docs/DEPLOY-GUIDE.md` 的 API 一览中补上 `_rev`/`baseRev`/409 语义与新增的两个历史路由
+
+## 10. 后续修复：消灭"假冲突"（2026-11-13）
+
+条件写落地后，生产环境仍频繁弹「云端目录已被其他设备修改」。根因不在 CAS，而在客户端与服务端
+让 revision 以宿主不知情的方式移动。本节记录这次修复。
+
+- [x] 10.1 前端目录写串行化 + 合并排队（`repository.saveTree`）：同一时刻只有一个 PUT 在飞，排队期间只保留最新一份树；冲突待决时只写本地、不发远端
+- [x] 10.2 移除 `PUT /api/notes/:id` 的整树可见性同步：该写入会在客户端不知情时推进 revision，使单设备也误报冲突；可见性改由客户端随目录写提交（`setActiveVisibility` 标记树 dirty）
+- [x] 10.3 管理后台改可见性 / 删笔记改为条件写（冲突重读重做，内容不变则不写）
+- [x] 10.4 冲突流程修正：冲突期间继续编辑仍写 IndexedDB 并把"要保留的本地树"推进到最新；覆盖时提交最新树；保留云端时把云端树写回本机副本
+- [x] 10.5 登录合并改为「先读云端 → 按 id 并集 → 条件写 → 刷新仓库 revision」，不再用 `baseRev: null` 整树覆盖
+- [x] 10.6 新增 `scripts/assert-tree-queue.mjs`（`npm run assert:tree-queue`）：断言串行化、合并、冲突一并结束、待决期只写本地、覆盖后恢复可写、等待队尾
+- [ ] 10.7 真机验证：单标签页连续新建 5 篇笔记不弹冲突；切换公开后改名不弹冲突；两个标签页各自改名仍能正确提示

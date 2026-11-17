@@ -18,6 +18,7 @@
     "init:github": "node scripts/init-github-data.mjs",
     "migrate:legacy": "npm run build --workspace packages/shared && node scripts/migrate-legacy-data.mjs",
     "audit:tree": "node scripts/audit-tree.mjs",
+    "assert:tree-queue": "node scripts/assert-tree-queue.mjs",
     "android:init": "node scripts/android-init.mjs",
     "android:apk": "node scripts/android-apk.mjs",
     "android:fingerprint": "node scripts/android-fingerprint.mjs",

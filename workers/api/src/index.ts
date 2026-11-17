@@ -15,7 +15,6 @@ import { extractBearer, verifyUserToken } from './auth';
 import { loadUserPlanWithSha, saveUserPlan, migrateRemindersIntoPlan } from './plan';
 import { FileConflictError } from './github';
 import { loadUserProfile, saveUserProfile } from './userProfile';
-import { getNoteVisibilityInTree, syncNoteVisibility } from './tree-filter';
 import { loadComments, addComment, buildUserAuthor, buildGuestAuthor } from './comments';
 import type { Note, NoteTree, NoteVisibility } from '@webbook/shared';
 import {
@@ -29,7 +28,6 @@ import {
 import type { AIStrategiesConfig, SystemSettings } from '@webbook/shared';
 import {
   loadUserTree,
-  loadUserTreeWithRev,
   loadUserNote,
   saveUserNote,
   deleteUserNote,
@@ -916,23 +914,11 @@ export default {
           const note = normalizeNote(JSON.parse(body) as Note);
           await saveUserNote(env, user.id, user.email, note);
 
-          // 目录树可见性同步是"整树读-改-写"，因此也必须带 revision。
-          // 原先的无条件写与客户端并发时会覆盖对方刚写入的目录结构——同一类事故的另一个入口。
-          // 尽力而为：笔记本身已经保存成功，同步失败不应把整次保存报成失败；
-          // 下次保存会重试，且 feed 侧对"树与笔记可见性不一致"本就按不收录处理。
-          for (let attempt = 0; attempt < 2; attempt++) {
-            const { tree, rev } = await loadUserTreeWithRev(env, user.id);
-            if (getNoteVisibilityInTree(tree, id) === note.visibility) break;
-            const synced = syncNoteVisibility(tree, id, note.visibility);
-            try {
-              await saveUserTreeConditional(env, user.id, user.email, synced, rev);
-              break;
-            } catch (e) {
-              // 只对冲突重读重试一次；其它错误（网络/权限）放弃同步
-              if (!(e instanceof FileConflictError)) break;
-            }
-          }
-
+          // 这里**不再**顺手把可见性同步进目录树。
+          // 那是服务端在客户端不知情的情况下做整树读-改-写：revision 被推进，而写笔记的
+          // 客户端仍持有旧 revision，下一次目录改动就会 409，界面报成"已被其他设备修改"——
+          // 明明只有一台设备。可见性现在由客户端随目录写一并提交（setActiveVisibility
+          // 会把树标记为 dirty），树仍然只有"客户端条件写"这一条写路径。
           return json({ ok: true });
         }
 
